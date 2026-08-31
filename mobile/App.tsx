@@ -9,6 +9,7 @@ import {
 } from "./src/alert-settings";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
+import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
 import { loadHistory, pushHistory } from "./src/history";
@@ -290,64 +291,69 @@ export default function App() {
         </View>
       </View>
 
-      {view === "result" && result ? (
-        <ResultScreen
-          analysis={result}
-          onBack={() => setView("home")}
-          watched={resultWatched}
-          onToggleWatch={() => void toggleWatch(result)}
-        />
-      ) : view === "watch" ? (
-        <WatchScreen
-          items={watch}
-          refreshingId={refreshingId}
-          refreshingAll={refreshingAll}
-          error={watchError}
-          onOpen={openFromWatch}
-          onRemove={(id) =>
-            void removeWatch(watchRef.current, id).then((next) => {
-              setWatch(next);
-              watchRef.current = next;
-              void syncPush(alertRules, next, pushToken);
-            })
-          }
-          onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
-          onRefreshAll={() => void refreshAllWatch()}
-        />
-      ) : view === "alerts" ? (
-        <AlertsScreen
-          rules={alertRules}
-          pushToken={pushToken}
-          watchCount={watch.length}
-          syncing={pushSyncing}
-          statusMessage={pushStatus}
-          onChange={(next) => void handleAlertRulesChange(next)}
-          onRequestPermission={() => void handleRequestPermission()}
-          onScanNow={() => void handleScanNow()}
-        />
-      ) : view === "history" ? (
-        <HistoryScreen
-          items={history}
-          onOpen={(item) => {
-            setResult(item);
-            setView("result");
-          }}
-        />
-      ) : (
-        <HomeScreen
-          ticker={ticker}
-          timeframe={timeframe}
-          image={image}
-          busy={busy}
-          step={step}
-          error={error}
-          topTraded={topTraded}
-          onTicker={setTicker}
-          onTimeframe={setTimeframe}
-          onImage={setImage}
-          onSubmit={() => void run()}
-        />
-      )}
+      <View style={styles.body}>
+        {view === "result" && result ? (
+          <ResultScreen
+            analysis={result}
+            onBack={() => setView("home")}
+            watched={resultWatched}
+            onToggleWatch={() => void toggleWatch(result)}
+          />
+        ) : view === "watch" ? (
+          <WatchScreen
+            items={watch}
+            refreshingId={refreshingId}
+            refreshingAll={refreshingAll}
+            error={watchError}
+            onOpen={openFromWatch}
+            onRemove={(id) =>
+              void removeWatch(watchRef.current, id).then((next) => {
+                setWatch(next);
+                watchRef.current = next;
+                void syncPush(alertRules, next, pushToken);
+              })
+            }
+            onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+            onRefreshAll={() => void refreshAllWatch()}
+          />
+        ) : view === "alerts" ? (
+          <AlertsScreen
+            rules={alertRules}
+            pushToken={pushToken}
+            watchCount={watch.length}
+            syncing={pushSyncing}
+            statusMessage={pushStatus}
+            onChange={(next) => void handleAlertRulesChange(next)}
+            onRequestPermission={() => void handleRequestPermission()}
+            onScanNow={() => void handleScanNow()}
+          />
+        ) : view === "history" ? (
+          <HistoryScreen
+            items={history}
+            onOpen={(item) => {
+              setResult(item);
+              setView("result");
+            }}
+          />
+        ) : (
+          <HomeScreen
+            ticker={ticker}
+            timeframe={timeframe}
+            image={image}
+            busy={busy}
+            step={step}
+            error={error}
+            topTraded={topTraded}
+            onTicker={setTicker}
+            onTimeframe={setTimeframe}
+            onImage={setImage}
+            onSubmit={() => void run()}
+          />
+        )}
+
+        {/* Assistente flutuante sempre que houver análise carregada */}
+        {result ? <ScenarioAssistant analysis={result} /> : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -398,4 +404,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   tabText: { fontSize: 10, fontWeight: "500", color: colors.muted },
+  body: { flex: 1 },
 });
