@@ -1,5 +1,4 @@
-// Espelha src/lib/market/types.ts do app web — mesmo formato de payload,
-// já que ambos falam com a mesma engine em src/routes/api/analyze.ts.
+// Espelha src/lib/market/types.ts do app web — mesmo formato de payload.
 
 export const TIMEFRAMES = ["15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
@@ -105,6 +104,25 @@ export type PrecedentResult = {
   recentMatches: { t: number; forward: number }[];
 };
 
+export type OnchainContext = {
+  fetchedAt: number;
+  fundingRate: number | null;
+  markPrice: number | null;
+  openInterest: number | null;
+  nextFundingTime: number | null;
+  derivativesSource: string | null;
+  chainId: string | null;
+  dexId: string | null;
+  pairUrl: string | null;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
+  buys24h: number | null;
+  sells24h: number | null;
+  priceChange24hPct: number | null;
+  dexSource: string | null;
+  sources: string[];
+};
+
 export type AnalysisPayload = {
   ticker: string;
   displayTicker: string;
@@ -117,6 +135,7 @@ export type AnalysisPayload = {
   vision: VisionReading | null;
   visionError: string | null;
   source: string;
+  onchain?: OnchainContext | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {
