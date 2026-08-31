@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
 import { AnalysisResult } from "@/components/analysis-result";
 import { HistoryPanel } from "@/components/history-panel";
@@ -7,8 +8,10 @@ import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
+import { productBoundary } from "@/lib/market/sample-copy";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory } from "@/lib/history";
 import type { StoredAnalysis, Timeframe } from "@/lib/market/types";
@@ -206,17 +209,69 @@ function Home() {
             <Mark className="size-7" />
             <span className="font-display text-xl tracking-tight">Precedente</span>
           </button>
-          <nav className="flex flex-wrap rounded-md bg-surface p-1 shadow-[var(--shadow-border)]">
-            <Tab active={view === "home"} onClick={() => setView("home")}>
-              Analisar
-            </Tab>
-            <Tab active={view === "watch"} onClick={() => setView("watch")}>
-              Watch
-            </Tab>
-            <Tab active={view === "history"} onClick={() => setView("history")}>
-              Histórico
-            </Tab>
-          </nav>
+          <div className="flex flex-wrap items-center gap-2">
+            <form
+              className="hidden items-center gap-1.5 rounded-md bg-surface px-2.5 shadow-[var(--shadow-border)] sm:flex"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (busy || !ticker.trim()) return;
+                setView("home");
+                void run();
+              }}
+            >
+              <Search className="size-3.5 shrink-0 text-subtle" />
+              <input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value)}
+                placeholder="BTC, ETHUSDT…"
+                disabled={busy}
+                className="h-9 w-32 bg-transparent font-mono text-xs uppercase text-fg placeholder:text-subtle placeholder:normal-case focus:outline-none disabled:opacity-50"
+              />
+            </form>
+
+            <nav className="flex flex-wrap rounded-md bg-surface p-1 shadow-[var(--shadow-border)]">
+              <Tab active={view === "home"} onClick={() => setView("home")}>
+                Analisar
+              </Tab>
+              <Tab active={view === "watch"} onClick={() => setView("watch")}>
+                Watch
+              </Tab>
+              <Tab active={view === "history"} onClick={() => setView("history")}>
+                Histórico
+              </Tab>
+            </nav>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Como ler"
+                  className="flex size-9 items-center justify-center rounded-md bg-surface text-muted shadow-[var(--shadow-border)] hover:text-fg"
+                >
+                  <HelpCircle className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <p className="text-xs tracking-wide text-muted uppercase">Como ler</p>
+                <ul className="mt-3 space-y-3 text-sm leading-relaxed text-fg">
+                  <li>
+                    <span className="font-medium">Amostra</span> — quantos casos parecidos já
+                    aconteceram no histórico real. Poucos casos, leia como ilustração.
+                  </li>
+                  <li>
+                    <span className="font-medium">Horizonte</span> — o que o preço fez depois, em
+                    5/10/20 barras à frente: subiu, ficou lateral ou caiu, e a mediana do retorno.
+                  </li>
+                  <li>
+                    <span className="font-medium">Caminho (drawdown)</span> — o quanto o preço
+                    balançou contra antes de chegar no fim do horizonte. É o caminho que estressa
+                    quem opera alavancado, não só o ponto final.
+                  </li>
+                </ul>
+                <p className="mt-3 text-xs leading-relaxed text-subtle">{productBoundary()}</p>
+              </PopoverContent>
+            </Popover>
+          </div>
         </header>
 
         {view === "result" && result ? (
