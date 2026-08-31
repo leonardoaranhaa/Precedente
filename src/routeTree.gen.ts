@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
+import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
+import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +30,69 @@ const ApiUniverseRoute = ApiUniverseRouteImport.update({
   path: '/api/universe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
+  id: '/api/push/register',
+  path: '/api/push/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushScanRoute = ApiPushScanRouteImport.update({
+  id: '/api/push/scan',
+  path: '/api/push/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/analyze' | '/api/universe'
+  fullPaths:
+    | '/'
+    | '/api/analyze'
+    | '/api/universe'
+    | '/api/push/register'
+    | '/api/push/scan'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/analyze' | '/api/universe'
-  id: '__root__' | '/' | '/api/analyze' | '/api/universe'
+  to:
+    | '/'
+    | '/api/analyze'
+    | '/api/universe'
+    | '/api/push/register'
+    | '/api/push/scan'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/analyze'
+    | '/api/universe'
+    | '/api/push/register'
+    | '/api/push/scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
+  ApiPushRegisterRoute: typeof ApiPushRegisterRoute
+  ApiPushScanRoute: typeof ApiPushScanRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +118,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUniverseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/register': {
+      id: '/api/push/register'
+      path: '/api/push/register'
+      fullPath: '/api/push/register'
+      preLoaderRoute: typeof ApiPushRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/scan': {
+      id: '/api/push/scan'
+      path: '/api/push/scan'
+      fullPath: '/api/push/scan'
+      preLoaderRoute: typeof ApiPushScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +139,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiUniverseRoute: ApiUniverseRoute,
+  ApiPushRegisterRoute: ApiPushRegisterRoute,
+  ApiPushScanRoute: ApiPushScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
