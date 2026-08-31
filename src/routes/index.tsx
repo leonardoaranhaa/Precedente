@@ -6,15 +6,23 @@ import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory } from "@/lib/history";
 import type { StoredAnalysis, Timeframe } from "@/lib/market/types";
+import {
+  isWatched,
+  loadWatchlist,
+  removeWatch,
+  upsertWatch,
+  type WatchItem,
+} from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-type View = "home" | "history" | "result";
+type View = "home" | "history" | "result" | "watch";
 
 function Home() {
   const [view, setView] = useState<View>("home");
@@ -26,10 +34,12 @@ function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
+  const [watch, setWatch] = useState<WatchItem[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
 
   useEffect(() => {
     setHistory(loadHistory());
+    setWatch(loadWatchlist());
   }, []);
 
   useEffect(() => {
@@ -81,17 +91,42 @@ function Home() {
     }
   }
 
-  const wide = view !== "history";
+  function toggleWatch(analysis: StoredAnalysis) {
+    setWatch((current) => {
+      if (isWatched(current, analysis)) {
+        return removeWatch(current, `${analysis.ticker}:${analysis.timeframe}`);
+      }
+      return upsertWatch(current, analysis);
+    });
+  }
+
+  function openFromWatch(item: WatchItem) {
+    const fromHistory = history.find(
+      (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
+    );
+    if (fromHistory) {
+      setResult(fromHistory);
+      setView("result");
+      return;
+    }
+    // Sem snapshot completo: pré-preenche o formulário para reanalisar.
+    setTicker(item.displayTicker.split("/")[0] ?? item.ticker);
+    setTimeframe(item.timeframe);
+    setView("home");
+  }
+
+  const wide = view === "result" || view === "home";
+  const resultWatched = result ? isWatched(watch, result) : false;
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <div
         className={cn(
           "mx-auto flex w-full flex-col px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]",
-          wide ? "max-w-5xl" : "max-w-lg",
+          view === "result" ? "max-w-6xl" : wide ? "max-w-5xl" : "max-w-lg",
         )}
       >
-        <header className="flex items-center justify-between gap-3 py-2">
+        <header className="flex flex-wrap items-center justify-between gap-3 py-2">
           <button
             type="button"
             className="flex items-center gap-2 text-fg"
@@ -103,9 +138,12 @@ function Home() {
             <Mark className="size-7" />
             <span className="font-display text-xl tracking-tight">Precedente</span>
           </button>
-          <nav className="flex rounded-md bg-surface p-1 shadow-[var(--shadow-border)]">
+          <nav className="flex flex-wrap rounded-md bg-surface p-1 shadow-[var(--shadow-border)]">
             <Tab active={view === "home"} onClick={() => setView("home")}>
               Analisar
+            </Tab>
+            <Tab active={view === "watch"} onClick={() => setView("watch")}>
+              Watch
             </Tab>
             <Tab active={view === "history"} onClick={() => setView("history")}>
               Histórico
@@ -120,7 +158,37 @@ function Home() {
               onBack={() => {
                 setView("home");
               }}
+              watched={resultWatched}
+              onToggleWatch={() => toggleWatch(result)}
             />
+          </div>
+        ) : view === "watch" ? (
+          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start">
+            <div>
+              <h1 className="font-display text-3xl tracking-tight">Watch</h1>
+              <p className="mt-1 mb-6 text-sm text-muted">
+                Pares pinados neste aparelho — amostra e drawdown, sem conta.
+              </p>
+              <WatchPanel
+                items={watch}
+                activeId={
+                  result ? `${result.ticker}:${result.timeframe}` : null
+                }
+                onSelect={openFromWatch}
+                onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+              />
+            </div>
+            <div className="hidden rounded-xl bg-surface p-5 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)] lg:block">
+              <p className="text-xs tracking-wide text-muted uppercase">Como usar</p>
+              <ul className="mt-3 list-disc space-y-2 pl-4">
+                <li>Analise um par e toque em <span className="text-fg">+ Watch</span>.</li>
+                <li>
+                  A tabela mostra Δ, qualidade da amostra e drawdown mediano do caminho (H10).
+                </li>
+                <li>Clique numa linha para reabrir o snapshot do histórico, se existir.</li>
+                <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
+              </ul>
+            </div>
           </div>
         ) : view === "history" ? (
           <div className="mt-6">
@@ -145,8 +213,8 @@ function Home() {
                   Quantas vezes isso já aconteceu?
                 </h1>
                 <p className="max-w-md text-base leading-relaxed text-muted">
-                  O print descreve o que se vê. A estatística vem do OHLC real:
-                  RSI, médias, e o que o preço fez depois das vezes anteriores.
+                  O print descreve o que se vê. A estatística vem do OHLC real: RSI, médias, e o
+                  que o preço fez depois — com foco no risco do caminho.
                 </p>
               </div>
 
@@ -168,8 +236,16 @@ function Home() {
               )}
             </div>
 
-            <div className={cn(busy && "opacity-50")}>
-              <HowItWorks />
+            <div className={cn("space-y-6", busy && "opacity-50")}>
+              {watch.length > 0 ? (
+                <WatchPanel
+                  items={watch.slice(0, 6)}
+                  onSelect={openFromWatch}
+                  onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+                />
+              ) : (
+                <HowItWorks />
+              )}
             </div>
           </div>
         )}
