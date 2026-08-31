@@ -1,11 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { analyze, fetchTopTraded } from "./src/api";
+import {
+  DEFAULT_ALERT_RULES,
+  loadAlertRules,
+  saveAlertRules,
+  type AlertRules,
+} from "./src/alert-settings";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
 import { loadHistory, pushHistory } from "./src/history";
+import {
+  registerForPushAsync,
+  requestPushScan,
+  syncPushSubscription,
+} from "./src/notifications";
+import { AlertsScreen } from "./src/screens/AlertsScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
@@ -21,7 +33,7 @@ import {
   type WatchItem,
 } from "./src/watchlist";
 
-type Screen = "home" | "history" | "result" | "watch";
+type Screen = "home" | "history" | "result" | "watch" | "alerts";
 
 export default function App() {
   const [fontsLoaded] = useAppFonts();
@@ -41,16 +53,41 @@ export default function App() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
 
-  // Refs para refresh em sequência sem ler estado React obsoleto.
+  const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [pushSyncing, setPushSyncing] = useState(false);
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
+
   const historyRef = useRef(history);
   const watchRef = useRef(watch);
   historyRef.current = history;
   watchRef.current = watch;
 
+  const syncPush = useCallback(
+    async (rules: AlertRules, watches: WatchItem[], token: string | null) => {
+      setPushSyncing(true);
+      const res = await syncPushSubscription({ token, watches, rules });
+      setPushSyncing(false);
+      if (!res.ok) setPushStatus(res.error ?? "Falha ao sincronizar.");
+      else if (rules.enabled && token) setPushStatus("Watch sincronizada com o backend.");
+      else if (!rules.enabled) setPushStatus("Alertas desativados.");
+    },
+    [],
+  );
+
   useEffect(() => {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
-  }, []);
+    loadAlertRules().then(async (rules) => {
+      setAlertRules(rules);
+      if (rules.enabled) {
+        const token = await registerForPushAsync();
+        setPushToken(token);
+        const watches = await loadWatchlist();
+        await syncPush(rules, watches, token);
+      }
+    });
+  }, [syncPush]);
 
   useEffect(() => {
     fetchTopTraded(12)
@@ -93,6 +130,7 @@ export default function App() {
         const nextWatch = await upsertWatch(watchRef.current, stored);
         setWatch(nextWatch);
         watchRef.current = nextWatch;
+        void syncPush(alertRules, nextWatch, pushToken);
       }
       setStep("done");
       setView("result");
@@ -106,21 +144,17 @@ export default function App() {
   }
 
   async function toggleWatch(analysis: StoredAnalysis) {
+    let next: WatchItem[];
     if (isWatched(watchRef.current, analysis)) {
-      const next = await removeWatch(
-        watchRef.current,
-        `${analysis.ticker}:${analysis.timeframe}`,
-      );
-      setWatch(next);
-      watchRef.current = next;
+      next = await removeWatch(watchRef.current, `${analysis.ticker}:${analysis.timeframe}`);
     } else {
-      const next = await upsertWatch(watchRef.current, analysis);
-      setWatch(next);
-      watchRef.current = next;
+      next = await upsertWatch(watchRef.current, analysis);
     }
+    setWatch(next);
+    watchRef.current = next;
+    void syncPush(alertRules, next, pushToken);
   }
 
-  /** Reavalia um par da watch via API (sem print). */
   async function refreshWatchItem(
     item: WatchItem,
     opts?: { openResult?: boolean; silent?: boolean },
@@ -148,6 +182,7 @@ export default function App() {
       const nextWatch = await upsertWatch(watchRef.current, stored);
       setWatch(nextWatch);
       watchRef.current = nextWatch;
+      void syncPush(alertRules, nextWatch, pushToken);
       if (opts?.openResult) {
         setResult(stored);
         setView("result");
@@ -195,6 +230,42 @@ export default function App() {
     void refreshWatchItem(item, { openResult: true });
   }
 
+  async function handleAlertRulesChange(next: AlertRules) {
+    setAlertRules(next);
+    await saveAlertRules(next);
+    let token = pushToken;
+    if (next.enabled && !token) {
+      token = await registerForPushAsync();
+      setPushToken(token);
+      if (!token) {
+        setPushStatus("Sem token de push. Use aparelho físico e aceite a permissão.");
+      }
+    }
+    await syncPush(next, watchRef.current, token);
+  }
+
+  async function handleRequestPermission() {
+    const token = await registerForPushAsync();
+    setPushToken(token);
+    if (!token) {
+      setPushStatus("Permissão negada ou token indisponível neste ambiente.");
+      return;
+    }
+    setPushStatus("Token obtido.");
+    if (alertRules.enabled) {
+      await syncPush(alertRules, watchRef.current, token);
+    }
+  }
+
+  async function handleScanNow() {
+    setPushSyncing(true);
+    setPushStatus("Solicitando scan no backend…");
+    await syncPush(alertRules, watchRef.current, pushToken);
+    await requestPushScan();
+    setPushSyncing(false);
+    setPushStatus("Scan solicitado. Se houver condição, o push chega em instantes.");
+  }
+
   const resultWatched = result ? isWatched(watch, result) : false;
 
   return (
@@ -208,13 +279,14 @@ export default function App() {
             setError(null);
           }}
         >
-          <Mark size={24} />
+          <Mark size={22} />
           <Text style={styles.brandText}>Precedente</Text>
         </Pressable>
         <View style={styles.tabs}>
           <Tab active={view === "home"} onPress={() => setView("home")} label="Analisar" />
           <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
-          <Tab active={view === "history"} onPress={() => setView("history")} label="Histórico" />
+          <Tab active={view === "alerts"} onPress={() => setView("alerts")} label="Alertas" />
+          <Tab active={view === "history"} onPress={() => setView("history")} label="Hist." />
         </View>
       </View>
 
@@ -236,10 +308,22 @@ export default function App() {
             void removeWatch(watchRef.current, id).then((next) => {
               setWatch(next);
               watchRef.current = next;
+              void syncPush(alertRules, next, pushToken);
             })
           }
           onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
           onRefreshAll={() => void refreshAllWatch()}
+        />
+      ) : view === "alerts" ? (
+        <AlertsScreen
+          rules={alertRules}
+          pushToken={pushToken}
+          watchCount={watch.length}
+          syncing={pushSyncing}
+          statusMessage={pushStatus}
+          onChange={(next) => void handleAlertRulesChange(next)}
+          onRequestPermission={() => void handleRequestPermission()}
+          onScanNow={() => void handleScanNow()}
         />
       ) : view === "history" ? (
         <HistoryScreen
@@ -293,25 +377,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
   },
-  brand: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
-  brandText: { fontFamily: fonts.display, fontSize: 17, color: colors.fg },
+  brand: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
+  brandText: { fontFamily: fonts.display, fontSize: 16, color: colors.fg },
   tabs: {
     flexDirection: "row",
     backgroundColor: colors.surface,
     borderRadius: 8,
-    padding: 3,
-    flexShrink: 0,
+    padding: 2,
+    flexShrink: 1,
   },
   tab: {
-    height: 30,
-    paddingHorizontal: 10,
+    height: 28,
+    paddingHorizontal: 8,
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
   },
-  tabText: { fontSize: 11, fontWeight: "500", color: colors.muted },
+  tabText: { fontSize: 10, fontWeight: "500", color: colors.muted },
 });
