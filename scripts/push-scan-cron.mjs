@@ -4,7 +4,10 @@
  *
  * Uso no Railway (serviço separado com Cron Schedule):
  *   Start Command: node scripts/push-scan-cron.mjs
- *   Cron Schedule: */30 * * * *   (UTC, mín. 5 min)
+ *   Cron Schedule: a cada 30 min, UTC (mín. 5 min) — "*" "/" "30 * * * *"
+ *   ATENÇÃO: nunca escreva a expressão cron com "*" seguido de "/" dentro
+ *   deste comentário de bloco — fecha o comentário mais cedo e quebra o
+ *   arquivo inteiro (foi exatamente o que aconteceu aqui antes).
  *
  * Variáveis:
  *   SCAN_URL          — default: $RAILWAY_PUBLIC_DOMAIN + /api/push/scan

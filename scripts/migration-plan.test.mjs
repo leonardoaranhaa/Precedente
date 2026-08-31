@@ -57,8 +57,15 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
 });
 
 test("the auth schema ships outside the globbed directory", () => {
+  // Real, always-on migrations (e.g. push_subscriptions) legitimately live
+  // directly in migrations/ — this only guards the AUTH schema specifically:
+  // 0001_auth.sql must stay out of the globbed root while sign-in is off.
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
+  const pendingNames = pendingMigrations(readdirSync(migrationsDir), []).map((m) => m.name);
+  assert.ok(
+    !pendingNames.includes(AUTH_MIGRATION),
+    "0001_auth.sql must not ship in migrations/ while sign-in is off",
+  );
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });
 
