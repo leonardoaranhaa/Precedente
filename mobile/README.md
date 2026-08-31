@@ -7,8 +7,15 @@ extremas de 20 barras) — usando a **mesma engine** do app web via
 
 ## Antes de tudo — aponte pro backend
 
-O app web já expõe `/api/analyze`. Rode o web app (`npm run dev` na raiz do
-repo) ou aponte para uma instância publicada, e configure a URL:
+O backend já está publicado na Railway:
+
+```
+https://web-production-ad1b65.up.railway.app
+```
+
+Essa URL está embutida nos perfis do `eas.json`, então builds EAS já saem
+apontando pra ela. Para desenvolvimento local, rode o web app (`npm run dev`
+na raiz do repo) ou aponte para outra instância, configurando a URL:
 
 ```bash
 # .env dentro de mobile/, ou exportado no shell antes de rodar
