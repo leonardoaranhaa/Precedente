@@ -1,7 +1,9 @@
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,10 +12,26 @@ import { RefreshCw, Star, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { colors, radius } from "../theme";
 import { formatPct, formatPrice, timeframeLabel } from "../format";
+import {
+  applyQuickFilter,
+  filterByTab,
+  quickFilterLabel,
+  WATCH_QUICK_FILTERS,
+  WATCH_TABS,
+  type WatchQuickFilter,
+  type WatchTab,
+} from "../watch-filters";
 import type { WatchItem } from "../watchlist";
+
+const TAB_LABEL: Record<WatchTab, string> = {
+  mine: "Minha watch",
+  focus: "Em foco",
+  fragile: "Frágeis",
+};
 
 export function WatchScreen({
   items,
+  focusIds = [],
   refreshingId,
   refreshingAll,
   error,
@@ -23,6 +41,7 @@ export function WatchScreen({
   onRefreshAll,
 }: {
   items: WatchItem[];
+  focusIds?: string[];
   refreshingId: string | null;
   refreshingAll: boolean;
   error: string | null;
@@ -31,6 +50,15 @@ export function WatchScreen({
   onRefresh: (item: WatchItem) => void;
   onRefreshAll: () => void;
 }) {
+  const [tab, setTab] = useState<WatchTab>("mine");
+  const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
+
+  const visible = useMemo(() => {
+    let out = filterByTab(items, tab, focusIds);
+    out = applyQuickFilter(out, quickFilter);
+    return out;
+  }, [items, tab, focusIds, quickFilter]);
+
   if (items.length === 0) {
     return (
       <View style={styles.empty}>
@@ -47,7 +75,7 @@ export function WatchScreen({
 
   return (
     <FlatList
-      data={items}
+      data={visible}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       ListHeaderComponent={
@@ -74,13 +102,52 @@ export function WatchScreen({
             </Pressable>
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <View style={styles.tabRow}>
+            {WATCH_TABS.map((t) => (
+              <Pressable
+                key={t}
+                onPress={() => setTab(t)}
+                style={[styles.tab, tab === t && { backgroundColor: colors.surface }]}
+              >
+                <Text style={[styles.tabText, tab === t && { color: colors.fg }]}>
+                  {TAB_LABEL[t]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {WATCH_QUICK_FILTERS.map((f) => (
+              <Pressable
+                key={f}
+                onPress={() => setQuickFilter(f)}
+                style={[styles.chip, quickFilter === f && { backgroundColor: colors.accent }]}
+              >
+                <Text style={[styles.chipText, quickFilter === f && { color: colors.accentFg }]}>
+                  {quickFilterLabel(f)}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
           <View style={styles.colHeader}>
-            <Text style={[styles.col, { flex: 1 }]}>Par</Text>
+            <Text style={[styles.col, { flex: 1, textAlign: "left" }]}>
+              Par · {visible.length}
+              {visible.length !== items.length ? `/${items.length}` : ""}
+            </Text>
             <Text style={styles.col}>Δ</Text>
             <Text style={styles.col}>Amostra</Text>
             <Text style={styles.col}>DD10</Text>
           </View>
         </View>
+      }
+      ListEmptyComponent={
+        <Text style={styles.emptyFilter}>Nada nesse filtro agora.</Text>
       }
       renderItem={({ item }) => {
         const up = item.changePct >= 0;
@@ -169,6 +236,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.sm,
   },
+  tabRow: {
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    padding: 4,
+    marginTop: 8,
+  },
+  tab: { flex: 1, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  tabText: { fontSize: 12, fontWeight: "500", color: colors.muted },
+  chipRow: { gap: 8, paddingVertical: 4 },
+  chip: {
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipText: { fontSize: 11, fontWeight: "500", color: colors.muted },
   colHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -183,6 +270,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     width: 56,
     textAlign: "right",
+  },
+  emptyFilter: {
+    textAlign: "center",
+    color: colors.muted,
+    fontSize: 13,
+    paddingVertical: 32,
   },
   empty: {
     flex: 1,

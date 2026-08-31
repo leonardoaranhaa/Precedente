@@ -235,15 +235,18 @@ export function analyzeSeries(
   else if (matchIdx.length < 20) sampleNote = "small";
 
   const lastHorizon = horizons[horizons.length - 1]!;
-  const recentMatches = [...matchIdx]
-    .sort((a, b) => b - a)
+  const recentMatches = [...used]
+    .sort((a, b) => b.i - a.i)
     .slice(0, 6)
-    .map((i) => {
+    .map(({ i, score }) => {
       const fwdIdx = Math.min(i + lastHorizon.bars, candles.length - 1);
       const base = closes[i]!;
       return {
         t: candles[i]!.t,
         forward: base > 0 ? ((closes[fwdIdx]! - base) / base) * 100 : 0,
+        // >=5 = todos os critérios bateram; abaixo disso, o match só entrou
+        // porque algum critério foi relaxado (ver `relaxed` acima).
+        score,
       };
     });
 
@@ -287,6 +290,16 @@ export function analyzeSeries(
     };
   });
 
+  // `recentMatches` (a tape) is the N most recent occurrences regardless of
+  // how far back they are; the chart only draws the last CHART_BARS candles.
+  // Those two windows rarely overlap — a fingerprint that recurs every ~15
+  // bars can easily have zero of its 6 most recent hits inside a 120-bar
+  // chart. Marking matches on the chart needs its own set, scoped to what
+  // the chart actually shows.
+  const chartMatches = used
+    .filter((c) => c.i >= from)
+    .map(({ i, score }) => ({ t: candles[i]!.t, score }));
+
   return {
     snapshot,
     chart,
@@ -299,6 +312,7 @@ export function analyzeSeries(
       sampleNote,
       horizons,
       recentMatches,
+      chartMatches,
     },
   };
 }

@@ -1,11 +1,25 @@
-import { Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatPct, formatPrice, timeframeLabel } from "@/lib/market/labels";
+import {
+  applyQuickFilter,
+  filterByTab,
+  quickFilterLabel,
+  sortWatch,
+  WATCH_QUICK_FILTERS,
+  WATCH_TABS,
+  type WatchQuickFilter,
+  type WatchSortDir,
+  type WatchSortKey,
+  type WatchTab,
+} from "@/lib/market/watch-filters";
 import type { WatchItem } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
 
 type Props = {
   items: WatchItem[];
+  focusIds?: string[];
   activeId?: string | null;
   refreshingId?: string | null;
   refreshingAll?: boolean;
@@ -17,8 +31,15 @@ type Props = {
   className?: string;
 };
 
+const TAB_LABEL: Record<WatchTab, string> = {
+  mine: "Minha watch",
+  focus: "Em foco",
+  fragile: "Frágeis",
+};
+
 export function WatchPanel({
   items,
+  focusIds = [],
   activeId,
   refreshingId = null,
   refreshingAll = false,
@@ -29,6 +50,36 @@ export function WatchPanel({
   onRefreshAll,
   className,
 }: Props) {
+  // A versão compacta (preview na home, sem "Reavaliar todos") não ganha
+  // abas/filtros/sort — o pedido é ver os últimos pares, não peneirar.
+  const richView = Boolean(onRefreshAll);
+
+  const [tab, setTab] = useState<WatchTab>("mine");
+  const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
+  const [sortKey, setSortKey] = useState<WatchSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<WatchSortDir>("desc");
+
+  const visible = useMemo(() => {
+    if (!richView) return items;
+    let out = filterByTab(items, tab, focusIds);
+    out = applyQuickFilter(out, quickFilter);
+    if (sortKey) out = sortWatch(out, sortKey, sortDir);
+    return out;
+  }, [items, richView, tab, focusIds, quickFilter, sortKey, sortDir]);
+
+  function toggleSort(key: WatchSortKey) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("desc");
+      return;
+    }
+    if (sortDir === "desc") {
+      setSortDir("asc");
+      return;
+    }
+    setSortKey(null);
+  }
+
   if (items.length === 0) {
     return (
       <div
@@ -64,7 +115,10 @@ export function WatchPanel({
           Watch
         </p>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] tabular-nums text-subtle">{items.length}</span>
+          <span className="font-mono text-[11px] tabular-nums text-subtle">
+            {visible.length}
+            {visible.length !== items.length ? `/${items.length}` : ""}
+          </span>
           {onRefreshAll ? (
             <button
               type="button"
@@ -84,114 +138,206 @@ export function WatchPanel({
         </div>
       </div>
 
+      {richView ? (
+        <>
+          <div className="flex gap-1 border-b border-border bg-bg/40 p-1.5">
+            {WATCH_TABS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={cn(
+                  "h-8 flex-1 rounded-sm text-xs font-medium",
+                  tab === t
+                    ? "bg-surface text-fg shadow-[var(--shadow-border)]"
+                    : "text-muted hover:text-fg",
+                )}
+              >
+                {TAB_LABEL[t]}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
+            {WATCH_QUICK_FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setQuickFilter(f)}
+                className={cn(
+                  "h-7 rounded-full px-2.5 text-[11px] font-medium shadow-[var(--shadow-border)]",
+                  quickFilter === f
+                    ? "bg-accent text-accent-fg"
+                    : "bg-bg text-muted hover:text-fg",
+                )}
+              >
+                {quickFilterLabel(f)}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
       {error ? (
         <p className="border-b border-border bg-down/10 px-3 py-2 text-xs text-down">{error}</p>
       ) : null}
 
       <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 border-b border-border px-3 py-1.5 text-[10px] tracking-wide text-subtle uppercase">
         <span>Par</span>
-        <span className="text-right">Δ</span>
-        <span className="text-right">Amostra</span>
-        <span className="text-right">DD10</span>
+        {richView ? (
+          <>
+            <SortHeader label="Δ" active={sortKey === "delta"} dir={sortDir} onClick={() => toggleSort("delta")} />
+            <SortHeader
+              label="Amostra"
+              active={sortKey === "sample"}
+              dir={sortDir}
+              onClick={() => toggleSort("sample")}
+            />
+            <SortHeader label="DD10" active={sortKey === "dd"} dir={sortDir} onClick={() => toggleSort("dd")} />
+          </>
+        ) : (
+          <>
+            <span className="text-right">Δ</span>
+            <span className="text-right">Amostra</span>
+            <span className="text-right">DD10</span>
+          </>
+        )}
       </div>
 
-      <ul className="max-h-[min(60vh,420px)] overflow-y-auto">
-        {items.map((item) => {
-          const active = activeId === item.id;
-          const up = item.changePct >= 0;
-          const sampleVariant =
-            item.sampleNote === "ok" ? "up" : item.sampleNote === "small" ? "warn" : "down";
-          const extreme = item.near20High || item.near20Low;
-          const rowBusy = refreshingId === item.id || refreshingAll;
-          return (
-            <li
-              key={item.id}
-              className={cn(
-                "group border-b border-border last:border-b-0",
-                rowBusy && "opacity-60",
-              )}
-            >
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onSelect(item)}
+      {richView && visible.length === 0 ? (
+        <p className="px-3 py-6 text-center text-sm text-muted">
+          Nada nesse filtro agora.
+        </p>
+      ) : (
+        <ul className="max-h-[min(60vh,420px)] overflow-y-auto">
+          {visible.map((item) => {
+            const active = activeId === item.id;
+            const up = item.changePct >= 0;
+            const sampleVariant =
+              item.sampleNote === "ok" ? "up" : item.sampleNote === "small" ? "warn" : "down";
+            const extreme = item.near20High || item.near20Low;
+            const rowBusy = refreshingId === item.id || refreshingAll;
+            return (
+              <li
+                key={item.id}
                 className={cn(
-                  "grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2.5 text-left transition-colors disabled:cursor-wait",
-                  active ? "bg-bg-elevated" : "hover:bg-bg-elevated/60",
+                  "group border-b border-border last:border-b-0",
+                  rowBusy && "opacity-60",
                 )}
               >
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-medium text-fg">
-                      {item.displayTicker.split("/")[0] ?? item.displayTicker}
-                    </span>
-                    {extreme ? (
-                      <span className="text-[10px] text-warn" title="Extremo 20 barras">
-                        ▲
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="block truncate text-[11px] text-subtle">
-                    {timeframeLabel(item.timeframe)} · RSI {item.rsi14.toFixed(0)}
-                  </span>
-                </span>
-                <span
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onSelect(item)}
                   className={cn(
-                    "font-mono text-xs tabular-nums",
-                    up ? "text-up" : "text-down",
+                    "grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2.5 text-left transition-colors disabled:cursor-wait",
+                    active ? "bg-bg-elevated" : "hover:bg-bg-elevated/60",
                   )}
                 >
-                  {formatPct(item.changePct, 1)}
-                </span>
-                <Badge variant={sampleVariant} className="justify-self-end uppercase">
-                  {item.sampleNote}
-                </Badge>
-                <span className="justify-self-end font-mono text-xs tabular-nums text-down">
-                  {formatPct(item.medianDrawdownPct, 1)}
-                </span>
-              </button>
-              <div className="flex items-center justify-between gap-2 px-3 pb-2">
-                <span className="truncate font-mono text-[10px] tabular-nums text-subtle">
-                  {formatPrice(item.price)}
-                </span>
-                <div className="flex items-center gap-1">
-                  {onRefresh ? (
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-medium text-fg">
+                        {item.displayTicker.split("/")[0] ?? item.displayTicker}
+                      </span>
+                      {extreme ? (
+                        <span className="text-[10px] text-warn" title="Extremo 20 barras">
+                          ▲
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="block truncate text-[11px] text-subtle">
+                      {timeframeLabel(item.timeframe)} · RSI {item.rsi14.toFixed(0)}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "font-mono text-xs tabular-nums",
+                      up ? "text-up" : "text-down",
+                    )}
+                  >
+                    {formatPct(item.changePct, 1)}
+                  </span>
+                  <Badge variant={sampleVariant} className="justify-self-end uppercase">
+                    {item.sampleNote}
+                  </Badge>
+                  <span className="justify-self-end font-mono text-xs tabular-nums text-down">
+                    {formatPct(item.medianDrawdownPct, 1)}
+                  </span>
+                </button>
+                <div className="flex items-center justify-between gap-2 px-3 pb-2">
+                  <span className="truncate font-mono text-[10px] tabular-nums text-subtle">
+                    {formatPrice(item.price)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {onRefresh ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`Reavaliar ${item.displayTicker}`}
+                        title="Reavaliar agora"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRefresh(item);
+                        }}
+                        className="rounded p-1 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
+                      >
+                        {refreshingId === item.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="size-3.5" />
+                        )}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={`Reavaliar ${item.displayTicker}`}
-                      title="Reavaliar agora"
+                      aria-label={`Remover ${item.displayTicker} da watch`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onRefresh(item);
+                        onRemove(item.id);
                       }}
-                      className="rounded p-1 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
+                      className="rounded p-1 text-subtle opacity-60 hover:bg-bg hover:text-fg hover:opacity-100 disabled:opacity-40"
                     >
-                      {refreshingId === item.id ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <RefreshCw className="size-3.5" />
-                      )}
+                      <Trash2 className="size-3.5" />
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    aria-label={`Remover ${item.displayTicker} da watch`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(item.id);
-                    }}
-                    className="rounded p-1 text-subtle opacity-60 hover:bg-bg hover:text-fg hover:opacity-100 disabled:opacity-40"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dir: WatchSortDir;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-end gap-0.5 text-right uppercase hover:text-fg",
+        active && "text-fg",
+      )}
+    >
+      {label}
+      {active ? (
+        dir === "desc" ? (
+          <ArrowDown className="size-2.5" />
+        ) : (
+          <ArrowUp className="size-2.5" />
+        )
+      ) : null}
+    </button>
   );
 }

@@ -3,10 +3,15 @@ import type { ChartPoint } from "@/lib/market/types";
 import { formatPrice } from "@/lib/market/labels";
 import { cn } from "@/lib/utils";
 
+type Match = { t: number; score: number };
+
 type Props = {
   data: ChartPoint[];
+  matches?: Match[];
   className?: string;
 };
+
+const FULL_MATCH_SCORE = 5;
 
 function linePath(
   values: Array<number | null>,
@@ -27,7 +32,17 @@ function linePath(
   return d.trim();
 }
 
-export function OhlcChart({ data, className }: Props) {
+export function OhlcChart({ data, matches, className }: Props) {
+  // Só marca matches que caem dentro da janela visível (últimas barras do
+  // chart) — precedentes mais antigos existem no cálculo, mas não têm barra
+  // pra desenhar aqui.
+  const matchByTime = useMemo(() => {
+    if (!matches?.length) return null;
+    const map = new Map<number, number>();
+    for (const m of matches) map.set(m.t, m.score);
+    return map;
+  }, [matches]);
+
   const layout = useMemo(() => {
     if (data.length === 0) return null;
     const min = Math.min(...data.map((d) => d.l));
@@ -110,6 +125,18 @@ export function OhlcChart({ data, className }: Props) {
                 fill={color}
                 rx="0.4"
               />
+              {matchByTime?.has(d.t) ? (
+                <circle
+                  cx={cx}
+                  cy={Math.max(4, layout.y(d.h) - 6)}
+                  r="2.4"
+                  fill={
+                    matchByTime.get(d.t)! >= FULL_MATCH_SCORE ? "var(--color-accent)" : "var(--color-bg)"
+                  }
+                  stroke="var(--color-accent)"
+                  strokeWidth="1"
+                />
+              ) : null}
             </g>
           );
         })}
@@ -124,6 +151,14 @@ export function OhlcChart({ data, className }: Props) {
             <span className="size-1.5 rounded-full bg-subtle" />
             SMA50
           </span>
+          {matchByTime?.size ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full border border-accent bg-accent" />
+              match
+              <span className="size-1.5 rounded-full border border-accent bg-bg" />
+              relaxado
+            </span>
+          ) : null}
         </span>
         <span className="font-mono tabular-nums text-fg">{formatPrice(layout.last.c)}</span>
       </div>
