@@ -6,6 +6,7 @@ import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
 import { makeThumb } from "@/lib/compress";
@@ -271,14 +272,14 @@ function Home() {
             <div className="space-y-8">
               <div className="space-y-3">
                 <p className="text-xs tracking-wide text-muted uppercase">
-                  Print + ticker · nunca compre/venda
+                  OHLC real · padrões históricos · nunca compre/venda
                 </p>
                 <h1 className="font-display text-4xl leading-tight tracking-tight text-fg">
                   Quantas vezes isso já aconteceu?
                 </h1>
                 <p className="max-w-md text-base leading-relaxed text-muted">
-                  O print descreve o que se vê. A estatística vem do OHLC real: RSI, médias, e o
-                  que o preço fez depois — com foco no risco do caminho.
+                  A estatística vem do histórico real: RSI, médias e o que o preço fez depois.
+                  No resultado, o assistente de cenário descreve o padrão — sem ordenar exposição.
                 </p>
               </div>
 
@@ -315,6 +316,9 @@ function Home() {
           </div>
         )}
       </div>
+
+      {/* Assistente flutuante: disponível sempre que houver um resultado carregado */}
+      {result ? <ScenarioAssistant analysis={result} /> : null}
     </div>
   );
 }
