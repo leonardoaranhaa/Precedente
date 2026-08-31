@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
+import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
 import { SplitBar } from "../components/SplitBar";
@@ -34,7 +35,7 @@ export function ResultScreen({
   watched?: boolean;
   onToggleWatch?: () => void;
 }) {
-  const { snapshot, precedent, vision } = analysis;
+  const { snapshot, precedent, vision, onchain } = analysis;
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
@@ -44,7 +45,6 @@ export function ResultScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Pair header */}
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
           <ArrowLeft size={20} color={colors.fg} />
@@ -53,6 +53,7 @@ export function ResultScreen({
           <Text style={styles.eyebrow}>
             {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
             {formatInt(analysis.candleCount)} candles
+            {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
           </Text>
           <Text style={styles.ticker} numberOfLines={1}>
             {analysis.displayTicker}
@@ -82,7 +83,6 @@ export function ResultScreen({
         </Pressable>
       ) : null}
 
-      {/* Chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
         {precedent.horizons.map((h, i) => (
           <HorizonChip
@@ -117,6 +117,25 @@ export function ResultScreen({
             tone="warn"
           />
         )}
+        {onchain?.fundingRate != null ? (
+          <Chip
+            label="Funding"
+            primary={`${onchain.fundingRate >= 0 ? "+" : ""}${(onchain.fundingRate * 100).toFixed(3).replace(".", ",")}%`}
+            tone={Math.abs(onchain.fundingRate) >= 0.0005 ? "warn" : undefined}
+          />
+        ) : null}
+        {onchain?.liquidityUsd != null ? (
+          <Chip
+            label="Liq DEX"
+            primary={
+              onchain.liquidityUsd >= 1e9
+                ? `$${(onchain.liquidityUsd / 1e9).toFixed(1)}B`
+                : onchain.liquidityUsd >= 1e6
+                  ? `$${(onchain.liquidityUsd / 1e6).toFixed(1)}M`
+                  : `$${(onchain.liquidityUsd / 1e3).toFixed(0)}K`
+            }
+          />
+        ) : null}
       </ScrollView>
 
       <Text style={styles.fpLine}>
@@ -126,10 +145,10 @@ export function ResultScreen({
           : ""}
       </Text>
 
-      {/* Risk first on mobile — prevention focus */}
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
 
-      {/* Horizontes */}
+      {onchain ? <OnchainCard onchain={onchain} /> : null}
+
       <View style={[styles.card, { padding: 16, gap: 14 }]}>
         <View style={styles.rowBetween}>
           <View>
@@ -189,7 +208,6 @@ export function ResultScreen({
         <PathChart horizon={horizon} />
       </View>
 
-      {/* Fingerprint + snapshot */}
       <View style={styles.twoCol}>
         <View style={[styles.card, styles.half, { padding: 14, gap: 8 }]}>
           <Text style={styles.eyebrow}>Fingerprint</Text>
@@ -211,7 +229,6 @@ export function ResultScreen({
         </View>
       </View>
 
-      {/* Matches tape */}
       {precedent.recentMatches.length > 0 ? (
         <View style={styles.card}>
           <View style={styles.tapeHead}>
@@ -244,7 +261,6 @@ export function ResultScreen({
         </View>
       ) : null}
 
-      {/* Visão */}
       {analysis.thumbUri || vision || analysis.visionError ? (
         <View style={styles.card}>
           {analysis.thumbUri ? (
@@ -274,8 +290,8 @@ export function ResultScreen({
       ) : null}
 
       <Text style={styles.disclaimer}>
-        Frequência e contexto de precedentes — nunca ordem de compra ou venda. O passado não
-        garante o próximo movimento. Estatística via OHLC da {analysis.source}.
+        Frequência e contexto de precedentes — nunca ordem de compra ou venda. Funding e
+        liquidez DEX são pressão e fragilidade, não sinal de entrada. OHLC: {analysis.source}.
       </Text>
     </ScrollView>
   );
