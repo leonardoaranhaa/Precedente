@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { analyze, fetchTopTraded } from "./src/api";
 import { Mark } from "./src/components/Mark";
@@ -41,6 +41,12 @@ export default function App() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
 
+  // Refs para refresh em sequência sem ler estado React obsoleto.
+  const historyRef = useRef(history);
+  const watchRef = useRef(watch);
+  historyRef.current = history;
+  watchRef.current = watch;
+
   useEffect(() => {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
@@ -80,10 +86,13 @@ export default function App() {
         thumbUri,
       };
       setResult(stored);
-      setHistory(await pushHistory(history, stored));
-      // Se já estiver na watch, atualiza o snapshot pinado.
-      if (isWatched(watch, stored)) {
-        setWatch(await upsertWatch(watch, stored));
+      const nextHistory = await pushHistory(historyRef.current, stored);
+      setHistory(nextHistory);
+      historyRef.current = nextHistory;
+      if (isWatched(watchRef.current, stored)) {
+        const nextWatch = await upsertWatch(watchRef.current, stored);
+        setWatch(nextWatch);
+        watchRef.current = nextWatch;
       }
       setStep("done");
       setView("result");
@@ -97,10 +106,17 @@ export default function App() {
   }
 
   async function toggleWatch(analysis: StoredAnalysis) {
-    if (isWatched(watch, analysis)) {
-      setWatch(await removeWatch(watch, `${analysis.ticker}:${analysis.timeframe}`));
+    if (isWatched(watchRef.current, analysis)) {
+      const next = await removeWatch(
+        watchRef.current,
+        `${analysis.ticker}:${analysis.timeframe}`,
+      );
+      setWatch(next);
+      watchRef.current = next;
     } else {
-      setWatch(await upsertWatch(watch, analysis));
+      const next = await upsertWatch(watchRef.current, analysis);
+      setWatch(next);
+      watchRef.current = next;
     }
   }
 
@@ -126,14 +142,12 @@ export default function App() {
         hasImage: false,
         thumbUri: null,
       };
-      setHistory((h) => {
-        // pushHistory é async; atualizamos em seguida
-        return h;
-      });
-      const nextHistory = await pushHistory(history, stored);
+      const nextHistory = await pushHistory(historyRef.current, stored);
       setHistory(nextHistory);
-      const nextWatch = await upsertWatch(watch, stored);
+      historyRef.current = nextHistory;
+      const nextWatch = await upsertWatch(watchRef.current, stored);
       setWatch(nextWatch);
+      watchRef.current = nextWatch;
       if (opts?.openResult) {
         setResult(stored);
         setView("result");
@@ -150,17 +164,14 @@ export default function App() {
   }
 
   async function refreshAllWatch() {
-    if (watch.length === 0 || refreshingAll) return;
+    if (watchRef.current.length === 0 || refreshingAll) return;
     setWatchError(null);
     setRefreshingAll(true);
-    let last: StoredAnalysis | null = null;
+    const list = [...watchRef.current];
     let failed = 0;
-    // Cópia estável da lista no início
-    const list = [...watch];
     for (const item of list) {
       const stored = await refreshWatchItem(item, { silent: true });
-      if (stored) last = stored;
-      else failed += 1;
+      if (!stored) failed += 1;
     }
     setRefreshingAll(false);
     if (failed > 0) {
@@ -170,12 +181,10 @@ export default function App() {
           : `${failed} par(es) falharam na reavaliação.`,
       );
     }
-    // Mantém na Watch; não força abrir resultado no bulk
-    void last;
   }
 
   function openFromWatch(item: WatchItem) {
-    const fromHistory = history.find(
+    const fromHistory = historyRef.current.find(
       (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
     );
     if (fromHistory) {
@@ -183,7 +192,6 @@ export default function App() {
       setView("result");
       return;
     }
-    // Sem snapshot: dispara refresh e abre o resultado
     void refreshWatchItem(item, { openResult: true });
   }
 
@@ -224,7 +232,12 @@ export default function App() {
           refreshingAll={refreshingAll}
           error={watchError}
           onOpen={openFromWatch}
-          onRemove={(id) => void removeWatch(watch, id).then(setWatch)}
+          onRemove={(id) =>
+            void removeWatch(watchRef.current, id).then((next) => {
+              setWatch(next);
+              watchRef.current = next;
+            })
+          }
           onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
           onRefreshAll={() => void refreshAllWatch()}
         />
