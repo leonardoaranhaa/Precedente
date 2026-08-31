@@ -11,6 +11,7 @@ import { Badge } from "../components/Badge";
 import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
+import { SampleBanner } from "../components/SampleBanner";
 import { SplitBar } from "../components/SplitBar";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
@@ -22,6 +23,7 @@ import {
   formatWhen,
   timeframeLabel,
 } from "../format";
+import { sampleTitle } from "../sample-copy";
 import type { HorizonOutcome, StoredAnalysis } from "../types";
 
 export function ResultScreen({
@@ -94,7 +96,7 @@ export function ResultScreen({
         ))}
         <Chip
           label="Amostra"
-          primary={precedent.sampleNote.toUpperCase()}
+          primary={sampleTitle(precedent.sampleNote)}
           secondary={`n=${formatInt(precedent.matches)}`}
           tone={
             precedent.sampleNote === "ok"
@@ -144,6 +146,8 @@ export function ResultScreen({
           ? ` · Último ${snapshot.lastExtrema.type === "top" ? "topo" : "fundo"} há ${snapshot.lastExtrema.barsAgo} barras.`
           : ""}
       </Text>
+
+      <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} />
 
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
 
@@ -290,8 +294,9 @@ export function ResultScreen({
       ) : null}
 
       <Text style={styles.disclaimer}>
-        Frequência e contexto de precedentes — nunca ordem de compra ou venda. Funding e
-        liquidez DEX são pressão e fragilidade, não sinal de entrada. OHLC: {analysis.source}.
+        Frequência e caminho em condições parecidas — nunca ordem de compra ou venda. Use{" "}
+        <Text style={{ color: colors.fg }}>Ler o cenário</Text> para o texto corrido. OHLC:{" "}
+        {analysis.source}.
       </Text>
     </ScrollView>
   );
@@ -374,7 +379,7 @@ function sideLabel(side: "above" | "below" | "near"): string {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 48, gap: 14 },
+  container: { padding: 16, paddingBottom: 96, gap: 14 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   backBtn: { marginTop: 2 },
   eyebrow: {
@@ -426,7 +431,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 12,
     color: colors.fg,
-    fontVariant: ["tabular-nums"],
   },
   fpLine: { fontSize: 12, lineHeight: 17, color: colors.muted },
   card: {
