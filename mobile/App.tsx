@@ -9,11 +9,19 @@ import { loadHistory, pushHistory } from "./src/history";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
+import { WatchScreen } from "./src/screens/WatchScreen";
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
 import type { StoredAnalysis, Timeframe } from "./src/types";
+import {
+  isWatched,
+  loadWatchlist,
+  removeWatch,
+  upsertWatch,
+  type WatchItem,
+} from "./src/watchlist";
 
-type Screen = "home" | "history" | "result";
+type Screen = "home" | "history" | "result" | "watch";
 
 export default function App() {
   const [fontsLoaded] = useAppFonts();
@@ -27,14 +35,15 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
+  const [watch, setWatch] = useState<WatchItem[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
 
   useEffect(() => {
     loadHistory().then(setHistory);
+    loadWatchlist().then(setWatch);
   }, []);
 
   useEffect(() => {
-    // Falha aqui não vira erro de tela: a lista fixa cobre.
     fetchTopTraded(12)
       .then((pairs) => setTopTraded(pairs.map((p) => p.base)))
       .catch(() => {});
@@ -49,13 +58,17 @@ export default function App() {
     const t1 = setTimeout(() => setStep("stats"), 600);
     const t2 = setTimeout(() => setStep(image ? "vision" : "stats"), 1400);
     try {
-      const imageDataUrl = image ? await toAnalysisDataUrl(image.uri, image.width, image.height) : null;
+      const imageDataUrl = image
+        ? await toAnalysisDataUrl(image.uri, image.width, image.height)
+        : null;
       const payload = await analyze({
         ticker: normalizeTicker(ticker),
         timeframe,
         imageDataUrl,
       });
-      const thumbUri = image ? await toThumbDataUrl(image.uri, image.width, image.height) : null;
+      const thumbUri = image
+        ? await toThumbDataUrl(image.uri, image.width, image.height)
+        : null;
       const stored: StoredAnalysis = {
         ...payload,
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -76,6 +89,30 @@ export default function App() {
     }
   }
 
+  async function toggleWatch(analysis: StoredAnalysis) {
+    if (isWatched(watch, analysis)) {
+      setWatch(await removeWatch(watch, `${analysis.ticker}:${analysis.timeframe}`));
+    } else {
+      setWatch(await upsertWatch(watch, analysis));
+    }
+  }
+
+  function openFromWatch(item: WatchItem) {
+    const fromHistory = history.find(
+      (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
+    );
+    if (fromHistory) {
+      setResult(fromHistory);
+      setView("result");
+      return;
+    }
+    setTicker(item.displayTicker.split("/")[0] ?? item.ticker);
+    setTimeframe(item.timeframe);
+    setView("home");
+  }
+
+  const resultWatched = result ? isWatched(watch, result) : false;
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
@@ -92,12 +129,24 @@ export default function App() {
         </Pressable>
         <View style={styles.tabs}>
           <Tab active={view === "home"} onPress={() => setView("home")} label="Analisar" />
+          <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
           <Tab active={view === "history"} onPress={() => setView("history")} label="Histórico" />
         </View>
       </View>
 
       {view === "result" && result ? (
-        <ResultScreen analysis={result} onBack={() => setView("home")} />
+        <ResultScreen
+          analysis={result}
+          onBack={() => setView("home")}
+          watched={resultWatched}
+          onToggleWatch={() => void toggleWatch(result)}
+        />
+      ) : view === "watch" ? (
+        <WatchScreen
+          items={watch}
+          onOpen={openFromWatch}
+          onRemove={(id) => void removeWatch(watch, id).then(setWatch)}
+        />
       ) : view === "history" ? (
         <HistoryScreen
           items={history}
@@ -125,9 +174,20 @@ export default function App() {
   );
 }
 
-function Tab({ active, onPress, label }: { active: boolean; onPress: () => void; label: string }) {
+function Tab({
+  active,
+  onPress,
+  label,
+}: {
+  active: boolean;
+  onPress: () => void;
+  label: string;
+}) {
   return (
-    <Pressable onPress={onPress} style={[styles.tab, active && { backgroundColor: colors.bgElevated }]}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.tab, active && { backgroundColor: colors.bgElevated }]}
+    >
       <Text style={[styles.tabText, active && { color: colors.fg }]}>{label}</Text>
     </Pressable>
   );
@@ -139,12 +199,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
   },
-  brand: { flexDirection: "row", alignItems: "center", gap: 8 },
-  brandText: { fontFamily: fonts.display, fontSize: 18, color: colors.fg },
-  tabs: { flexDirection: "row", backgroundColor: colors.surface, borderRadius: 8, padding: 4 },
-  tab: { height: 32, paddingHorizontal: 12, borderRadius: 6, alignItems: "center", justifyContent: "center" },
-  tabText: { fontSize: 12, fontWeight: "500", color: colors.muted },
+  brand: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
+  brandText: { fontFamily: fonts.display, fontSize: 17, color: colors.fg },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 3,
+    flexShrink: 0,
+  },
+  tab: {
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabText: { fontSize: 11, fontWeight: "500", color: colors.muted },
 });
