@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
-import { analyze } from "./src/api";
+import { analyze, fetchTopTraded } from "./src/api";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
 import { fonts, useAppFonts } from "./src/fonts";
@@ -27,9 +27,17 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
+  const [topTraded, setTopTraded] = useState<string[]>([]);
 
   useEffect(() => {
     loadHistory().then(setHistory);
+  }, []);
+
+  useEffect(() => {
+    // Falha aqui não vira erro de tela: a lista fixa cobre.
+    fetchTopTraded(12)
+      .then((pairs) => setTopTraded(pairs.map((p) => p.base)))
+      .catch(() => {});
   }, []);
 
   if (!fontsLoaded) return null;
@@ -106,6 +114,7 @@ export default function App() {
           busy={busy}
           step={step}
           error={error}
+          topTraded={topTraded}
           onTicker={setTicker}
           onTimeframe={setTimeframe}
           onImage={setImage}

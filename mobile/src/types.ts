@@ -50,6 +50,9 @@ export type HorizonOutcome = {
   p10: number;
   p90: number;
   medianPath: number[];
+  medianDrawdownPct: number;
+  worstDrawdownPct: number;
+  medianRunupPct: number;
 };
 
 export type Snapshot = {
@@ -124,3 +127,12 @@ export type StoredAnalysis = AnalysisPayload & {
 };
 
 export type ApiErrorBody = { error: string };
+
+export type TradedPair = {
+  symbol: string;
+  display: string;
+  base: string;
+  lastPrice: number;
+  changePct: number;
+  quoteVolume: number;
+};

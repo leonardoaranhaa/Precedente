@@ -193,6 +193,33 @@ export function AnalysisResult({ analysis, onBack }: Props) {
               <Row label="10% melhor que (P90)" value={formatPct(horizon.p90)} />
             </dl>
 
+            <Separator />
+
+            <div className="space-y-3">
+              <p className="text-sm text-fg">O caminho até lá</p>
+              <dl className="grid grid-cols-2 gap-3">
+                <Row
+                  label="queda típica no caminho"
+                  value={formatPct(horizon.medianDrawdownPct)}
+                  tone="down"
+                />
+                <Row
+                  label="alta típica no caminho"
+                  value={formatPct(horizon.medianRunupPct)}
+                  tone="up"
+                />
+                <Row
+                  label="pior queda registrada"
+                  value={formatPct(horizon.worstDrawdownPct)}
+                  tone="down"
+                />
+              </dl>
+              <p className="text-xs leading-relaxed text-subtle">
+                O retorno acima é só o ponto final. Quem opera alavancado é
+                liquidado pelo caminho, não pelo fim dele.
+              </p>
+            </div>
+
             <PathChart horizon={horizon} />
           </section>
         </div>
@@ -279,14 +306,25 @@ function Metric({
 function Row({
   label,
   value,
+  tone,
 }: {
   label: string;
   value: string;
+  tone?: "up" | "down";
 }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <dt className="text-xs text-muted">{label}</dt>
-      <dd className="font-mono text-sm tabular-nums text-fg">{value}</dd>
+      <dd
+        className={cn(
+          "font-mono text-sm tabular-nums",
+          tone === "up" && "text-up",
+          tone === "down" && "text-down",
+          !tone && "text-fg",
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

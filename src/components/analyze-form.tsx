@@ -12,6 +12,7 @@ type Props = {
   image: string | null;
   busy: boolean;
   error: string | null;
+  topTraded: string[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
   onImage: (v: string | null) => void;
@@ -24,12 +25,15 @@ export function AnalyzeForm({
   image,
   busy,
   error,
+  topTraded,
   onTicker,
   onTimeframe,
   onImage,
   onSubmit,
 }: Props) {
   const current = normalizeTicker(ticker);
+  // Ranking ao vivo por volume 24h; a lista fixa cobre a falha da rede.
+  const chips = topTraded.length > 0 ? topTraded.slice(0, 6) : [...POPULAR_TICKERS.slice(0, 6)];
 
   return (
     <form
@@ -58,7 +62,7 @@ export function AnalyzeForm({
           className="font-mono uppercase"
         />
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {POPULAR_TICKERS.slice(0, 6).map((t) => {
+          {chips.map((t) => {
             const active = current === t;
             return (
               <button

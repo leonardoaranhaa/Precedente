@@ -26,6 +26,7 @@ type Props = {
   busy: boolean;
   step: PipelineStep;
   error: string | null;
+  topTraded: string[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
   onImage: (v: PickedImage | null) => void;
@@ -39,6 +40,7 @@ export function HomeScreen({
   busy,
   step,
   error,
+  topTraded,
   onTicker,
   onTimeframe,
   onImage,
@@ -46,6 +48,8 @@ export function HomeScreen({
 }: Props) {
   const [pickError, setPickError] = useState<string | null>(null);
   const current = normalizeTicker(ticker);
+  // Ranking ao vivo por volume 24h; a lista fixa cobre a falha da rede.
+  const chips = topTraded.length > 0 ? topTraded.slice(0, 6) : [...POPULAR_TICKERS.slice(0, 6)];
 
   async function pickImage() {
     setPickError(null);
@@ -111,7 +115,7 @@ export function HomeScreen({
               style={styles.input}
             />
             <View style={styles.chipRow}>
-              {POPULAR_TICKERS.slice(0, 6).map((t) => {
+              {chips.map((t) => {
                 const active = current === `${t}USDT` || current === t;
                 return (
                   <Pressable

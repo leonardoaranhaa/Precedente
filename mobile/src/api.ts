@@ -1,5 +1,5 @@
-import { ANALYZE_ENDPOINT } from "./config";
-import type { AnalysisPayload, ApiErrorBody, Timeframe } from "./types";
+import { ANALYZE_ENDPOINT, API_BASE_URL } from "./config";
+import type { AnalysisPayload, ApiErrorBody, Timeframe, TradedPair } from "./types";
 
 export type AnalyzeRequest = {
   ticker: string;
@@ -33,4 +33,17 @@ export async function analyze(input: AnalyzeRequest): Promise<AnalysisPayload> {
   }
 
   return body as AnalysisPayload;
+}
+
+/**
+ * Pares mais negociados nas últimas 24h. Quem chama trata a falha caindo na
+ * lista fixa — o ranking é conveniência, não pré-requisito da análise.
+ */
+export async function fetchTopTraded(limit = 12): Promise<TradedPair[]> {
+  const response = await fetch(`${API_BASE_URL}/api/universe?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error(`Não foi possível ler o ranking (status ${response.status}).`);
+  }
+  const body = (await response.json()) as { pairs?: TradedPair[] };
+  return body.pairs ?? [];
 }

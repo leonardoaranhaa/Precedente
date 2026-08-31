@@ -47,6 +47,15 @@ export type HorizonOutcome = {
   p10: number;
   p90: number;
   medianPath: number[];
+  /**
+   * Excursão do caminho, não do fim: o quanto o preço afundou (drawdown) e
+   * subiu (runup) ANTES de chegar ao fim do horizonte. Em ativos que disparam
+   * e despencam, o retorno final é quase moeda ao ar enquanto o caminho
+   * decide quem sobrevive — é o drawdown que liquida posição alavancada.
+   */
+  medianDrawdownPct: number;
+  worstDrawdownPct: number;
+  medianRunupPct: number;
 };
 
 export type Snapshot = {

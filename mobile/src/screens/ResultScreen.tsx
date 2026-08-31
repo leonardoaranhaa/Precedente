@@ -155,6 +155,31 @@ export function ResultScreen({
         </View>
 
         <PathChart horizon={horizon} />
+
+        <View style={styles.divider} />
+
+        <Text style={styles.body}>O caminho até lá</Text>
+        <View style={styles.statRows}>
+          <StatRow
+            label="queda típica"
+            value={formatPct(horizon.medianDrawdownPct)}
+            tone="down"
+          />
+          <StatRow
+            label="alta típica"
+            value={formatPct(horizon.medianRunupPct)}
+            tone="up"
+          />
+          <StatRow
+            label="pior queda"
+            value={formatPct(horizon.worstDrawdownPct)}
+            tone="down"
+          />
+        </View>
+        <Text style={styles.disclaimer}>
+          O retorno acima é só o ponto final. Quem opera alavancado é liquidado
+          pelo caminho, não pelo fim dele.
+        </Text>
       </View>
 
       {precedent.recentMatches.length > 0 ? (
@@ -215,11 +240,27 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: "
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "up" | "down";
+}) {
   return (
     <View style={styles.statRow}>
       <Text style={styles.muted}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text
+        style={[
+          styles.statValue,
+          tone === "up" && { color: colors.up },
+          tone === "down" && { color: colors.down },
+        ]}
+      >
+        {value}
+      </Text>
     </View>
   );
 }

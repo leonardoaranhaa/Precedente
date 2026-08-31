@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiUniverseRouteImport } from './routes/api/universe'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUniverseRoute = ApiUniverseRouteImport.update({
+  id: '/api/universe',
+  path: '/api/universe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/universe': typeof ApiUniverseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/universe': typeof ApiUniverseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/universe': typeof ApiUniverseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/analyze'
+  fullPaths: '/' | '/api/analyze' | '/api/universe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/analyze'
-  id: '__root__' | '/' | '/api/analyze'
+  to: '/' | '/api/analyze' | '/api/universe'
+  id: '__root__' | '/' | '/api/analyze' | '/api/universe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiUniverseRoute: typeof ApiUniverseRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/universe': {
+      id: '/api/universe'
+      path: '/api/universe'
+      fullPath: '/api/universe'
+      preLoaderRoute: typeof ApiUniverseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiUniverseRoute: ApiUniverseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

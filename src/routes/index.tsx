@@ -26,9 +26,22 @@ function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
+  const [topTraded, setTopTraded] = useState<string[]>([]);
 
   useEffect(() => {
     setHistory(loadHistory());
+  }, []);
+
+  useEffect(() => {
+    // Falha aqui não é erro de tela: o formulário cai na lista fixa.
+    const controller = new AbortController();
+    fetch("/api/universe?limit=12", { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("universe"))))
+      .then((body: { pairs?: { base: string }[] }) => {
+        setTopTraded((body.pairs ?? []).map((p) => p.base));
+      })
+      .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   async function run() {
@@ -146,6 +159,7 @@ function Home() {
                   image={image}
                   busy={busy}
                   error={error}
+                  topTraded={topTraded}
                   onTicker={setTicker}
                   onTimeframe={setTimeframe}
                   onImage={setImage}
