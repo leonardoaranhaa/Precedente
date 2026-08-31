@@ -1,17 +1,20 @@
+// Espelha src/lib/market/types.ts do app web — mesmo formato de payload,
+// já que ambos falam com a mesma engine em src/routes/api/analyze.ts.
+
 export const TIMEFRAMES = ["15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
 
 export const POPULAR_TICKERS = [
-  "BTCUSDT",
-  "ETHUSDT",
-  "SOLUSDT",
-  "BNBUSDT",
-  "XRPUSDT",
-  "DOGEUSDT",
-  "LINKUSDT",
-  "AVAXUSDT",
-  "SUIUSDT",
-  "ADAUSDT",
+  "BTC",
+  "ETH",
+  "SOL",
+  "BNB",
+  "XRP",
+  "DOGE",
+  "LINK",
+  "AVAX",
+  "SUI",
+  "ADA",
 ] as const;
 
 export type Candle = {
@@ -47,12 +50,6 @@ export type HorizonOutcome = {
   p10: number;
   p90: number;
   medianPath: number[];
-  /**
-   * Excursão do caminho, não do fim: o quanto o preço afundou (drawdown) e
-   * subiu (runup) ANTES de chegar ao fim do horizonte. Em ativos que disparam
-   * e despencam, o retorno final é quase moeda ao ar enquanto o caminho
-   * decide quem sobrevive — é o drawdown que liquida posição alavancada.
-   */
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
@@ -126,5 +123,16 @@ export type StoredAnalysis = AnalysisPayload & {
   id: string;
   createdAt: number;
   hasImage: boolean;
-  thumb: string | null;
+  thumbUri: string | null;
+};
+
+export type ApiErrorBody = { error: string };
+
+export type TradedPair = {
+  symbol: string;
+  display: string;
+  base: string;
+  lastPrice: number;
+  changePct: number;
+  quoteVolume: number;
 };

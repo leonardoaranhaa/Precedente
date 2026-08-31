@@ -115,10 +115,14 @@ function buildHorizon(
   bars: number,
   matchIdx: number[],
   closes: number[],
+  lows: number[],
+  highs: number[],
 ): HorizonOutcome {
   const flat = flatThreshold(tf);
   const returns: number[] = [];
   const paths: number[][] = [];
+  const drawdowns: number[] = [];
+  const runups: number[] = [];
 
   for (const i of matchIdx) {
     if (i + bars >= closes.length) continue;
@@ -127,10 +131,17 @@ function buildHorizon(
     const fwd = ((closes[i + bars]! - base) / base) * 100;
     returns.push(fwd);
     const path: number[] = [];
+    let lowest = Infinity;
+    let highest = -Infinity;
     for (let k = 1; k <= bars; k++) {
       path.push(((closes[i + k]! - base) / base) * 100);
+      lowest = Math.min(lowest, lows[i + k]!);
+      highest = Math.max(highest, highs[i + k]!);
     }
     paths.push(path);
+    // Excursão máxima contra e a favor, medida na mínima/máxima do caminho.
+    if (Number.isFinite(lowest)) drawdowns.push(((lowest - base) / base) * 100);
+    if (Number.isFinite(highest)) runups.push(((highest - base) / base) * 100);
   }
 
   const up = returns.filter((r) => r > flat).length;
@@ -156,6 +167,9 @@ function buildHorizon(
     p10: percentile(returns, 0.1),
     p90: percentile(returns, 0.9),
     medianPath,
+    medianDrawdownPct: median(drawdowns),
+    worstDrawdownPct: drawdowns.length ? Math.min(...drawdowns) : 0,
+    medianRunupPct: median(runups),
   };
 }
 
@@ -212,7 +226,9 @@ export function analyzeSeries(
   }
 
   const matchIdx = used.map((c) => c.i);
-  const horizons = HORIZONS.map((h) => buildHorizon(timeframe, h, matchIdx, closes));
+  const horizons = HORIZONS.map((h) =>
+    buildHorizon(timeframe, h, matchIdx, closes, lows, highs),
+  );
 
   let sampleNote: PrecedentResult["sampleNote"] = "ok";
   if (matchIdx.length < 8) sampleNote = "tiny";

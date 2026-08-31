@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Precedente",
+    "slug": "precedente",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0c0c0a",
+    "scheme": "precedente",
+    "splash": {
+      "backgroundColor": "#0c0c0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.precedente.app"
+    },
+    "android": {
+      "package": "com.precedente.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0c0c0a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.READ_EXTERNAL_STORAGE"],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#0c0c0a"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Precedente usa a galeria para você escolher o print do gráfico a analisar.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9353a76b-25a3-42cb-9fa3-e70f8568985c"
+      }
+    },
+    "owner": "canuc-avais-organization"
+  }
+}
