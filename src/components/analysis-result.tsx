@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OhlcChart } from "@/components/ohlc-chart";
+import { OnchainPanel } from "@/components/onchain-panel";
 import { PathChart } from "@/components/path-chart";
 import { RiskRail } from "@/components/risk-rail";
 import { SplitBar } from "@/components/split-bar";
@@ -35,7 +36,7 @@ export function AnalysisResult({
   watched = false,
   onToggleWatch,
 }: Props) {
-  const { snapshot, precedent, vision } = analysis;
+  const { snapshot, precedent, vision, onchain } = analysis;
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
@@ -68,6 +69,7 @@ export function AnalysisResult({
             <p className="text-xs tracking-wide text-muted uppercase">
               {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
               {formatInt(analysis.candleCount)} candles
+              {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
             </p>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="font-display text-2xl leading-tight tracking-tight text-fg sm:text-3xl">
@@ -139,6 +141,25 @@ export function AnalysisResult({
               variant="warn"
             />
           )}
+          {onchain?.fundingRate != null ? (
+            <Chip
+              label="Funding"
+              primary={`${onchain.fundingRate >= 0 ? "+" : ""}${(onchain.fundingRate * 100).toFixed(3).replace(".", ",")}%`}
+              variant={Math.abs(onchain.fundingRate) >= 0.0005 ? "warn" : undefined}
+            />
+          ) : null}
+          {onchain?.liquidityUsd != null ? (
+            <Chip
+              label="Liq DEX"
+              primary={
+                onchain.liquidityUsd >= 1e9
+                  ? `$${(onchain.liquidityUsd / 1e9).toFixed(1)}B`
+                  : onchain.liquidityUsd >= 1e6
+                    ? `$${(onchain.liquidityUsd / 1e6).toFixed(1)}M`
+                    : `$${(onchain.liquidityUsd / 1e3).toFixed(0)}K`
+              }
+            />
+          ) : null}
         </div>
 
         <p className="text-xs leading-relaxed text-muted sm:text-sm">
@@ -160,6 +181,8 @@ export function AnalysisResult({
             </div>
             <OhlcChart data={analysis.chart} />
           </section>
+
+          {onchain ? <OnchainPanel onchain={onchain} /> : null}
 
           <section className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-end justify-between gap-2">
@@ -322,8 +345,8 @@ export function AnalysisResult({
 
       <p className="text-xs leading-relaxed text-subtle">
         Frequência e contexto de precedentes — nunca ordem de compra ou venda. O passado não
-        garante o próximo movimento. A leitura do print é qualitativa; a estatística vem do OHLC
-        da {analysis.source}.
+        garante o próximo movimento. Funding e liquidez DEX são contexto de pressão e
+        fragilidade, não sinal de entrada.
       </p>
     </article>
   );
