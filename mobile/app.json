@@ -8,9 +8,6 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0c0c0a",
     "scheme": "precedente",
-    "splash": {
-      "backgroundColor": "#0c0c0a"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.precedente.app",
