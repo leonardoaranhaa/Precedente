@@ -1,5 +1,5 @@
 import { formatInt, formatPct, timeframeLabel } from "./format";
-import type { HorizonOutcome, StoredAnalysis } from "./types";
+import type { HorizonOutcome, OnchainContext, StoredAnalysis } from "./types";
 
 export type ScenarioNarrative = {
   headline: string;
@@ -24,9 +24,62 @@ function flowLabel(up: number, down: number, flat: number): string {
   return `o desfecho ficou dividido — ${u}% subiu, ${d}% caiu, ${f}% ficou de lado`;
 }
 
-/** Narração factual — sem LLM, sem ordem de exposição. */
+function formatUsdCompact(n: number): string {
+  if (n >= 1_000_000_000) return `US$ ${(n / 1_000_000_000).toFixed(2)} bi`;
+  if (n >= 1_000_000) return `US$ ${(n / 1_000_000).toFixed(2)} mi`;
+  if (n >= 1_000) return `US$ ${(n / 1_000).toFixed(0)} mil`;
+  return `US$ ${n.toFixed(0)}`;
+}
+
+function onchainParagraph(onchain: OnchainContext): string | null {
+  const bits: string[] = [];
+  if (onchain.fundingRate != null && Number.isFinite(onchain.fundingRate)) {
+    const pct = onchain.fundingRate * 100;
+    const sign = pct > 0 ? "+" : "";
+    const who =
+      onchain.fundingRate > 0
+        ? "longs pagando shorts (pressão de alavancagem comprada)"
+        : onchain.fundingRate < 0
+          ? "shorts pagando longs (pressão de alavancagem vendida)"
+          : "funding neutro";
+    bits.push(`Funding atual em ${sign}${pct.toFixed(4).replace(".", ",")}% — ${who}.`);
+  }
+  if (onchain.openInterest != null && Number.isFinite(onchain.openInterest)) {
+    bits.push(
+      `Open interest em cerca de ${formatInt(Math.round(onchain.openInterest))} contratos no perp listado.`,
+    );
+  }
+  if (onchain.liquidityUsd != null && Number.isFinite(onchain.liquidityUsd)) {
+    const chain = onchain.chainId ? ` em ${onchain.chainId}` : "";
+    const dex = onchain.dexId ? ` (${onchain.dexId})` : "";
+    bits.push(
+      `No par DEX mais líquido encontrado${chain}${dex}, a liquidez está em torno de ${formatUsdCompact(onchain.liquidityUsd)}.`,
+    );
+  }
+  if (onchain.volume24hUsd != null && Number.isFinite(onchain.volume24hUsd)) {
+    bits.push(`Volume DEX 24h ≈ ${formatUsdCompact(onchain.volume24hUsd)}.`);
+  }
+  if (
+    onchain.buys24h != null &&
+    onchain.sells24h != null &&
+    onchain.buys24h + onchain.sells24h > 0
+  ) {
+    const total = onchain.buys24h + onchain.sells24h;
+    const sellShare = Math.round((onchain.sells24h / total) * 100);
+    bits.push(
+      `Nas últimas 24h on-chain: ${formatInt(onchain.buys24h)} compras e ${formatInt(onchain.sells24h)} vendas de txns indexadas (~${sellShare}% sells).`,
+    );
+  }
+  if (bits.length === 0) return null;
+  return (
+    bits.join(" ") +
+    " Isso descreve pressão de alavancagem e profundidade de mercado — não uma ordem de direção."
+  );
+}
+
 export function narrateScenario(analysis: StoredAnalysis): ScenarioNarrative {
-  const { snapshot, precedent, timeframe, displayTicker, candleCount, source } = analysis;
+  const { snapshot, precedent, timeframe, displayTicker, candleCount, source, onchain } =
+    analysis;
   const h10 = pickHorizon(precedent.horizons, 10);
   const h5 = pickHorizon(precedent.horizons, 5);
   const h20 = pickHorizon(precedent.horizons, 20);
@@ -72,7 +125,6 @@ export function narrateScenario(analysis: StoredAnalysis): ScenarioNarrative {
         `A mediana do retorno até o fim foi ${formatPct(h10.medianPct)}; a faixa entre o pior e o melhor décimo ficou de ${formatPct(h10.p10)} a ${formatPct(h10.p90)}. ` +
         `Isso não diz o que “os players farão agora” — só resume o desfecho histórico quando o setup se parecia com este.`,
     );
-
     paragraphs.push(
       `No caminho até lá, a queda típica entre a condição e o fim do horizonte foi ${formatPct(h10.medianDrawdownPct)}, com a pior trajetória registrada em ${formatPct(h10.worstDrawdownPct)}. ` +
         `A alta típica no meio do trajeto ficou em ${formatPct(h10.medianRunupPct)}. ` +
@@ -108,10 +160,15 @@ export function narrateScenario(analysis: StoredAnalysis): ScenarioNarrative {
     );
   }
 
+  if (onchain) {
+    const oc = onchainParagraph(onchain);
+    if (oc) paragraphs.push(oc);
+  }
+
   return {
     headline,
     paragraphs,
     footer:
-      "Isto descreve frequência e contexto de precedentes. Não é ordem de compra, venda, long ou short — e o passado não garante o próximo movimento.",
+      "Isto descreve frequência, liquidez e pressão de alavancagem. Não é ordem de compra, venda, long ou short — e o passado não garante o próximo movimento.",
   };
 }
