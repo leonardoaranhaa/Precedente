@@ -183,7 +183,7 @@ export function AnalysisResult({
               </h2>
               <span className="text-[11px] text-subtle">sem setas de entrada</span>
             </div>
-            <OhlcChart data={analysis.chart} />
+            <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
           </section>
 
           {onchain ? <OnchainPanel onchain={onchain} /> : null}

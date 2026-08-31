@@ -105,7 +105,9 @@ export type PrecedentResult = {
   relaxed: string[];
   sampleNote: "ok" | "small" | "tiny";
   horizons: HorizonOutcome[];
-  recentMatches: { t: number; forward: number }[];
+  recentMatches: { t: number; forward: number; score: number }[];
+  /** Matches cujo timestamp cai dentro do `chart` (últimas barras visíveis) — pra marcar no candle chart. */
+  chartMatches: { t: number; score: number }[];
 };
 
 /** Contexto de derivativos + liquidez DEX (quando disponível). */

@@ -101,7 +101,8 @@ export type PrecedentResult = {
   relaxed: string[];
   sampleNote: "ok" | "small" | "tiny";
   horizons: HorizonOutcome[];
-  recentMatches: { t: number; forward: number }[];
+  recentMatches: { t: number; forward: number; score: number }[];
+  chartMatches: { t: number; score: number }[];
 };
 
 export type OnchainContext = {
