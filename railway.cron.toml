@@ -1,0 +1,25 @@
+# Serviço CRON separado no Railway (não use no serviço web principal).
+#
+# Setup:
+# 1. No mesmo projeto Railway, New Service → GitHub → mesmo repo Precedente
+# 2. Settings deste serviço:
+#    - Root Directory: (raiz do repo)
+#    - Custom Start Command: node scripts/push-scan-cron.mjs
+#    - Cron Schedule: */30 * * * *
+# 3. Variables (compartilhe com o serviço web ou copie):
+#    - PUSH_CRON_SECRET=<mesmo do web>
+#    - PUBLIC_APP_URL=https://<seu-servico-web>.up.railway.app
+#      (ou SCAN_URL=https://.../api/push/scan)
+#
+# O serviço web continua 24/7 SEM cronSchedule.
+# Este arquivo documenta o deploy do worker; no dashboard você cola o startCommand.
+
+[build]
+builder = "NIXPACKS"
+# Só precisa de Node para o script — sem build do app web.
+buildCommand = "echo skip-build"
+
+[deploy]
+startCommand = "node scripts/push-scan-cron.mjs"
+cronSchedule = "*/30 * * * *"
+restartPolicyType = "NEVER"

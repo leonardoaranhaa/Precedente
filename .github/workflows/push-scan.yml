@@ -1,0 +1,37 @@
+# Alternativa ao cron nativo do Railway: dispara o scan via GitHub Actions.
+# Secrets do repositório:
+#   RAILWAY_APP_URL     — https://seu-app.up.railway.app (sem barra final)
+#   PUSH_CRON_SECRET    — mesmo valor do backend
+
+name: Push alert scan
+
+on:
+  schedule:
+    # A cada 30 min (UTC). GitHub pode atrasar alguns minutos.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/push/scan
+        env:
+          BASE: ${{ secrets.RAILWAY_APP_URL }}
+          SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ]; then
+            echo "Secret RAILWAY_APP_URL ausente"
+            exit 1
+          fi
+          URL="${BASE%/}/api/push/scan"
+          echo "POST $URL"
+          CODE=$(curl -sS -o /tmp/scan.json -w "%{http_code}" -X POST "$URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${SECRET}" \
+            -d '{}')
+          cat /tmp/scan.json
+          echo
+          test "$CODE" = "200"
