@@ -22,10 +22,6 @@ Regras:
 - Campos sem informação clara no print ficam null (ou lista vazia).
 - "leitura" tem 2 a 4 frases, factual, em português.`;
 
-/**
- * Formato da leitura visual. Structured outputs garantem esta forma — não há
- * JSON solto para raspar da resposta.
- */
 const VisionSchema = z.object({
   tendencia: z.enum(["alta", "baixa", "lateral", "indefinida"]),
   padrao: z.string().nullable(),
@@ -60,8 +56,6 @@ async function readChart(imageDataUrl: string): Promise<VisionReading> {
 
   const { mediaType, data } = splitDataUrl(imageDataUrl);
 
-  // Chaves identity-linked exigem o workspace em que a requisição roda; as
-  // chaves comuns ignoram o header, então enviá-lo é opcional.
   const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
   const client = new Anthropic({
     timeout: 28_000,
@@ -75,8 +69,6 @@ async function readChart(imageDataUrl: string): Promise<VisionReading> {
     response = await client.messages.parse({
       model: "claude-opus-5",
       max_tokens: 16000,
-      // Descrever um print é tarefa simples: esforço baixo corta custo e
-      // latência sem perder qualidade na leitura.
       output_config: {
         effort: "low",
         format: zodOutputFormat(VisionSchema),
@@ -150,6 +142,7 @@ export function validateAnalyzeInput(input: unknown): AnalyzeInput {
 
 export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> {
   const { fetchOHLCV } = await import("./market/exchange");
+  const { fetchOnchainContext } = await import("./market/onchain");
 
   const marketPromise = fetchOHLCV(data.ticker, data.timeframe).then((m) => ({
     ...m,
@@ -168,7 +161,20 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
         }))
     : Promise.resolve({ vision: null, visionError: null });
 
-  const [market, visionPart] = await Promise.all([marketPromise, visionPromise]);
+  const onchainPromise = fetchOnchainContext(data.ticker).catch(() => null);
+
+  const [market, visionPart, onchain] = await Promise.all([
+    marketPromise,
+    visionPromise,
+    onchainPromise,
+  ]);
+
+  const hasOnchain =
+    onchain &&
+    (onchain.fundingRate != null ||
+      onchain.openInterest != null ||
+      onchain.liquidityUsd != null ||
+      onchain.volume24hUsd != null);
 
   return {
     ticker: data.ticker,
@@ -182,6 +188,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     vision: visionPart.vision,
     visionError: visionPart.visionError,
     source: market.source,
+    onchain: hasOnchain ? onchain : null,
   };
 }
 

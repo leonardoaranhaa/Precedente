@@ -108,6 +108,28 @@ export type PrecedentResult = {
   recentMatches: { t: number; forward: number }[];
 };
 
+/** Contexto de derivativos + liquidez DEX (quando disponível). */
+export type OnchainContext = {
+  fetchedAt: number;
+  /** Funding atual (fração por período, ex. 0.0001 = 0,01%). */
+  fundingRate: number | null;
+  markPrice: number | null;
+  /** Open interest em contratos (unidade da exchange). */
+  openInterest: number | null;
+  nextFundingTime: number | null;
+  derivativesSource: string | null;
+  chainId: string | null;
+  dexId: string | null;
+  pairUrl: string | null;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
+  buys24h: number | null;
+  sells24h: number | null;
+  priceChange24hPct: number | null;
+  dexSource: string | null;
+  sources: string[];
+};
+
 export type AnalysisPayload = {
   ticker: string;
   displayTicker: string;
@@ -120,6 +142,8 @@ export type AnalysisPayload = {
   vision: VisionReading | null;
   visionError: string | null;
   source: string;
+  /** Opcional: funding/OI + liquidez DEX. Null se todas as fontes falharem. */
+  onchain: OnchainContext | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {
