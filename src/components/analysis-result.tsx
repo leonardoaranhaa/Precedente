@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   Eye,
@@ -52,7 +52,6 @@ export function AnalysisResult({
 
   return (
     <article className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-16">
-      {/* C0 — Pair header + chips (Dex-style) */}
       <header className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)] sm:p-5">
         <div className="flex flex-wrap items-start gap-3">
           <Button
@@ -97,16 +96,13 @@ export function AnalysisResult({
                 onClick={onToggleWatch}
                 className="gap-1.5"
               >
-                <Star
-                  className={cn("size-3.5", watched && "fill-current")}
-                />
+                <Star className={cn("size-3.5", watched && "fill-current")} />
                 {watched ? "Na watch" : "+ Watch"}
               </Button>
             ) : null}
           </div>
         </div>
 
-        {/* Metric chips */}
         <div className="flex flex-wrap gap-2">
           {precedent.horizons.map((h, i) => (
             <HorizonChip
@@ -153,10 +149,8 @@ export function AnalysisResult({
         </p>
       </header>
 
-      {/* Main grid: center + risk rail */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] lg:items-start">
         <div className="space-y-4">
-          {/* C1 Chart */}
           <section className="rounded-xl bg-surface p-4 shadow-[var(--shadow-border)]">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-xs tracking-wide text-muted uppercase">
@@ -167,7 +161,6 @@ export function AnalysisResult({
             <OhlcChart data={analysis.chart} />
           </section>
 
-          {/* C2 Horizontes */}
           <section className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -218,7 +211,6 @@ export function AnalysisResult({
             <PathChart horizon={horizon} />
           </section>
 
-          {/* C3 Fingerprint + snapshot */}
           <div className="grid gap-4 sm:grid-cols-2">
             <section className="rounded-xl bg-surface p-4 shadow-[var(--shadow-border)]">
               <h2 className="text-xs tracking-wide text-muted uppercase">Fingerprint</h2>
@@ -252,7 +244,6 @@ export function AnalysisResult({
             </section>
           </div>
 
-          {/* C4 Matches tape */}
           {precedent.recentMatches.length > 0 ? (
             <section className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]">
               <div className="border-b border-border px-4 py-3">
@@ -289,7 +280,6 @@ export function AnalysisResult({
             </section>
           ) : null}
 
-          {/* C5 Visão */}
           {analysis.thumb || vision || analysis.visionError ? (
             <section className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]">
               {analysis.thumb ? (
@@ -327,7 +317,6 @@ export function AnalysisResult({
           ) : null}
         </div>
 
-        {/* D Risk rail */}
         <RiskRail snapshot={snapshot} precedent={precedent} horizon={horizon} />
       </div>
 
@@ -435,9 +424,7 @@ function Chip({
         )}
       >
         {primary}
-        {secondary ? (
-          <span className="ml-1 text-xs text-muted">{secondary}</span>
-        ) : null}
+        {secondary ? <span className="ml-1 text-xs text-muted">{secondary}</span> : null}
       </p>
     </div>
   );
