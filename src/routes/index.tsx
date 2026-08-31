@@ -36,6 +36,7 @@ function Home() {
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
+  const [focusIds, setFocusIds] = useState<string[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -82,6 +83,7 @@ function Home() {
       setResult(stored);
       setHistory((h) => pushHistory(h, stored));
       setWatch((w) => (isWatched(w, stored) ? upsertWatch(w, stored) : w));
+      touchFocus(`${stored.ticker}:${stored.timeframe}`);
       setStep("done");
       setView("result");
     } catch (err) {
@@ -93,6 +95,10 @@ function Home() {
       window.clearTimeout(t2);
       setBusy(false);
     }
+  }
+
+  function touchFocus(id: string) {
+    setFocusIds((current) => [id, ...current.filter((x) => x !== id)].slice(0, 8));
   }
 
   function toggleWatch(analysis: StoredAnalysis) {
@@ -165,6 +171,7 @@ function Home() {
   }
 
   function openFromWatch(item: WatchItem) {
+    touchFocus(item.id);
     const fromHistory = history.find(
       (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
     );
@@ -232,6 +239,7 @@ function Home() {
               </p>
               <WatchPanel
                 items={watch}
+                focusIds={focusIds}
                 activeId={result ? `${result.ticker}:${result.timeframe}` : null}
                 refreshingId={refreshingId}
                 refreshingAll={refreshingAll}

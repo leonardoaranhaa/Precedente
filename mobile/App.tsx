@@ -49,6 +49,7 @@ export default function App() {
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
+  const [focusIds, setFocusIds] = useState<string[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -98,6 +99,10 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
+  function touchFocus(id: string) {
+    setFocusIds((current) => [id, ...current.filter((x) => x !== id)].slice(0, 8));
+  }
+
   async function run() {
     setError(null);
     setBusy(true);
@@ -133,6 +138,7 @@ export default function App() {
         watchRef.current = nextWatch;
         void syncPush(alertRules, nextWatch, pushToken);
       }
+      touchFocus(`${stored.ticker}:${stored.timeframe}`);
       setStep("done");
       setView("result");
     } catch (err) {
@@ -220,6 +226,7 @@ export default function App() {
   }
 
   function openFromWatch(item: WatchItem) {
+    touchFocus(item.id);
     const fromHistory = historyRef.current.find(
       (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
     );
@@ -302,6 +309,7 @@ export default function App() {
         ) : view === "watch" ? (
           <WatchScreen
             items={watch}
+            focusIds={focusIds}
             refreshingId={refreshingId}
             refreshingAll={refreshingAll}
             error={watchError}
