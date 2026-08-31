@@ -1,5 +1,12 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { Star, Trash2 } from "lucide-react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { RefreshCw, Star, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { colors, radius } from "../theme";
 import { formatPct, formatPrice, timeframeLabel } from "../format";
@@ -7,12 +14,22 @@ import type { WatchItem } from "../watchlist";
 
 export function WatchScreen({
   items,
+  refreshingId,
+  refreshingAll,
+  error,
   onOpen,
   onRemove,
+  onRefresh,
+  onRefreshAll,
 }: {
   items: WatchItem[];
+  refreshingId: string | null;
+  refreshingAll: boolean;
+  error: string | null;
   onOpen: (item: WatchItem) => void;
   onRemove: (id: string) => void;
+  onRefresh: (item: WatchItem) => void;
+  onRefreshAll: () => void;
 }) {
   if (items.length === 0) {
     return (
@@ -26,6 +43,8 @@ export function WatchScreen({
     );
   }
 
+  const busy = refreshingAll || refreshingId != null;
+
   return (
     <FlatList
       data={items}
@@ -33,10 +52,28 @@ export function WatchScreen({
       contentContainerStyle={styles.list}
       ListHeaderComponent={
         <View style={styles.header}>
-          <Text style={styles.title}>Watch</Text>
-          <Text style={styles.subtitle}>
-            Pares pinados — Δ, amostra e DD do caminho. Sem conta.
-          </Text>
+          <View style={styles.titleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Watch</Text>
+              <Text style={styles.subtitle}>
+                Pares pinados — Δ, amostra e DD do caminho. Sem conta.
+              </Text>
+            </View>
+            <Pressable
+              onPress={onRefreshAll}
+              disabled={busy}
+              style={[styles.refreshAll, busy && { opacity: 0.5 }]}
+              accessibilityLabel="Reavaliar todos"
+            >
+              {refreshingAll ? (
+                <ActivityIndicator size="small" color={colors.fg} />
+              ) : (
+                <RefreshCw size={16} color={colors.fg} />
+              )}
+              <Text style={styles.refreshAllText}>Reavaliar</Text>
+            </Pressable>
+          </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.colHeader}>
             <Text style={[styles.col, { flex: 1 }]}>Par</Text>
             <Text style={styles.col}>Δ</Text>
@@ -48,9 +85,14 @@ export function WatchScreen({
       renderItem={({ item }) => {
         const up = item.changePct >= 0;
         const extreme = item.near20High || item.near20Low;
+        const rowBusy = refreshingId === item.id || refreshingAll;
         return (
-          <View style={styles.row}>
-            <Pressable style={styles.rowMain} onPress={() => onOpen(item)}>
+          <View style={[styles.row, rowBusy && { opacity: 0.65 }]}>
+            <Pressable
+              style={styles.rowMain}
+              onPress={() => onOpen(item)}
+              disabled={busy}
+            >
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={styles.ticker} numberOfLines={1}>
@@ -74,12 +116,26 @@ export function WatchScreen({
               <Text style={styles.dd}>{formatPct(item.medianDrawdownPct, 1)}</Text>
             </Pressable>
             <Pressable
-              onPress={() => onRemove(item.id)}
+              onPress={() => onRefresh(item)}
+              disabled={busy}
               hitSlop={8}
-              style={styles.trash}
+              style={styles.iconBtn}
+              accessibilityLabel={`Reavaliar ${item.displayTicker}`}
+            >
+              {refreshingId === item.id ? (
+                <ActivityIndicator size="small" color={colors.muted} />
+              ) : (
+                <RefreshCw size={15} color={colors.muted} />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => onRemove(item.id)}
+              disabled={busy}
+              hitSlop={8}
+              style={styles.iconBtn}
               accessibilityLabel={`Remover ${item.displayTicker}`}
             >
-              <Trash2 size={16} color={colors.subtle} />
+              <Trash2 size={15} color={colors.subtle} />
             </Pressable>
           </View>
         );
@@ -91,8 +147,28 @@ export function WatchScreen({
 const styles = StyleSheet.create({
   list: { padding: 20, paddingBottom: 48, gap: 8 },
   header: { gap: 8, marginBottom: 8 },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   title: { fontSize: 28, color: colors.fg, fontWeight: "500" },
-  subtitle: { fontSize: 13, color: colors.muted, lineHeight: 18 },
+  subtitle: { fontSize: 13, color: colors.muted, lineHeight: 18, marginTop: 4 },
+  refreshAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    marginTop: 4,
+  },
+  refreshAllText: { fontSize: 12, fontWeight: "500", color: colors.fg },
+  error: {
+    fontSize: 12,
+    color: colors.down,
+    backgroundColor: "rgba(193,123,106,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+  },
   colHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -125,8 +201,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 12,
     paddingLeft: 14,
-    paddingRight: 8,
-    gap: 4,
+    paddingRight: 4,
+    gap: 2,
   },
   rowMain: {
     flex: 1,
@@ -149,5 +225,5 @@ const styles = StyleSheet.create({
     color: colors.down,
     fontVariant: ["tabular-nums"],
   },
-  trash: { padding: 8 },
+  iconBtn: { padding: 8 },
 });

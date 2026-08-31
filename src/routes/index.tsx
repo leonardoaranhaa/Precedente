@@ -36,6 +36,9 @@ function Home() {
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -43,7 +46,6 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    // Falha aqui não é erro de tela: o formulário cai na lista fixa.
     const controller = new AbortController();
     fetch("/api/universe?limit=12", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("universe"))))
@@ -78,6 +80,7 @@ function Home() {
       };
       setResult(stored);
       setHistory((h) => pushHistory(h, stored));
+      setWatch((w) => (isWatched(w, stored) ? upsertWatch(w, stored) : w));
       setStep("done");
       setView("result");
     } catch (err) {
@@ -100,6 +103,66 @@ function Home() {
     });
   }
 
+  async function refreshWatchItem(
+    item: WatchItem,
+    opts?: { openResult?: boolean; silent?: boolean },
+  ): Promise<StoredAnalysis | null> {
+    if (!opts?.silent) {
+      setWatchError(null);
+      setRefreshingId(item.id);
+    }
+    try {
+      const payload = await analyzeSetup({
+        data: {
+          ticker: item.ticker,
+          timeframe: item.timeframe,
+          imageDataUrl: null,
+        },
+      });
+      const stored: StoredAnalysis = {
+        ...payload,
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+        hasImage: false,
+        thumb: null,
+      };
+      setHistory((h) => pushHistory(h, stored));
+      setWatch((w) => upsertWatch(w, stored));
+      if (opts?.openResult) {
+        setResult(stored);
+        setView("result");
+      }
+      return stored;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao reavaliar este par.";
+      if (!opts?.silent) setWatchError(cleanError(message));
+      return null;
+    } finally {
+      if (!opts?.silent) setRefreshingId(null);
+    }
+  }
+
+  async function refreshAllWatch() {
+    if (watch.length === 0 || refreshingAll) return;
+    setWatchError(null);
+    setRefreshingAll(true);
+    const list = [...watch];
+    let failed = 0;
+    for (const item of list) {
+      const ok = await refreshWatchItem(item, { silent: true });
+      if (!ok) failed += 1;
+    }
+    setRefreshingAll(false);
+    if (failed > 0) {
+      setWatchError(
+        failed === list.length
+          ? "Não foi possível reavaliar nenhum par. Confira a rede."
+          : `${failed} par(es) falharam na reavaliação.`,
+      );
+    }
+  }
+
   function openFromWatch(item: WatchItem) {
     const fromHistory = history.find(
       (h) => h.ticker === item.ticker && h.timeframe === item.timeframe,
@@ -109,10 +172,7 @@ function Home() {
       setView("result");
       return;
     }
-    // Sem snapshot completo: pré-preenche o formulário para reanalisar.
-    setTicker(item.displayTicker.split("/")[0] ?? item.ticker);
-    setTimeframe(item.timeframe);
-    setView("home");
+    void refreshWatchItem(item, { openResult: true });
   }
 
   const wide = view === "result" || view === "home";
@@ -171,11 +231,14 @@ function Home() {
               </p>
               <WatchPanel
                 items={watch}
-                activeId={
-                  result ? `${result.ticker}:${result.timeframe}` : null
-                }
+                activeId={result ? `${result.ticker}:${result.timeframe}` : null}
+                refreshingId={refreshingId}
+                refreshingAll={refreshingAll}
+                error={watchError}
                 onSelect={openFromWatch}
                 onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+                onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+                onRefreshAll={() => void refreshAllWatch()}
               />
             </div>
             <div className="hidden rounded-xl bg-surface p-5 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)] lg:block">
@@ -183,9 +246,10 @@ function Home() {
               <ul className="mt-3 list-disc space-y-2 pl-4">
                 <li>Analise um par e toque em <span className="text-fg">+ Watch</span>.</li>
                 <li>
-                  A tabela mostra Δ, qualidade da amostra e drawdown mediano do caminho (H10).
+                  <span className="text-fg">Reavaliar</span> chama a API de novo (OHLC fresco, sem
+                  print) e atualiza amostra e drawdown.
                 </li>
-                <li>Clique numa linha para reabrir o snapshot do histórico, se existir.</li>
+                <li>Clique na linha para abrir o último snapshot do histórico.</li>
                 <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
               </ul>
             </div>
@@ -242,6 +306,7 @@ function Home() {
                   items={watch.slice(0, 6)}
                   onSelect={openFromWatch}
                   onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+                  onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
                 />
               ) : (
                 <HowItWorks />

@@ -1,4 +1,4 @@
-import { Star, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatPct, formatPrice, timeframeLabel } from "@/lib/market/labels";
 import type { WatchItem } from "@/lib/watchlist";
@@ -7,12 +7,28 @@ import { cn } from "@/lib/utils";
 type Props = {
   items: WatchItem[];
   activeId?: string | null;
+  refreshingId?: string | null;
+  refreshingAll?: boolean;
+  error?: string | null;
   onSelect: (item: WatchItem) => void;
   onRemove: (id: string) => void;
+  onRefresh?: (item: WatchItem) => void;
+  onRefreshAll?: () => void;
   className?: string;
 };
 
-export function WatchPanel({ items, activeId, onSelect, onRemove, className }: Props) {
+export function WatchPanel({
+  items,
+  activeId,
+  refreshingId = null,
+  refreshingAll = false,
+  error = null,
+  onSelect,
+  onRemove,
+  onRefresh,
+  onRefreshAll,
+  className,
+}: Props) {
   if (items.length === 0) {
     return (
       <div
@@ -33,6 +49,8 @@ export function WatchPanel({ items, activeId, onSelect, onRemove, className }: P
     );
   }
 
+  const busy = refreshingAll || refreshingId != null;
+
   return (
     <div
       className={cn(
@@ -40,13 +58,35 @@ export function WatchPanel({ items, activeId, onSelect, onRemove, className }: P
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
         <p className="flex items-center gap-2 text-xs tracking-wide text-muted uppercase">
           <Star className="size-3.5" />
           Watch
         </p>
-        <span className="font-mono text-[11px] tabular-nums text-subtle">{items.length}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] tabular-nums text-subtle">{items.length}</span>
+          {onRefreshAll ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onRefreshAll}
+              className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-medium text-fg hover:bg-bg disabled:opacity-50"
+              title="Reavaliar todos"
+            >
+              {refreshingAll ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              Reavaliar
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {error ? (
+        <p className="border-b border-border bg-down/10 px-3 py-2 text-xs text-down">{error}</p>
+      ) : null}
 
       <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 border-b border-border px-3 py-1.5 text-[10px] tracking-wide text-subtle uppercase">
         <span>Par</span>
@@ -62,13 +102,21 @@ export function WatchPanel({ items, activeId, onSelect, onRemove, className }: P
           const sampleVariant =
             item.sampleNote === "ok" ? "up" : item.sampleNote === "small" ? "warn" : "down";
           const extreme = item.near20High || item.near20Low;
+          const rowBusy = refreshingId === item.id || refreshingAll;
           return (
-            <li key={item.id} className="group border-b border-border last:border-b-0">
+            <li
+              key={item.id}
+              className={cn(
+                "group border-b border-border last:border-b-0",
+                rowBusy && "opacity-60",
+              )}
+            >
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => onSelect(item)}
                 className={cn(
-                  "grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2.5 text-left transition-colors",
+                  "grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2.5 text-left transition-colors disabled:cursor-wait",
                   active ? "bg-bg-elevated" : "hover:bg-bg-elevated/60",
                 )}
               >
@@ -106,17 +154,39 @@ export function WatchPanel({ items, activeId, onSelect, onRemove, className }: P
                 <span className="truncate font-mono text-[10px] tabular-nums text-subtle">
                   {formatPrice(item.price)}
                 </span>
-                <button
-                  type="button"
-                  aria-label={`Remover ${item.displayTicker} da watch`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(item.id);
-                  }}
-                  className="rounded p-1 text-subtle opacity-60 hover:bg-bg hover:text-fg hover:opacity-100"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {onRefresh ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-label={`Reavaliar ${item.displayTicker}`}
+                      title="Reavaliar agora"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRefresh(item);
+                      }}
+                      className="rounded p-1 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
+                    >
+                      {refreshingId === item.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="size-3.5" />
+                      )}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={`Remover ${item.displayTicker} da watch`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(item.id);
+                    }}
+                    className="rounded p-1 text-subtle opacity-60 hover:bg-bg hover:text-fg hover:opacity-100 disabled:opacity-40"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
             </li>
           );
