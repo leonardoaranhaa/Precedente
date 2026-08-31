@@ -27,7 +27,7 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
     errors: [],
   };
 
-  const subs = listSubscriptions().filter(shouldScan);
+  const subs = (await listSubscriptions()).filter(shouldScan);
   report.subscriptions = subs.length;
 
   for (const sub of subs) {
@@ -56,7 +56,7 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
       report.sentOk += result.ok;
       report.sentFailed += result.failed;
       if (result.ok > 0) {
-        markSent(
+        await markSent(
           sub.token,
           eventsForToken.map(alertCooldownKey),
         );

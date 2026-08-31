@@ -17,7 +17,6 @@ function json(body: unknown, status = 200): Response {
 
 function authorized(request: Request): boolean {
   const secret = process.env.PUSH_CRON_SECRET;
-  // Sem secret configurado: permite em dev (útil em testes locais).
   if (!secret) return true;
   const header =
     request.headers.get("x-cron-secret") ??
@@ -35,7 +34,7 @@ export const Route = createFileRoute("/api/push/scan")({
         }
         try {
           const report = await scanAllSubscriptions();
-          return json({ ok: true, subscribers: subscriptionCount(), ...report });
+          return json({ ok: true, subscribers: await subscriptionCount(), ...report });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Falha no scan.";
           return json({ error: message }, 500);

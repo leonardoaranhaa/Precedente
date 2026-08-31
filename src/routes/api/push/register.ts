@@ -62,7 +62,7 @@ export const Route = createFileRoute("/api/push/register")({
         const raw = body as Record<string, unknown>;
         const token = typeof raw.token === "string" ? raw.token : "";
         try {
-          const sub = upsertSubscription({
+          const sub = await upsertSubscription({
             token,
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
             watches: parseWatches(raw.watches),
@@ -72,7 +72,7 @@ export const Route = createFileRoute("/api/push/register")({
             ok: true,
             watches: sub.watches.length,
             rules: sub.rules,
-            subscribers: subscriptionCount(),
+            subscribers: await subscriptionCount(),
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Falha no registro.";
@@ -90,8 +90,8 @@ export const Route = createFileRoute("/api/push/register")({
           typeof (body as { token?: string }).token === "string"
             ? (body as { token: string }).token
             : "";
-        const removed = removeSubscription(token);
-        return json({ ok: removed, subscribers: subscriptionCount() });
+        await removeSubscription(token);
+        return json({ ok: true, subscribers: await subscriptionCount() });
       },
     },
   },
