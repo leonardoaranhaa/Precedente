@@ -12,6 +12,7 @@ import { OhlcChart } from "@/components/ohlc-chart";
 import { OnchainPanel } from "@/components/onchain-panel";
 import { PathChart } from "@/components/path-chart";
 import { RiskRail } from "@/components/risk-rail";
+import { SampleBanner } from "@/components/sample-banner";
 import { SplitBar } from "@/components/split-bar";
 import {
   formatInt,
@@ -20,6 +21,7 @@ import {
   formatWhen,
   timeframeLabel,
 } from "@/lib/market/labels";
+import { sampleTitle } from "@/lib/market/sample-copy";
 import type { HorizonOutcome, StoredAnalysis } from "@/lib/market/types";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +54,7 @@ export function AnalysisResult({
   const fp = precedent.fingerprint;
 
   return (
-    <article className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-16">
+    <article className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24">
       <header className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)] sm:p-5">
         <div className="flex flex-wrap items-start gap-3">
           <Button
@@ -116,7 +118,7 @@ export function AnalysisResult({
           ))}
           <Chip
             label="Amostra"
-            primary={precedent.sampleNote.toUpperCase()}
+            primary={sampleTitle(precedent.sampleNote)}
             secondary={`n=${formatInt(precedent.matches)}`}
             variant={sampleVariant}
           />
@@ -169,6 +171,8 @@ export function AnalysisResult({
             : null}
         </p>
       </header>
+
+      <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] lg:items-start">
         <div className="space-y-4">
@@ -344,9 +348,9 @@ export function AnalysisResult({
       </div>
 
       <p className="text-xs leading-relaxed text-subtle">
-        Frequência e contexto de precedentes — nunca ordem de compra ou venda. O passado não
-        garante o próximo movimento. Funding e liquidez DEX são contexto de pressão e
-        fragilidade, não sinal de entrada.
+        Frequência e caminho em condições parecidas — nunca ordem de compra ou venda. O
+        passado não garante o próximo movimento. Use o botão{" "}
+        <span className="text-fg">Ler o cenário</span> para a mesma leitura em texto corrido.
       </p>
     </article>
   );
@@ -436,18 +440,19 @@ function Chip({
       <p className="text-[10px] tracking-wide text-subtle uppercase">{label}</p>
       <p
         className={cn(
-          "mt-0.5 font-mono text-sm tabular-nums",
+          "mt-0.5 text-sm",
           variant === "up" && "text-up",
           variant === "down" && "text-down",
           variant === "warn" && "text-warn",
           variant === "accent" && "text-accent",
-          tone === "up" && "text-up",
-          tone === "down" && "text-down",
-          !variant && !tone && "text-fg",
+          tone === "up" && "font-mono tabular-nums text-up",
+          tone === "down" && "font-mono tabular-nums text-down",
+          !variant && !tone && "font-mono tabular-nums text-fg",
+          variant && !tone && "font-medium",
         )}
       >
         {primary}
-        {secondary ? <span className="ml-1 text-xs text-muted">{secondary}</span> : null}
+        {secondary ? <span className="ml-1 text-xs font-normal text-muted">{secondary}</span> : null}
       </p>
     </div>
   );

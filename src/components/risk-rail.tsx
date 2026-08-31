@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatPct } from "@/lib/market/labels";
+import { productBoundary, sampleBody, sampleTitle } from "@/lib/market/sample-copy";
 import type { HorizonOutcome, PrecedentResult, Snapshot } from "@/lib/market/types";
 import { cn } from "@/lib/utils";
 
@@ -22,12 +23,7 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
       {
         id: "sample",
         on: precedent.sampleNote !== "ok",
-        label:
-          precedent.sampleNote === "tiny"
-            ? "Amostra muito pequena (tiny)"
-            : precedent.sampleNote === "small"
-              ? "Amostra pequena (< 20 matches)"
-              : "Amostra adequada",
+        label: sampleTitle(precedent.sampleNote),
         risk: precedent.sampleNote !== "ok",
       },
       {
@@ -35,14 +31,14 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
         on: precedent.relaxed.length > 0,
         label:
           precedent.relaxed.length > 0
-            ? `Match relaxado: ${precedent.relaxed.join(", ")}`
-            : "Match com critérios completos",
+            ? `Critérios aliviados: ${precedent.relaxed.join(", ")}`
+            : "Critérios completos no match",
         risk: precedent.relaxed.length > 0,
       },
       {
         id: "dd",
         on: Math.abs(horizon.medianDrawdownPct) > 3,
-        label: `DD mediano do caminho ${formatPct(horizon.medianDrawdownPct)}`,
+        label: `Queda típica no caminho ${formatPct(horizon.medianDrawdownPct)}`,
         risk: Math.abs(horizon.medianDrawdownPct) > 3,
       },
       {
@@ -69,6 +65,7 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
 
   const reading = buildReading({
     sampleNote: precedent.sampleNote,
+    matches: precedent.matches,
     relaxed: precedent.relaxed.length > 0,
     medianDd: horizon.medianDrawdownPct,
     worstDd: horizon.worstDrawdownPct,
@@ -90,33 +87,27 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
       <section className="space-y-2">
         <p className="text-xs text-muted">Qualidade da amostra</p>
         <div className="flex items-center justify-between gap-2">
-          <Badge variant={sampleVariant} className="uppercase">
-            {precedent.sampleNote}
-          </Badge>
+          <Badge variant={sampleVariant}>{sampleTitle(precedent.sampleNote)}</Badge>
           <span className="font-mono text-sm tabular-nums text-fg">
-            {precedent.matches} matches
+            {precedent.matches} casos
           </span>
         </div>
         <SampleBar note={precedent.sampleNote} matches={precedent.matches} />
-        {precedent.relaxed.length > 0 ? (
-          <p className="text-xs leading-relaxed text-warn">
-            Critérios relaxados: {precedent.relaxed.join(", ")}.
-          </p>
-        ) : (
-          <p className="text-xs text-subtle">Match com fingerprint completo.</p>
-        )}
+        <p className="text-xs leading-relaxed text-muted">
+          {sampleBody(precedent.sampleNote, precedent.matches)}
+        </p>
       </section>
 
       <section className="space-y-2">
         <p className="text-xs text-muted">Risco do caminho · {horizon.bars} barras</p>
         <dl className="space-y-2">
-          <RiskRow label="Drawdown mediano" value={formatPct(horizon.medianDrawdownPct)} tone="down" />
-          <RiskRow label="Pior drawdown" value={formatPct(horizon.worstDrawdownPct)} tone="down" />
-          <RiskRow label="Runup mediano" value={formatPct(horizon.medianRunupPct)} tone="up" />
+          <RiskRow label="Queda típica no trajeto" value={formatPct(horizon.medianDrawdownPct)} tone="down" />
+          <RiskRow label="Pior trajetória" value={formatPct(horizon.worstDrawdownPct)} tone="down" />
+          <RiskRow label="Alta típica no trajeto" value={formatPct(horizon.medianRunupPct)} tone="up" />
         </dl>
         <p className="text-xs leading-relaxed text-subtle">
-          Retorno final ≠ sobrevivência no caminho. Quem se expõe agressivo é pressionado pelo
-          drawdown do trajeto, não só pelo ponto de chegada.
+          O ponto final não conta a pressão do meio do caminho. É no drawdown do trajeto que a
+          exposição costuma doer.
         </p>
       </section>
 
@@ -155,7 +146,7 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
           )}
         </p>
         <p className="text-[11px] leading-relaxed text-subtle">
-          Não é ordem de corretora nem recomendação. Só ilustra fragilidade do caminho.
+          Não é ordem de corretora. Só ilustra fragilidade do caminho.
         </p>
       </section>
 
@@ -167,9 +158,7 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
               <span
                 className={cn(
                   "mt-0.5 inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm text-[10px]",
-                  item.risk
-                    ? "bg-warn/20 text-warn"
-                    : "bg-up/15 text-up",
+                  item.risk ? "bg-warn/20 text-warn" : "bg-up/15 text-up",
                 )}
                 aria-hidden
               >
@@ -184,9 +173,7 @@ export function RiskRail({ snapshot, precedent, horizon, className }: Props) {
       <section className="space-y-2 border-t border-border pt-4">
         <p className="text-xs text-muted">Leitura objetiva</p>
         <p className="text-sm leading-relaxed text-fg">{reading}</p>
-        <p className="text-[11px] tracking-wide text-subtle uppercase">
-          Nunca: compre · venda · entre · long · short
-        </p>
+        <p className="text-[11px] leading-relaxed text-subtle">{productBoundary()}</p>
       </section>
     </aside>
   );
@@ -237,33 +224,26 @@ function RiskRow({
 
 function buildReading(input: {
   sampleNote: "ok" | "small" | "tiny";
+  matches: number;
   relaxed: boolean;
   medianDd: number;
   worstDd: number;
   riskCount: number;
 }): string {
-  const parts: string[] = [];
-  if (input.sampleNote === "tiny") {
-    parts.push("Amostra insuficiente para confiar na distribuição do caminho.");
-  } else if (input.sampleNote === "small") {
-    parts.push("Amostra limitada — interprete os horizontes com cautela.");
-  } else {
-    parts.push("Amostra razoável para leitura descritiva dos precedentes.");
-  }
+  const parts: string[] = [sampleBody(input.sampleNote, input.matches)];
   if (input.relaxed) {
-    parts.push("O match só fechou com critérios relaxados.");
+    parts.push("O match só fechou com critérios aliviados.");
   }
   if (Math.abs(input.medianDd) > 3) {
     parts.push(
-      `Caminho histórico com drawdown mediano de ${formatPct(input.medianDd)} antes do fim do horizonte.`,
+      `No caminho, a queda típica antes do fim do horizonte foi ${formatPct(input.medianDd)}.`,
     );
   }
   if (Math.abs(input.worstDd) > 8) {
-    parts.push(`Pior trajetória registrada chegou a ${formatPct(input.worstDd)}.`);
+    parts.push(`A pior trajetória registrada chegou a ${formatPct(input.worstDd)}.`);
   }
   if (input.riskCount >= 3) {
-    parts.push("Vários alertas de fragilidade ativos ao mesmo tempo.");
+    parts.push("Vários pontos de fragilidade ativos ao mesmo tempo.");
   }
-  parts.push("Isto descreve o passado parecido — não ordena exposição.");
   return parts.join(" ");
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -14,19 +14,45 @@ import type { StoredAnalysis } from "../types";
 
 export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | null }) {
   const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState(true);
   const narrative = useMemo(
     () => (analysis ? narrateScenario(analysis) : null),
     [analysis],
   );
 
+  useEffect(() => {
+    if (!analysis) return;
+    setHint(true);
+  }, [analysis?.id]);
+
   if (!analysis || !narrative) return null;
+
+  const weak = analysis.precedent.sampleNote !== "ok";
 
   return (
     <>
       <View style={styles.fabWrap} pointerEvents="box-none">
+        {!open && hint ? (
+          <Pressable
+            onPress={() => {
+              setOpen(true);
+              setHint(false);
+            }}
+            style={[styles.hint, weak && styles.hintWeak]}
+          >
+            <Text style={styles.hintText}>
+              {weak
+                ? "Amostra frágil — toque para ler o cenário e o aviso de cautela."
+                : "Toque para ler o cenário em português."}
+            </Text>
+          </Pressable>
+        ) : null}
         <Pressable
-          style={[styles.fab, open && styles.fabOpen]}
-          onPress={() => setOpen(true)}
+          style={[styles.fab, open && styles.fabOpen, !open && weak && styles.fabWeak]}
+          onPress={() => {
+            setOpen(true);
+            setHint(false);
+          }}
           accessibilityLabel="Ler o cenário"
         >
           <MessageCircle size={18} color={open ? colors.fg : colors.accentFg} />
@@ -48,28 +74,20 @@ export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | nul
                 <Sparkles size={16} color={colors.warn} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.eyebrow}>Assistente de cenário</Text>
+                <Text style={styles.eyebrow}>Leitura do cenário</Text>
                 <Text style={styles.headline} numberOfLines={2}>
                   {narrative.headline}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => setOpen(false)}
-                hitSlop={10}
-                accessibilityLabel="Fechar"
-                style={styles.closeBtn}
-              >
+              <Pressable onPress={() => setOpen(false)} hitSlop={10} style={styles.closeBtn}>
                 <X size={18} color={colors.muted} />
               </Pressable>
             </View>
 
-            <ScrollView
-              contentContainerStyle={styles.body}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.hint}>
-                Leitura descritiva do que está na tela e do que o histórico parecido costumava
-                fazer. Não orienta exposição.
+            <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+              <Text style={styles.hintBody}>
+                Texto montado a partir dos números desta análise. Não é chat com IA nem
+                recomendação.
               </Text>
               {narrative.paragraphs.map((p, i) => (
                 <Text key={i} style={styles.paragraph}>
@@ -91,7 +109,23 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 24,
     zIndex: 40,
+    alignItems: "flex-end",
+    gap: 8,
   },
+  hint: {
+    maxWidth: 220,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  hintWeak: {
+    backgroundColor: "rgba(196,165,116,0.18)",
+    borderColor: colors.warn,
+  },
+  hintText: { fontSize: 11, lineHeight: 15, color: colors.fg },
   fab: {
     flexDirection: "row",
     alignItems: "center",
@@ -110,6 +144,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  fabWeak: {
+    borderWidth: 2,
+    borderColor: colors.warn,
   },
   fabText: {
     fontSize: 14,
@@ -168,7 +206,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
   },
-  hint: {
+  hintBody: {
     fontSize: 11,
     lineHeight: 16,
     color: colors.subtle,
