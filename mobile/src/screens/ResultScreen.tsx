@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
+import { OhlcChart } from "../components/OhlcChart";
 import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
@@ -148,6 +149,14 @@ export function ResultScreen({
       </Text>
 
       <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} />
+
+      <View style={[styles.card, { padding: 16, gap: 12 }]}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
+          <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
+        </View>
+        <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
+      </View>
 
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
 
