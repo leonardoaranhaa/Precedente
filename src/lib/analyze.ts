@@ -122,61 +122,66 @@ async function readChart(imageDataUrl: string): Promise<VisionReading> {
   }
 }
 
+export function validateAnalyzeInput(input: unknown): AnalyzeInput {
+  if (!input || typeof input !== "object") {
+    throw new Error("Pedido inválido.");
+  }
+  const raw = input as Partial<AnalyzeInput>;
+  const ticker = normalizeTicker(String(raw.ticker ?? ""));
+  if (!/^[A-Z0-9]{5,20}$/.test(ticker)) {
+    throw new Error("Ticker inválido. Ex.: BTC, ETHUSDT, SOL.");
+  }
+  const timeframe = raw.timeframe as Timeframe;
+  if (!TIMEFRAMES.includes(timeframe)) {
+    throw new Error("Tempo gráfico inválido.");
+  }
+  const imageDataUrl =
+    typeof raw.imageDataUrl === "string" && raw.imageDataUrl.startsWith("data:image/")
+      ? raw.imageDataUrl
+      : null;
+  if (imageDataUrl && imageDataUrl.length > 1_800_000) {
+    throw new Error("Print grande demais. Envie um recorte do gráfico.");
+  }
+  return { ticker, timeframe, imageDataUrl };
+}
+
+export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> {
+  const { fetchOHLCV } = await import("./market/exchange");
+
+  const marketPromise = fetchOHLCV(data.ticker, data.timeframe).then((m) => ({
+    ...m,
+    stats: analyzeSeries(m.candles, data.timeframe),
+  }));
+
+  const visionPromise = data.imageDataUrl
+    ? readChart(data.imageDataUrl)
+        .then((vision) => ({ vision, visionError: null as string | null }))
+        .catch((err: unknown) => ({
+          vision: null,
+          visionError:
+            err instanceof Error
+              ? err.message
+              : "Não foi possível ler o print.",
+        }))
+    : Promise.resolve({ vision: null, visionError: null });
+
+  const [market, visionPart] = await Promise.all([marketPromise, visionPromise]);
+
+  return {
+    ticker: data.ticker,
+    displayTicker: displayTicker(data.ticker),
+    timeframe: data.timeframe,
+    fetchedAt: Date.now(),
+    candleCount: market.candles.length,
+    snapshot: market.stats.snapshot,
+    precedent: market.stats.precedent,
+    chart: market.stats.chart,
+    vision: visionPart.vision,
+    visionError: visionPart.visionError,
+    source: market.source,
+  };
+}
+
 export const analyzeSetup = createServerFn({ method: "POST" })
-  .validator((input: AnalyzeInput) => {
-    if (!input || typeof input !== "object") {
-      throw new Error("Pedido inválido.");
-    }
-    const ticker = normalizeTicker(String(input.ticker ?? ""));
-    if (!/^[A-Z0-9]{5,20}$/.test(ticker)) {
-      throw new Error("Ticker inválido. Ex.: BTC, ETHUSDT, SOL.");
-    }
-    const timeframe = input.timeframe;
-    if (!TIMEFRAMES.includes(timeframe)) {
-      throw new Error("Tempo gráfico inválido.");
-    }
-    const imageDataUrl =
-      typeof input.imageDataUrl === "string" && input.imageDataUrl.startsWith("data:image/")
-        ? input.imageDataUrl
-        : null;
-    if (imageDataUrl && imageDataUrl.length > 1_800_000) {
-      throw new Error("Print grande demais. Envie um recorte do gráfico.");
-    }
-    return { ticker, timeframe, imageDataUrl } satisfies AnalyzeInput;
-  })
-  .handler(async ({ data }): Promise<AnalysisPayload> => {
-    const { fetchOHLCV } = await import("./market/exchange");
-
-    const marketPromise = fetchOHLCV(data.ticker, data.timeframe).then((m) => ({
-      ...m,
-      stats: analyzeSeries(m.candles, data.timeframe),
-    }));
-
-    const visionPromise = data.imageDataUrl
-      ? readChart(data.imageDataUrl)
-          .then((vision) => ({ vision, visionError: null as string | null }))
-          .catch((err: unknown) => ({
-            vision: null,
-            visionError:
-              err instanceof Error
-                ? err.message
-                : "Não foi possível ler o print.",
-          }))
-      : Promise.resolve({ vision: null, visionError: null });
-
-    const [market, visionPart] = await Promise.all([marketPromise, visionPromise]);
-
-    return {
-      ticker: data.ticker,
-      displayTicker: displayTicker(data.ticker),
-      timeframe: data.timeframe,
-      fetchedAt: Date.now(),
-      candleCount: market.candles.length,
-      snapshot: market.stats.snapshot,
-      precedent: market.stats.precedent,
-      chart: market.stats.chart,
-      vision: visionPart.vision,
-      visionError: visionPart.visionError,
-      source: market.source,
-    };
-  });
+  .validator(validateAnalyzeInput)
+  .handler(async ({ data }): Promise<AnalysisPayload> => runAnalysis(data));
