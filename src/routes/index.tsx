@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
@@ -14,7 +14,8 @@ import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory } from "@/lib/history";
-import { TIMEFRAMES, type StoredAnalysis, type Timeframe } from "@/lib/market/types";
+import { TIMEFRAMES, type StoredAnalysis, type Timeframe, type WatchRefreshMinutes } from "@/lib/market/types";
+import { loadWatchRefreshMinutes, saveWatchRefreshMinutes } from "@/lib/watch-refresh";
 import {
   isWatched,
   loadWatchlist,
@@ -44,11 +45,29 @@ function Home() {
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
+  const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
+
+  const watchRef = useRef(watch);
+  const refreshingAllRef = useRef(refreshingAll);
+  const refreshAllFnRef = useRef<() => void>(() => {});
+  watchRef.current = watch;
+  refreshingAllRef.current = refreshingAll;
 
   useEffect(() => {
     setHistory(loadHistory());
     setWatch(loadWatchlist());
+    setAutoRefreshMin(loadWatchRefreshMinutes());
   }, []);
+
+  useEffect(() => {
+    if (autoRefreshMin <= 0) return;
+    const ms = autoRefreshMin * 60_000;
+    const id = window.setInterval(() => {
+      if (refreshingAllRef.current || watchRef.current.length === 0) return;
+      refreshAllFnRef.current();
+    }, ms);
+    return () => window.clearInterval(id);
+  }, [autoRefreshMin]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -99,13 +118,6 @@ function Home() {
     }
   }
 
-  /**
-   * TF global do top bar: troca o tempo gráfico do ticker em foco agora.
-   * Com um resultado aberto, reanalisa o MESMO ticker no novo TF (sem
-   * reenviar o print — a leitura visual é específica da análise original,
-   * não do TF). Sem resultado aberto, só atualiza o estado compartilhado
-   * que o formulário de Analisar já usa.
-   */
   async function changeGlobalTimeframe(tf: Timeframe) {
     setTimeframe(tf);
     if (tf === timeframe) return;
@@ -192,14 +204,10 @@ function Home() {
   }
 
   async function refreshAllWatch() {
-    if (watch.length === 0 || refreshingAll) return;
+    if (watchRef.current.length === 0 || refreshingAllRef.current) return;
     setWatchError(null);
     setRefreshingAll(true);
-    const list = [...watch];
-    // Uma linha de cada vez, mostrando qual par está sendo reavaliado agora
-    // (refreshingId) — silent só evita que uma falha isolada substitua o
-    // banner de erro no meio do lote; os nomes que falharam vão na mensagem
-    // final, não uma contagem genérica.
+    const list = [...watchRef.current];
     const failedTickers: string[] = [];
     for (const item of list) {
       const ok = await refreshWatchItem(item, { silent: true, showProgress: true });
@@ -213,6 +221,15 @@ function Home() {
           : `Falha ao reavaliar: ${failedTickers.join(", ")}.`,
       );
     }
+  }
+
+  refreshAllFnRef.current = () => {
+    void refreshAllWatch();
+  };
+
+  function setAutoRefresh(v: WatchRefreshMinutes) {
+    setAutoRefreshMin(v);
+    saveWatchRefreshMinutes(v);
   }
 
   function openFromWatch(item: WatchItem) {
@@ -237,8 +254,6 @@ function Home() {
         className={cn(
           "mx-auto flex w-full flex-col px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]",
           view === "result" ? "max-w-6xl" : wide ? "max-w-5xl" : "max-w-lg",
-          // Acima de xl a watch vira coluna permanente (layout terminal) —
-          // precisa de mais largura que qualquer um dos limites acima.
           "xl:max-w-[1680px]",
         )}
       >
@@ -287,7 +302,7 @@ function Home() {
                   onClick={() => void changeGlobalTimeframe(tf)}
                   title={`Trocar para ${tf}${view === "result" && result ? ` — reanalisa ${result.displayTicker}` : ""}`}
                   className={cn(
-                    "h-7 rounded-sm px-2 text-[11px] font-medium disabled:opacity-50",
+                    "h-7 rounded-sm px-1.5 text-[10px] font-medium disabled:opacity-50",
                     tf === timeframe ? "bg-accent text-accent-fg" : "text-muted hover:text-fg",
                   )}
                 >
@@ -300,8 +315,6 @@ function Home() {
               <Tab active={view === "home"} onClick={() => setView("home")}>
                 Analisar
               </Tab>
-              {/* Acima de xl a watch é uma coluna sempre visível (ver grid
-                  abaixo) — a aba fica redundante e some. */}
               <Tab active={view === "watch"} onClick={() => setView("watch")} className="xl:hidden">
                 Watch
               </Tab>
@@ -344,9 +357,6 @@ function Home() {
         </header>
 
         <div className="xl:grid xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start xl:gap-6">
-          {/* Rail permanente: acima de xl a watch fica sempre visível ao
-              lado do que estiver no centro, em vez de trocar de aba pra
-              vê-la (layout terminal do wireframe). */}
           <div className="hidden xl:block xl:pt-6">
             <WatchPanel
               items={watch}
@@ -359,6 +369,8 @@ function Home() {
               onRemove={(id) => setWatch((w) => removeWatch(w, id))}
               onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
               onRefreshAll={() => void refreshAllWatch()}
+              autoRefreshMin={autoRefreshMin}
+              onAutoRefreshMin={setAutoRefresh}
             />
           </div>
 
@@ -392,6 +404,8 @@ function Home() {
                     onRemove={(id) => setWatch((w) => removeWatch(w, id))}
                     onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
                     onRefreshAll={() => void refreshAllWatch()}
+                    autoRefreshMin={autoRefreshMin}
+                    onAutoRefreshMin={setAutoRefresh}
                   />
                 </div>
                 <div className="hidden rounded-xl bg-surface p-5 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)] lg:block">
@@ -401,8 +415,8 @@ function Home() {
                       Analise um par e toque em <span className="text-fg">+ Watch</span>.
                     </li>
                     <li>
-                      <span className="text-fg">Reavaliar</span> chama a API de novo (OHLC fresco,
-                      sem print) e atualiza amostra e drawdown.
+                      <span className="text-fg">Reavaliar</span> ou auto 1/5/15 min: snapshot fresco
+                      (não é websocket ao vivo).
                     </li>
                     <li>Clique na linha para abrir o último snapshot do histórico.</li>
                     <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
@@ -457,9 +471,6 @@ function Home() {
                 </div>
 
                 <div className={cn("space-y-6", busy && "opacity-50")}>
-                  {/* Abaixo de xl não há rail — mantém o atalho de Watch aqui.
-                  Acima de xl a watch já está sempre visível à esquerda,
-                  então esse espaço vira só "como funciona". */}
                   <div className="xl:hidden">
                     {watch.length > 0 ? (
                       <WatchPanel
@@ -482,7 +493,6 @@ function Home() {
         </div>
       </div>
 
-      {/* Assistente flutuante: disponível sempre que houver um resultado carregado */}
       {result ? <ScenarioAssistant analysis={result} /> : null}
     </div>
   );
