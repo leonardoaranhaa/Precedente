@@ -195,7 +195,29 @@ export function WatchPanel({
         ) : (
           <span className="text-right">Δ</span>
         )}
-        <span className="text-center">·</span>
+        {richView ? (
+          <button
+            type="button"
+            onClick={() => toggleSort("sample")}
+            title="Ordenar por amostra"
+            className={cn(
+              "flex items-center justify-center hover:text-fg",
+              sortKey === "sample" && "text-fg",
+            )}
+          >
+            {sortKey === "sample" ? (
+              sortDir === "desc" ? (
+                <ArrowDown className="size-2.5" />
+              ) : (
+                <ArrowUp className="size-2.5" />
+              )
+            ) : (
+              "·"
+            )}
+          </button>
+        ) : (
+          <span className="text-center">·</span>
+        )}
         {richView ? (
           <SortHeader label="dd10" active={sortKey === "dd"} dir={sortDir} onClick={() => toggleSort("dd")} />
         ) : (
