@@ -90,8 +90,7 @@ function Home() {
       setStep("done");
       setView("result");
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Não foi possível concluir a análise.";
+      const message = err instanceof Error ? err.message : "Não foi possível concluir a análise.";
       setError(cleanError(message));
     } finally {
       window.clearTimeout(t1);
@@ -144,8 +143,7 @@ function Home() {
       }
       return stored;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Falha ao reavaliar este par.";
+      const message = err instanceof Error ? err.message : "Falha ao reavaliar este par.";
       if (!opts?.silent) setWatchError(cleanError(message));
       return null;
     } finally {
@@ -195,6 +193,9 @@ function Home() {
         className={cn(
           "mx-auto flex w-full flex-col px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]",
           view === "result" ? "max-w-6xl" : wide ? "max-w-5xl" : "max-w-lg",
+          // Acima de xl a watch vira coluna permanente (layout terminal) —
+          // precisa de mais largura que qualquer um dos limites acima.
+          "xl:max-w-[1680px]",
         )}
       >
         <header className="flex flex-wrap items-center justify-between gap-3 py-2">
@@ -233,7 +234,9 @@ function Home() {
               <Tab active={view === "home"} onClick={() => setView("home")}>
                 Analisar
               </Tab>
-              <Tab active={view === "watch"} onClick={() => setView("watch")}>
+              {/* Acima de xl a watch é uma coluna sempre visível (ver grid
+                  abaixo) — a aba fica redundante e some. */}
+              <Tab active={view === "watch"} onClick={() => setView("watch")} className="xl:hidden">
                 Watch
               </Tab>
               <Tab active={view === "history"} onClick={() => setView("history")}>
@@ -274,110 +277,143 @@ function Home() {
           </div>
         </header>
 
-        {view === "result" && result ? (
-          <div className="mt-4">
-            <AnalysisResult
-              analysis={result}
-              onBack={() => {
-                setView("home");
-              }}
-              watched={resultWatched}
-              onToggleWatch={() => toggleWatch(result)}
+        <div className="xl:grid xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start xl:gap-6">
+          {/* Rail permanente: acima de xl a watch fica sempre visível ao
+              lado do que estiver no centro, em vez de trocar de aba pra
+              vê-la (layout terminal do wireframe). */}
+          <div className="hidden xl:block xl:pt-6">
+            <WatchPanel
+              items={watch}
+              focusIds={focusIds}
+              activeId={result ? `${result.ticker}:${result.timeframe}` : null}
+              refreshingId={refreshingId}
+              refreshingAll={refreshingAll}
+              error={watchError}
+              onSelect={openFromWatch}
+              onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+              onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+              onRefreshAll={() => void refreshAllWatch()}
             />
           </div>
-        ) : view === "watch" ? (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start">
-            <div>
-              <h1 className="font-display text-3xl tracking-tight">Watch</h1>
-              <p className="mt-1 mb-6 text-sm text-muted">
-                Pares pinados neste aparelho — amostra e drawdown, sem conta.
-              </p>
-              <WatchPanel
-                items={watch}
-                focusIds={focusIds}
-                activeId={result ? `${result.ticker}:${result.timeframe}` : null}
-                refreshingId={refreshingId}
-                refreshingAll={refreshingAll}
-                error={watchError}
-                onSelect={openFromWatch}
-                onRemove={(id) => setWatch((w) => removeWatch(w, id))}
-                onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
-                onRefreshAll={() => void refreshAllWatch()}
-              />
-            </div>
-            <div className="hidden rounded-xl bg-surface p-5 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)] lg:block">
-              <p className="text-xs tracking-wide text-muted uppercase">Como usar</p>
-              <ul className="mt-3 list-disc space-y-2 pl-4">
-                <li>Analise um par e toque em <span className="text-fg">+ Watch</span>.</li>
-                <li>
-                  <span className="text-fg">Reavaliar</span> chama a API de novo (OHLC fresco, sem
-                  print) e atualiza amostra e drawdown.
-                </li>
-                <li>Clique na linha para abrir o último snapshot do histórico.</li>
-                <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
-              </ul>
-            </div>
-          </div>
-        ) : view === "history" ? (
-          <div className="mt-6">
-            <h1 className="font-display text-3xl tracking-tight">Histórico</h1>
-            <p className="mt-1 mb-6 text-sm text-muted">Neste aparelho, sem conta.</p>
-            <HistoryPanel
-              items={history}
-              onOpen={(item) => {
-                setResult(item);
-                setView("result");
-              }}
-            />
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-10 lg:mt-10 lg:grid-cols-2 lg:items-start lg:gap-16">
-            <div className="space-y-8">
-              <div className="space-y-3">
-                <p className="text-xs tracking-wide text-muted uppercase">
-                  OHLC real · padrões históricos · nunca compre/venda
-                </p>
-                <h1 className="font-display text-4xl leading-tight tracking-tight text-fg">
-                  Quantas vezes isso já aconteceu?
-                </h1>
-                <p className="max-w-md text-base leading-relaxed text-muted">
-                  A estatística vem do histórico real: RSI, médias e o que o preço fez depois.
-                  No resultado, o assistente de cenário descreve o padrão — sem ordenar exposição.
-                </p>
+
+          <div>
+            {view === "result" && result ? (
+              <div className="mt-4">
+                <AnalysisResult
+                  analysis={result}
+                  onBack={() => {
+                    setView("home");
+                  }}
+                  watched={resultWatched}
+                  onToggleWatch={() => toggleWatch(result)}
+                />
               </div>
-
-              {busy ? (
-                <Pipeline step={step} hasImage={Boolean(image)} />
-              ) : (
-                <AnalyzeForm
-                  ticker={ticker}
-                  timeframe={timeframe}
-                  image={image}
-                  busy={busy}
-                  error={error}
-                  topTraded={topTraded}
-                  onTicker={setTicker}
-                  onTimeframe={setTimeframe}
-                  onImage={setImage}
-                  onSubmit={() => void run()}
+            ) : view === "watch" ? (
+              <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start">
+                <div>
+                  <h1 className="font-display text-3xl tracking-tight">Watch</h1>
+                  <p className="mt-1 mb-6 text-sm text-muted">
+                    Pares pinados neste aparelho — amostra e drawdown, sem conta.
+                  </p>
+                  <WatchPanel
+                    items={watch}
+                    focusIds={focusIds}
+                    activeId={result ? `${result.ticker}:${result.timeframe}` : null}
+                    refreshingId={refreshingId}
+                    refreshingAll={refreshingAll}
+                    error={watchError}
+                    onSelect={openFromWatch}
+                    onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+                    onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+                    onRefreshAll={() => void refreshAllWatch()}
+                  />
+                </div>
+                <div className="hidden rounded-xl bg-surface p-5 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)] lg:block">
+                  <p className="text-xs tracking-wide text-muted uppercase">Como usar</p>
+                  <ul className="mt-3 list-disc space-y-2 pl-4">
+                    <li>
+                      Analise um par e toque em <span className="text-fg">+ Watch</span>.
+                    </li>
+                    <li>
+                      <span className="text-fg">Reavaliar</span> chama a API de novo (OHLC fresco,
+                      sem print) e atualiza amostra e drawdown.
+                    </li>
+                    <li>Clique na linha para abrir o último snapshot do histórico.</li>
+                    <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
+                  </ul>
+                </div>
+              </div>
+            ) : view === "history" ? (
+              <div className="mt-6">
+                <h1 className="font-display text-3xl tracking-tight">Histórico</h1>
+                <p className="mt-1 mb-6 text-sm text-muted">Neste aparelho, sem conta.</p>
+                <HistoryPanel
+                  items={history}
+                  onOpen={(item) => {
+                    setResult(item);
+                    setView("result");
+                  }}
                 />
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-10 lg:mt-10 lg:grid-cols-2 lg:items-start lg:gap-16">
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <p className="text-xs tracking-wide text-muted uppercase">
+                      OHLC real · padrões históricos · nunca compre/venda
+                    </p>
+                    <h1 className="font-display text-4xl leading-tight tracking-tight text-fg">
+                      Quantas vezes isso já aconteceu?
+                    </h1>
+                    <p className="max-w-md text-base leading-relaxed text-muted">
+                      A estatística vem do histórico real: RSI, médias e o que o preço fez depois.
+                      No resultado, o assistente de cenário descreve o padrão — sem ordenar
+                      exposição.
+                    </p>
+                  </div>
 
-            <div className={cn("space-y-6", busy && "opacity-50")}>
-              {watch.length > 0 ? (
-                <WatchPanel
-                  items={watch.slice(0, 6)}
-                  onSelect={openFromWatch}
-                  onRemove={(id) => setWatch((w) => removeWatch(w, id))}
-                  onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
-                />
-              ) : (
-                <HowItWorks />
-              )}
-            </div>
+                  {busy ? (
+                    <Pipeline step={step} hasImage={Boolean(image)} />
+                  ) : (
+                    <AnalyzeForm
+                      ticker={ticker}
+                      timeframe={timeframe}
+                      image={image}
+                      busy={busy}
+                      error={error}
+                      topTraded={topTraded}
+                      onTicker={setTicker}
+                      onTimeframe={setTimeframe}
+                      onImage={setImage}
+                      onSubmit={() => void run()}
+                    />
+                  )}
+                </div>
+
+                <div className={cn("space-y-6", busy && "opacity-50")}>
+                  {/* Abaixo de xl não há rail — mantém o atalho de Watch aqui.
+                  Acima de xl a watch já está sempre visível à esquerda,
+                  então esse espaço vira só "como funciona". */}
+                  <div className="xl:hidden">
+                    {watch.length > 0 ? (
+                      <WatchPanel
+                        items={watch.slice(0, 6)}
+                        onSelect={openFromWatch}
+                        onRemove={(id) => setWatch((w) => removeWatch(w, id))}
+                        onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+                      />
+                    ) : (
+                      <HowItWorks />
+                    )}
+                  </div>
+                  <div className="hidden xl:block">
+                    <HowItWorks />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Assistente flutuante: disponível sempre que houver um resultado carregado */}
@@ -390,10 +426,12 @@ function Tab({
   active,
   onClick,
   children,
+  className,
 }: {
   active: boolean;
   onClick: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <button
@@ -402,6 +440,7 @@ function Tab({
       className={cn(
         "h-9 rounded-sm px-3 text-xs font-medium",
         active ? "bg-bg-elevated text-fg shadow-[var(--shadow-border)]" : "text-muted",
+        className,
       )}
     >
       {children}
