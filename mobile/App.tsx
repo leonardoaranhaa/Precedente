@@ -25,7 +25,11 @@ import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
-import type { StoredAnalysis, Timeframe } from "./src/types";
+import type { StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
+import {
+  loadWatchRefreshMinutes,
+  saveWatchRefreshMinutes,
+} from "./src/watch-refresh";
 import {
   isWatched,
   loadWatchlist,
@@ -54,6 +58,7 @@ export default function App() {
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
+  const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
 
   const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -62,8 +67,11 @@ export default function App() {
 
   const historyRef = useRef(history);
   const watchRef = useRef(watch);
+  const refreshingAllRef = useRef(refreshingAll);
+  const refreshAllFnRef = useRef<() => void>(() => {});
   historyRef.current = history;
   watchRef.current = watch;
+  refreshingAllRef.current = refreshingAll;
 
   const syncPush = useCallback(
     async (rules: AlertRules, watches: WatchItem[], token: string | null) => {
@@ -80,6 +88,7 @@ export default function App() {
   useEffect(() => {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
+    loadWatchRefreshMinutes().then(setAutoRefreshMin);
     loadAlertRules().then(async (rules) => {
       setAlertRules(rules);
       if (rules.enabled) {
@@ -96,6 +105,16 @@ export default function App() {
       .then((pairs) => setTopTraded(pairs.map((p) => p.base)))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (autoRefreshMin <= 0) return;
+    const ms = autoRefreshMin * 60_000;
+    const id = setInterval(() => {
+      if (refreshingAllRef.current || watchRef.current.length === 0) return;
+      refreshAllFnRef.current();
+    }, ms);
+    return () => clearInterval(id);
+  }, [autoRefreshMin]);
 
   if (!fontsLoaded) return null;
 
@@ -207,7 +226,7 @@ export default function App() {
   }
 
   async function refreshAllWatch() {
-    if (watchRef.current.length === 0 || refreshingAll) return;
+    if (watchRef.current.length === 0 || refreshingAllRef.current) return;
     setWatchError(null);
     setRefreshingAll(true);
     const list = [...watchRef.current];
@@ -230,6 +249,15 @@ export default function App() {
           : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
+  }
+
+  refreshAllFnRef.current = () => {
+    void refreshAllWatch();
+  };
+
+  function setAutoRefresh(v: WatchRefreshMinutes) {
+    setAutoRefreshMin(v);
+    void saveWatchRefreshMinutes(v);
   }
 
   function openFromWatch(item: WatchItem) {
@@ -330,6 +358,8 @@ export default function App() {
             }
             onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
             onRefreshAll={() => void refreshAllWatch()}
+            autoRefreshMin={autoRefreshMin}
+            onAutoRefreshMin={setAutoRefresh}
           />
         ) : view === "alerts" ? (
           <AlertsScreen
