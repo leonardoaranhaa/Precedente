@@ -321,11 +321,11 @@ export function WatchPanel({
                     {refreshingId === item.id ? (
                       <Loader2 className="size-2.5 shrink-0 animate-spin text-subtle" />
                     ) : null}
-                    <span className="truncate text-xs font-semibold text-fg">
+                    <span className="shrink-0 text-xs font-semibold text-fg">
                       {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
                     <span
-                      className="shrink-0 truncate text-[10px] text-subtle"
+                      className="min-w-0 truncate text-[10px] text-subtle"
                       title={`Última avaliação: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`}
                     >
                       {refreshingId === item.id

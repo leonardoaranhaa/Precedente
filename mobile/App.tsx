@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { analyze, fetchTopTraded } from "./src/api";
 import {
   DEFAULT_ALERT_RULES,
@@ -41,6 +42,14 @@ import {
 type Screen = "home" | "history" | "result" | "watch" | "alerts";
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppInner />
+    </SafeAreaProvider>
+  );
+}
+
+function AppInner() {
   const [fontsLoaded] = useAppFonts();
 
   const [view, setView] = useState<Screen>("home");
@@ -438,7 +447,7 @@ export default function App() {
           />
         )}
 
-        {result ? <ScenarioAssistant analysis={result} /> : null}
+        {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
       </View>
     </SafeAreaView>
   );

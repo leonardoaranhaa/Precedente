@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { MessageCircle, Sparkles, X } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ASSISTANT_QUESTIONS,
   answerAssistantQuestion,
@@ -18,6 +19,7 @@ import { colors, radius } from "../theme";
 import type { StoredAnalysis } from "../types";
 
 export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | null }) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [hint, setHint] = useState(true);
   const [qaId, setQaId] = useState<AssistantQuestionId | null>(null);
@@ -43,7 +45,10 @@ export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | nul
 
   return (
     <>
-      <View style={styles.fabWrap} pointerEvents="box-none">
+      <View
+        style={[styles.fabWrap, { bottom: 24 + insets.bottom, right: 16 + insets.right }]}
+        pointerEvents="box-none"
+      >
         {!open && hint ? (
           <Pressable
             onPress={() => {
@@ -110,7 +115,10 @@ export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | nul
               ))}
             </ScrollView>
 
-            <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              contentContainerStyle={[styles.body, { paddingBottom: 16 + insets.bottom }]}
+              showsVerticalScrollIndicator={false}
+            >
               {qaAnswer ? (
                 <Text style={styles.qaAnswer}>{qaAnswer}</Text>
               ) : (
