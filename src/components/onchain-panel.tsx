@@ -13,7 +13,6 @@ function formatUsd(n: number | null): string {
 
 function formatFunding(rate: number | null): string {
   if (rate == null || !Number.isFinite(rate)) return "—";
-  // Binance lastFundingRate é fração por 8h tipicamente
   const pct = rate * 100;
   const sign = pct > 0 ? "+" : "";
   return `${sign}${pct.toFixed(4).replace(".", ",")}%`;
@@ -22,6 +21,12 @@ function formatFunding(rate: number | null): string {
 function formatOi(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return "—";
   return formatInt(Math.round(n));
+}
+
+function formatAge(hours: number | null): string {
+  if (hours == null || !Number.isFinite(hours)) return "—";
+  if (hours < 48) return `~${Math.round(hours)}h`;
+  return `~${Math.round(hours / 24)}d`;
 }
 
 type Props = { onchain: OnchainContext };
@@ -49,6 +54,16 @@ export function OnchainPanel({ onchain }: Props) {
   const sells = onchain.sells24h ?? 0;
   const txnTotal = buys + sells;
   const sellShare = txnTotal > 0 ? (sells / txnTotal) * 100 : null;
+
+  const buys6 = onchain.buys6h;
+  const sells6 = onchain.sells6h;
+  const txn6 =
+    buys6 != null && sells6 != null ? buys6 + sells6 : null;
+  const sellShare6 =
+    txn6 != null && txn6 > 0 && sells6 != null ? (sells6 / txn6) * 100 : null;
+
+  const youngPair =
+    onchain.pairAgeHours != null && onchain.pairAgeHours < 72;
 
   return (
     <section className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]">
@@ -104,11 +119,31 @@ export function OnchainPanel({ onchain }: Props) {
             <dl className="space-y-2 text-sm">
               <Row label="Liquidez" value={formatUsd(onchain.liquidityUsd)} />
               <Row label="Vol 24h" value={formatUsd(onchain.volume24hUsd)} />
+              {onchain.volume6hUsd != null ? (
+                <Row label="Vol 6h" value={formatUsd(onchain.volume6hUsd)} />
+              ) : null}
+              {onchain.volume1hUsd != null ? (
+                <Row label="Vol 1h" value={formatUsd(onchain.volume1hUsd)} />
+              ) : null}
               {onchain.priceChange24hPct != null ? (
                 <Row
-                  label="Δ 24h DEX"
+                  label="Δ 24h"
                   value={formatPct(onchain.priceChange24hPct)}
                   tone={onchain.priceChange24hPct >= 0 ? "up" : "down"}
+                />
+              ) : null}
+              {onchain.priceChange6hPct != null ? (
+                <Row
+                  label="Δ 6h"
+                  value={formatPct(onchain.priceChange6hPct)}
+                  tone={onchain.priceChange6hPct >= 0 ? "up" : "down"}
+                />
+              ) : null}
+              {onchain.priceChange1hPct != null ? (
+                <Row
+                  label="Δ 1h"
+                  value={formatPct(onchain.priceChange1hPct)}
+                  tone={onchain.priceChange1hPct >= 0 ? "up" : "down"}
                 />
               ) : null}
               {sellShare != null ? (
@@ -116,6 +151,21 @@ export function OnchainPanel({ onchain }: Props) {
                   label="Txns 24h"
                   value={`${formatInt(buys)}B / ${formatInt(sells)}S`}
                   hint={`${Math.round(sellShare)}% sells`}
+                />
+              ) : null}
+              {sellShare6 != null && buys6 != null && sells6 != null ? (
+                <Row
+                  label="Txns 6h"
+                  value={`${formatInt(buys6)}B / ${formatInt(sells6)}S`}
+                  hint={`${Math.round(sellShare6)}% sells`}
+                />
+              ) : null}
+              {onchain.pairAgeHours != null ? (
+                <Row
+                  label="Idade do par"
+                  value={formatAge(onchain.pairAgeHours)}
+                  tone={youngPair ? "warn" : undefined}
+                  hint={youngPair ? "recente" : undefined}
                 />
               ) : null}
             </dl>
@@ -131,8 +181,8 @@ export function OnchainPanel({ onchain }: Props) {
               </a>
             ) : null}
             <p className="text-[11px] leading-relaxed text-subtle">
-              Liquidez rasa ou volume concentrado aumentam o risco de escorregamento
-              on-chain — contexto de fragilidade, não de entrada.
+              Vol/txns em 1h–6h e par muito novo aumentam o risco de escorregamento —
+              contexto de fragilidade, não de entrada.
             </p>
           </div>
         ) : null}

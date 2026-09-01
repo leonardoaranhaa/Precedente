@@ -142,12 +142,32 @@ export function validateAnalyzeInput(input: unknown): AnalyzeInput {
 
 export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> {
   const { fetchOHLCV } = await import("./market/exchange");
-  const { fetchOnchainContext } = await import("./market/onchain");
+  const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
 
-  const marketPromise = fetchOHLCV(data.ticker, data.timeframe).then((m) => ({
-    ...m,
-    stats: analyzeSeries(m.candles, data.timeframe),
-  }));
+  const onchainPromise = fetchOnchainContext(data.ticker).catch(() => null);
+
+  let market: Awaited<ReturnType<typeof fetchOHLCV>> & {
+    stats: ReturnType<typeof analyzeSeries>;
+  };
+
+  try {
+    const m = await fetchOHLCV(data.ticker, data.timeframe);
+    market = { ...m, stats: analyzeSeries(m.candles, data.timeframe) };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const notListed =
+      msg.includes("não encontrado") || msg.includes("Sem candles");
+    if (notListed) {
+      const onchain = await onchainPromise;
+      const dexHint = onchain ? summarizeDexForError(onchain) : null;
+      if (dexHint) {
+        throw new Error(
+          `${msg} No DEX há atividade (${dexHint}). Precedentes de preço exigem histórico de candles na Binance — use o contexto de liquidez só como fragilidade pré-listagem, não como estatística de caminho.`,
+        );
+      }
+    }
+    throw err instanceof Error ? err : new Error(msg);
+  }
 
   const visionPromise = data.imageDataUrl
     ? readChart(data.imageDataUrl)
@@ -161,13 +181,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
         }))
     : Promise.resolve({ vision: null, visionError: null });
 
-  const onchainPromise = fetchOnchainContext(data.ticker).catch(() => null);
-
-  const [market, visionPart, onchain] = await Promise.all([
-    marketPromise,
-    visionPromise,
-    onchainPromise,
-  ]);
+  const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
 
   const hasOnchain =
     onchain &&

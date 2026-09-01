@@ -80,6 +80,7 @@ type DexPair = {
   dexId?: string;
   url?: string;
   pairAddress?: string;
+  pairCreatedAt?: number;
   baseToken?: { symbol?: string; name?: string; address?: string };
   quoteToken?: { symbol?: string };
   priceUsd?: string;
@@ -88,6 +89,7 @@ type DexPair = {
   txns?: {
     h24?: { buys?: number; sells?: number };
     h6?: { buys?: number; sells?: number };
+    h1?: { buys?: number; sells?: number };
   };
   priceChange?: { h24?: number; h6?: number; h1?: number };
   fdv?: number;
@@ -107,15 +109,43 @@ function scorePair(p: DexPair, base: string): number {
   return score;
 }
 
+function formatUsdShort(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${Math.round(n)}`;
+}
+
+/** Texto factual para erro de par não listado — não é tela completa, só contexto. */
+export function summarizeDexForError(ctx: OnchainContext): string | null {
+  if (ctx.liquidityUsd == null && ctx.volume24hUsd == null) return null;
+  const parts: string[] = [];
+  if (ctx.liquidityUsd != null) parts.push(`liquidez DEX ~${formatUsdShort(ctx.liquidityUsd)}`);
+  if (ctx.volume24hUsd != null) parts.push(`vol 24h ~${formatUsdShort(ctx.volume24hUsd)}`);
+  if (ctx.pairAgeHours != null) {
+    if (ctx.pairAgeHours < 48) parts.push(`par recente (~${Math.round(ctx.pairAgeHours)}h)`);
+    else parts.push(`par ~${Math.round(ctx.pairAgeHours / 24)}d no DEX`);
+  }
+  if (ctx.chainId) parts.push(ctx.chainId);
+  return parts.join(" · ");
+}
+
 async function fetchDexContext(symbol: string): Promise<{
   chainId: string | null;
   dexId: string | null;
   pairUrl: string | null;
   liquidityUsd: number | null;
   volume24hUsd: number | null;
+  volume6hUsd: number | null;
+  volume1hUsd: number | null;
   buys24h: number | null;
   sells24h: number | null;
+  buys6h: number | null;
+  sells6h: number | null;
   priceChange24hPct: number | null;
+  priceChange6hPct: number | null;
+  priceChange1hPct: number | null;
+  pairAgeHours: number | null;
   source: string | null;
 }> {
   const base = baseAsset(symbol);
@@ -135,7 +165,6 @@ async function fetchDexContext(symbol: string): Promise<{
         best = p;
       }
     }
-    // se já achou par com símbolo exato + liquidez decente, para
     if (
       best &&
       (best.baseToken?.symbol ?? "").toUpperCase() === base &&
@@ -152,15 +181,24 @@ async function fetchDexContext(symbol: string): Promise<{
       pairUrl: null,
       liquidityUsd: null,
       volume24hUsd: null,
+      volume6hUsd: null,
+      volume1hUsd: null,
       buys24h: null,
       sells24h: null,
+      buys6h: null,
+      sells6h: null,
       priceChange24hPct: null,
+      priceChange6hPct: null,
+      priceChange1hPct: null,
+      pairAgeHours: null,
       source: null,
     };
   }
 
-  const buys = best.txns?.h24?.buys ?? null;
-  const sells = best.txns?.h24?.sells ?? null;
+  let pairAgeHours: number | null = null;
+  if (typeof best.pairCreatedAt === "number" && best.pairCreatedAt > 0) {
+    pairAgeHours = Math.max(0, (Date.now() - best.pairCreatedAt) / 3_600_000);
+  }
 
   return {
     chainId: best.chainId ?? null,
@@ -168,10 +206,19 @@ async function fetchDexContext(symbol: string): Promise<{
     pairUrl: best.url ?? null,
     liquidityUsd: best.liquidity?.usd ?? null,
     volume24hUsd: best.volume?.h24 ?? null,
-    buys24h: buys,
-    sells24h: sells,
+    volume6hUsd: best.volume?.h6 ?? null,
+    volume1hUsd: best.volume?.h1 ?? null,
+    buys24h: best.txns?.h24?.buys ?? null,
+    sells24h: best.txns?.h24?.sells ?? null,
+    buys6h: best.txns?.h6?.buys ?? null,
+    sells6h: best.txns?.h6?.sells ?? null,
     priceChange24hPct:
       typeof best.priceChange?.h24 === "number" ? best.priceChange.h24 : null,
+    priceChange6hPct:
+      typeof best.priceChange?.h6 === "number" ? best.priceChange.h6 : null,
+    priceChange1hPct:
+      typeof best.priceChange?.h1 === "number" ? best.priceChange.h1 : null,
+    pairAgeHours,
     source: "DexScreener",
   };
 }
@@ -200,9 +247,16 @@ export async function fetchOnchainContext(symbol: string): Promise<OnchainContex
     pairUrl: dex.pairUrl,
     liquidityUsd: dex.liquidityUsd,
     volume24hUsd: dex.volume24hUsd,
+    volume6hUsd: dex.volume6hUsd,
+    volume1hUsd: dex.volume1hUsd,
     buys24h: dex.buys24h,
     sells24h: dex.sells24h,
+    buys6h: dex.buys6h,
+    sells6h: dex.sells6h,
     priceChange24hPct: dex.priceChange24hPct,
+    priceChange6hPct: dex.priceChange6hPct,
+    priceChange1hPct: dex.priceChange1hPct,
+    pairAgeHours: dex.pairAgeHours,
     dexSource: dex.source,
     sources,
   };
