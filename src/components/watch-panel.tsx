@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
-import { formatPct, timeframeLabel } from "@/lib/market/labels";
+import { formatAgo, formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
   filterByTab,
@@ -255,8 +255,13 @@ export function WatchPanel({
                     <span className="truncate text-xs font-semibold text-fg">
                       {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
-                    <span className="shrink-0 text-[10px] text-subtle">
+                    <span
+                      className="shrink-0 truncate text-[10px] text-subtle"
+                      title={`Última avaliação: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`}
+                    >
                       {timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
+                      {" · "}
+                      {formatAgo(item.updatedAt)}
                     </span>
                   </button>
                   <span className="text-right text-[11px] tabular-nums text-muted">
