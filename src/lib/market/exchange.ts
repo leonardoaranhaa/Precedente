@@ -86,7 +86,7 @@ export async function fetchOHLCV(
         throw new Error(`Sem candles para ${symbol} neste tempo gráfico.`);
       }
 
-      let candles = first;
+      const candles = first;
       if (first.length === PAGE) {
         const nextStart = first[first.length - 1]!.t + ms;
         const second = await fetchPage(base, symbol, interval, nextStart);

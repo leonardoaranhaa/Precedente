@@ -7,8 +7,8 @@ import {
   rollingLow,
   rsi,
   sma,
-} from "./indicators";
-import { fingerprintLabel, horizonCaption } from "./labels";
+} from "./indicators.ts";
+import { fingerprintLabel, horizonCaption } from "./labels.ts";
 import type {
   Candle,
   ChartPoint,
@@ -19,7 +19,7 @@ import type {
   PrecedentResult,
   Snapshot,
   Timeframe,
-} from "./types";
+} from "./types.ts";
 
 const HORIZONS = [5, 10, 20] as const;
 const CHART_BARS = 120;

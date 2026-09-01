@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { formatPct, formatPrice, timeframeLabel } from "@/lib/market/labels";
+import { formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
   filterByTab,
@@ -32,10 +31,21 @@ type Props = {
 };
 
 const TAB_LABEL: Record<WatchTab, string> = {
-  mine: "Minha watch",
-  focus: "Em foco",
-  fragile: "Frágeis",
+  mine: "watch",
+  focus: "foco",
+  fragile: "frágeis",
 };
+
+/** ● ok · ○ frágil · ▲ extremo — a mesma leitura de risco do checklist do Risk Rail, num glifo. */
+function signal(item: WatchItem): { glyph: string; tone: "up" | "warn" | "muted"; title: string } {
+  if (item.near20High || item.near20Low) {
+    return { glyph: "▲", tone: "warn", title: "Colado num extremo de 20 barras" };
+  }
+  if (item.sampleNote !== "ok") {
+    return { glyph: "○", tone: "warn", title: "Amostra frágil" };
+  }
+  return { glyph: "●", tone: "up", title: "Amostra ok, sem extremo" };
+}
 
 export function WatchPanel({
   items,
@@ -84,15 +94,15 @@ export function WatchPanel({
     return (
       <div
         className={cn(
-          "rounded-xl bg-surface p-4 text-sm leading-relaxed text-muted shadow-[var(--shadow-border)]",
+          "rounded-md bg-surface p-3 text-xs leading-relaxed text-muted shadow-[var(--shadow-border)]",
           className,
         )}
       >
-        <p className="flex items-center gap-2 text-xs tracking-wide text-muted uppercase">
-          <Star className="size-3.5" />
+        <p className="flex items-center gap-1.5 text-[10px] tracking-wide text-muted uppercase">
+          <Star className="size-3" />
           Watch
         </p>
-        <p className="mt-3">
+        <p className="mt-2">
           Nenhum par pinado. Após uma análise, use <span className="text-fg">+ Watch</span> para
           acompanhar amostra e drawdown aqui.
         </p>
@@ -105,17 +115,17 @@ export function WatchPanel({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]",
+        "overflow-hidden rounded-md bg-surface font-mono shadow-[var(--shadow-border)]",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <p className="flex items-center gap-2 text-xs tracking-wide text-muted uppercase">
-          <Star className="size-3.5" />
+      <div className="flex items-center justify-between gap-2 border-b border-border px-2 py-1.5">
+        <p className="flex items-center gap-1.5 text-[10px] tracking-wide text-muted uppercase">
+          <Star className="size-3" />
           Watch
         </p>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] tabular-nums text-subtle">
+          <span className="text-[10px] tabular-nums text-subtle">
             {visible.length}
             {visible.length !== items.length ? `/${items.length}` : ""}
           </span>
@@ -124,15 +134,15 @@ export function WatchPanel({
               type="button"
               disabled={busy}
               onClick={onRefreshAll}
-              className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-medium text-fg hover:bg-bg disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-fg hover:bg-bg disabled:opacity-50"
               title="Reavaliar todos"
             >
               {refreshingAll ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-3 animate-spin" />
               ) : (
-                <RefreshCw className="size-3.5" />
+                <RefreshCw className="size-3" />
               )}
-              Reavaliar
+              reavaliar
             </button>
           ) : null}
         </div>
@@ -140,34 +150,30 @@ export function WatchPanel({
 
       {richView ? (
         <>
-          <div className="flex gap-1 border-b border-border bg-bg/40 p-1.5">
+          <div className="flex gap-0.5 border-b border-border bg-bg/40 p-1">
             {WATCH_TABS.map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
                 className={cn(
-                  "h-8 flex-1 rounded-sm text-xs font-medium",
-                  tab === t
-                    ? "bg-surface text-fg shadow-[var(--shadow-border)]"
-                    : "text-muted hover:text-fg",
+                  "h-6 flex-1 rounded-sm text-[10px] font-medium uppercase tracking-wide",
+                  tab === t ? "bg-surface text-fg shadow-[var(--shadow-border)]" : "text-muted hover:text-fg",
                 )}
               >
                 {TAB_LABEL[t]}
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2">
+          <div className="flex flex-wrap gap-1 border-b border-border px-2 py-1.5">
             {WATCH_QUICK_FILTERS.map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setQuickFilter(f)}
                 className={cn(
-                  "h-7 rounded-full px-2.5 text-[11px] font-medium shadow-[var(--shadow-border)]",
-                  quickFilter === f
-                    ? "bg-accent text-accent-fg"
-                    : "bg-bg text-muted hover:text-fg",
+                  "h-5 rounded-sm px-1.5 text-[10px] font-medium",
+                  quickFilter === f ? "bg-accent text-accent-fg" : "bg-bg text-muted hover:text-fg",
                 )}
               >
                 {quickFilterLabel(f)}
@@ -178,96 +184,79 @@ export function WatchPanel({
       ) : null}
 
       {error ? (
-        <p className="border-b border-border bg-down/10 px-3 py-2 text-xs text-down">{error}</p>
+        <p className="border-b border-border bg-down/10 px-2 py-1.5 text-[11px] text-down">{error}</p>
       ) : null}
 
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 border-b border-border px-3 py-1.5 text-[10px] tracking-wide text-subtle uppercase">
-        <span>Par</span>
+      <div className="grid grid-cols-[1fr_2rem_3rem_0.9rem_3rem_2.5rem] items-center gap-x-1.5 border-b border-border px-2 py-1 text-[9px] tracking-wide text-subtle uppercase">
+        <span>par</span>
+        <span className="text-right">rsi</span>
         {richView ? (
-          <>
-            <SortHeader label="Δ" active={sortKey === "delta"} dir={sortDir} onClick={() => toggleSort("delta")} />
-            <SortHeader
-              label="Amostra"
-              active={sortKey === "sample"}
-              dir={sortDir}
-              onClick={() => toggleSort("sample")}
-            />
-            <SortHeader label="DD10" active={sortKey === "dd"} dir={sortDir} onClick={() => toggleSort("dd")} />
-          </>
+          <SortHeader label="Δ" active={sortKey === "delta"} dir={sortDir} onClick={() => toggleSort("delta")} />
         ) : (
-          <>
-            <span className="text-right">Δ</span>
-            <span className="text-right">Amostra</span>
-            <span className="text-right">DD10</span>
-          </>
+          <span className="text-right">Δ</span>
         )}
+        <span className="text-center">·</span>
+        {richView ? (
+          <SortHeader label="dd10" active={sortKey === "dd"} dir={sortDir} onClick={() => toggleSort("dd")} />
+        ) : (
+          <span className="text-right">dd10</span>
+        )}
+        <span />
       </div>
 
       {richView && visible.length === 0 ? (
-        <p className="px-3 py-6 text-center text-sm text-muted">
-          Nada nesse filtro agora.
-        </p>
+        <p className="px-2 py-5 text-center text-[11px] text-muted">Nada nesse filtro agora.</p>
       ) : (
-        <ul className="max-h-[min(60vh,420px)] overflow-y-auto">
+        <ul className="max-h-[min(65vh,460px)] overflow-y-auto">
           {visible.map((item) => {
             const active = activeId === item.id;
             const up = item.changePct >= 0;
-            const sampleVariant =
-              item.sampleNote === "ok" ? "up" : item.sampleNote === "small" ? "warn" : "down";
-            const extreme = item.near20High || item.near20Low;
+            const sig = signal(item);
             const rowBusy = refreshingId === item.id || refreshingAll;
             return (
               <li
                 key={item.id}
-                className={cn(
-                  "group border-b border-border last:border-b-0",
-                  rowBusy && "opacity-60",
-                )}
+                className={cn("group border-b border-border last:border-b-0", rowBusy && "opacity-60")}
               >
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onSelect(item)}
+                <div
                   className={cn(
-                    "grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2.5 text-left transition-colors disabled:cursor-wait",
+                    "grid grid-cols-[1fr_2rem_3rem_0.9rem_3rem_2.5rem] items-center gap-x-1.5 px-2 py-1.5",
                     active ? "bg-bg-elevated" : "hover:bg-bg-elevated/60",
                   )}
                 >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate text-sm font-medium text-fg">
-                        {item.displayTicker.split("/")[0] ?? item.displayTicker}
-                      </span>
-                      {extreme ? (
-                        <span className="text-[10px] text-warn" title="Extremo 20 barras">
-                          ▲
-                        </span>
-                      ) : null}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onSelect(item)}
+                    className="flex min-w-0 items-baseline gap-1 text-left disabled:cursor-wait"
+                  >
+                    <span className="truncate text-xs font-semibold text-fg">
+                      {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
-                    <span className="block truncate text-[11px] text-subtle">
-                      {timeframeLabel(item.timeframe)} · RSI {item.rsi14.toFixed(0)}
+                    <span className="shrink-0 text-[10px] text-subtle">
+                      {timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
                     </span>
+                  </button>
+                  <span className="text-right text-[11px] tabular-nums text-muted">
+                    {item.rsi14.toFixed(0)}
+                  </span>
+                  <span className={cn("text-right text-[11px] tabular-nums", up ? "text-up" : "text-down")}>
+                    {formatPct(item.changePct, 1)}
                   </span>
                   <span
                     className={cn(
-                      "font-mono text-xs tabular-nums",
-                      up ? "text-up" : "text-down",
+                      "text-center text-[11px] leading-none",
+                      sig.tone === "up" && "text-up",
+                      sig.tone === "warn" && "text-warn",
                     )}
+                    title={sig.title}
                   >
-                    {formatPct(item.changePct, 1)}
+                    {sig.glyph}
                   </span>
-                  <Badge variant={sampleVariant} className="justify-self-end uppercase">
-                    {item.sampleNote}
-                  </Badge>
-                  <span className="justify-self-end font-mono text-xs tabular-nums text-down">
+                  <span className="text-right text-[11px] tabular-nums text-down">
                     {formatPct(item.medianDrawdownPct, 1)}
                   </span>
-                </button>
-                <div className="flex items-center justify-between gap-2 px-3 pb-2">
-                  <span className="truncate font-mono text-[10px] tabular-nums text-subtle">
-                    {formatPrice(item.price)}
-                  </span>
-                  <div className="flex items-center gap-1">
+                  <span className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
                     {onRefresh ? (
                       <button
                         type="button"
@@ -278,12 +267,12 @@ export function WatchPanel({
                           e.stopPropagation();
                           onRefresh(item);
                         }}
-                        className="rounded p-1 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
+                        className="rounded-sm p-0.5 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
                       >
                         {refreshingId === item.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
+                          <Loader2 className="size-3 animate-spin" />
                         ) : (
-                          <RefreshCw className="size-3.5" />
+                          <RefreshCw className="size-3" />
                         )}
                       </button>
                     ) : null}
@@ -295,11 +284,11 @@ export function WatchPanel({
                         e.stopPropagation();
                         onRemove(item.id);
                       }}
-                      className="rounded p-1 text-subtle opacity-60 hover:bg-bg hover:text-fg hover:opacity-100 disabled:opacity-40"
+                      className="rounded-sm p-0.5 text-subtle hover:bg-bg hover:text-fg disabled:opacity-40"
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-3" />
                     </button>
-                  </div>
+                  </span>
                 </div>
               </li>
             );
@@ -325,19 +314,10 @@ function SortHeader({
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "flex items-center justify-end gap-0.5 text-right uppercase hover:text-fg",
-        active && "text-fg",
-      )}
+      className={cn("flex items-center justify-end gap-0.5 text-right uppercase hover:text-fg", active && "text-fg")}
     >
       {label}
-      {active ? (
-        dir === "desc" ? (
-          <ArrowDown className="size-2.5" />
-        ) : (
-          <ArrowUp className="size-2.5" />
-        )
-      ) : null}
+      {active ? dir === "desc" ? <ArrowDown className="size-2.5" /> : <ArrowUp className="size-2.5" /> : null}
     </button>
   );
 }
