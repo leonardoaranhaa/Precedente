@@ -14,7 +14,7 @@ import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory } from "@/lib/history";
-import type { StoredAnalysis, Timeframe } from "@/lib/market/types";
+import { TIMEFRAMES, type StoredAnalysis, type Timeframe } from "@/lib/market/types";
 import {
   isWatched,
   loadWatchlist,
@@ -95,6 +95,48 @@ function Home() {
     } finally {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
+      setBusy(false);
+    }
+  }
+
+  /**
+   * TF global do top bar: troca o tempo gráfico do ticker em foco agora.
+   * Com um resultado aberto, reanalisa o MESMO ticker no novo TF (sem
+   * reenviar o print — a leitura visual é específica da análise original,
+   * não do TF). Sem resultado aberto, só atualiza o estado compartilhado
+   * que o formulário de Analisar já usa.
+   */
+  async function changeGlobalTimeframe(tf: Timeframe) {
+    setTimeframe(tf);
+    if (tf === timeframe) return;
+    if (view !== "result" || !result) return;
+
+    const target = result.ticker;
+    setError(null);
+    setBusy(true);
+    setStep("ohlc");
+    const t1 = window.setTimeout(() => setStep("stats"), 600);
+    try {
+      const payload = await analyzeSetup({
+        data: { ticker: target, timeframe: tf, imageDataUrl: null },
+      });
+      const stored: StoredAnalysis = {
+        ...payload,
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+        hasImage: false,
+        thumb: null,
+      };
+      setResult(stored);
+      setHistory((h) => pushHistory(h, stored));
+      setWatch((w) => (isWatched(w, stored) ? upsertWatch(w, stored) : w));
+      touchFocus(`${stored.ticker}:${stored.timeframe}`);
+      setStep("done");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Não foi possível concluir a análise.";
+      setError(cleanError(message));
+    } finally {
+      window.clearTimeout(t1);
       setBusy(false);
     }
   }
@@ -231,6 +273,28 @@ function Home() {
                 className="h-9 w-32 bg-transparent font-mono text-xs uppercase text-fg placeholder:text-subtle placeholder:normal-case focus:outline-none disabled:opacity-50"
               />
             </form>
+
+            <div
+              className="hidden items-center gap-0.5 rounded-md bg-surface p-1 shadow-[var(--shadow-border)] font-mono sm:flex"
+              role="group"
+              aria-label="Tempo gráfico"
+            >
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void changeGlobalTimeframe(tf)}
+                  title={`Trocar para ${tf}${view === "result" && result ? ` — reanalisa ${result.displayTicker}` : ""}`}
+                  className={cn(
+                    "h-7 rounded-sm px-2 text-[11px] font-medium disabled:opacity-50",
+                    tf === timeframe ? "bg-accent text-accent-fg" : "text-muted hover:text-fg",
+                  )}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
 
             <nav className="flex flex-wrap rounded-md bg-surface p-1 shadow-[var(--shadow-border)]">
               <Tab active={view === "home"} onClick={() => setView("home")}>
