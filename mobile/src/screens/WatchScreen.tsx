@@ -11,7 +11,7 @@ import {
 import { RefreshCw, Star, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { colors, radius } from "../theme";
-import { formatPct, formatPrice, timeframeLabel } from "../format";
+import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from "../format";
 import {
   applyQuickFilter,
   filterByTab,
@@ -152,9 +152,9 @@ export function WatchScreen({
       renderItem={({ item }) => {
         const up = item.changePct >= 0;
         const extreme = item.near20High || item.near20Low;
-        const rowBusy = refreshingId === item.id || refreshingAll;
+        const rowBusy = refreshingId === item.id;
         return (
-          <View style={[styles.row, rowBusy && { opacity: 0.65 }]}>
+          <View style={[styles.row, rowBusy && styles.rowBusy]}>
             <Pressable
               style={styles.rowMain}
               onPress={() => onOpen(item)}
@@ -167,9 +167,16 @@ export function WatchScreen({
                   </Text>
                   {extreme ? <Text style={{ color: colors.warn, fontSize: 10 }}>▲</Text> : null}
                 </View>
-                <Text style={styles.meta} numberOfLines={1}>
-                  {timeframeLabel(item.timeframe)} · RSI {item.rsi14.toFixed(0)} ·{" "}
-                  {formatPrice(item.price)}
+                {rowBusy ? (
+                  <Text style={[styles.meta, { color: colors.warn }]}>reavaliando…</Text>
+                ) : (
+                  <Text style={styles.meta} numberOfLines={1}>
+                    {timeframeLabel(item.timeframe)} · há {formatAgo(item.updatedAt)} · RSI{" "}
+                    {item.rsi14.toFixed(0)}
+                  </Text>
+                )}
+                <Text style={styles.agoFull} numberOfLines={1}>
+                  {formatPrice(item.price)} · {formatWhen(item.updatedAt)}
                 </Text>
               </View>
               <Text style={[styles.delta, { color: up ? colors.up : colors.down }]}>
@@ -189,7 +196,7 @@ export function WatchScreen({
               style={styles.iconBtn}
               accessibilityLabel={`Reavaliar ${item.displayTicker}`}
             >
-              {refreshingId === item.id ? (
+              {rowBusy ? (
                 <ActivityIndicator size="small" color={colors.muted} />
               ) : (
                 <RefreshCw size={15} color={colors.muted} />
@@ -235,6 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: radius.sm,
+    lineHeight: 17,
   },
   tabRow: {
     flexDirection: "row",
@@ -297,6 +305,10 @@ const styles = StyleSheet.create({
     paddingRight: 4,
     gap: 2,
   },
+  rowBusy: {
+    borderWidth: 1,
+    borderColor: "rgba(196,165,116,0.45)",
+  },
   rowMain: {
     flex: 1,
     flexDirection: "row",
@@ -305,6 +317,7 @@ const styles = StyleSheet.create({
   },
   ticker: { fontSize: 14, fontWeight: "600", color: colors.fg },
   meta: { fontSize: 11, color: colors.subtle, marginTop: 2 },
+  agoFull: { fontSize: 10, color: colors.subtle, marginTop: 1, opacity: 0.85 },
   delta: {
     width: 52,
     textAlign: "right",

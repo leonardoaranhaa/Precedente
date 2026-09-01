@@ -74,6 +74,18 @@ export function formatInt(n: number): string {
   return n.toLocaleString("pt-BR");
 }
 
+/** Compacto: "agora", "5m", "3h", "2d". */
+export function formatAgo(ts: number, now = Date.now()): string {
+  const diffMs = Math.max(0, now - ts);
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return "agora";
+  if (min < 60) return `${min}m`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 export function formatWhen(ts: number): string {
   return new Date(ts).toLocaleString("pt-BR", {
     day: "2-digit",

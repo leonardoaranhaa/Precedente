@@ -164,9 +164,10 @@ export default function App() {
 
   async function refreshWatchItem(
     item: WatchItem,
-    opts?: { openResult?: boolean; silent?: boolean },
+    opts?: { openResult?: boolean; silent?: boolean; showProgress?: boolean },
   ): Promise<StoredAnalysis | null> {
-    if (!opts?.silent) {
+    const showProgress = opts?.showProgress || !opts?.silent;
+    if (showProgress) {
       setWatchError(null);
       setRefreshingId(item.id);
     }
@@ -198,10 +199,10 @@ export default function App() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Falha ao reavaliar este par.";
-      if (!opts?.silent) setWatchError(message);
+      if (!opts?.silent) setWatchError(`${item.displayTicker}: ${message}`);
       return null;
     } finally {
-      if (!opts?.silent) setRefreshingId(null);
+      if (showProgress) setRefreshingId(null);
     }
   }
 
@@ -210,17 +211,23 @@ export default function App() {
     setWatchError(null);
     setRefreshingAll(true);
     const list = [...watchRef.current];
-    let failed = 0;
+    const failed: string[] = [];
     for (const item of list) {
-      const stored = await refreshWatchItem(item, { silent: true });
-      if (!stored) failed += 1;
+      const stored = await refreshWatchItem(item, {
+        silent: true,
+        showProgress: true,
+      });
+      if (!stored) {
+        failed.push(item.displayTicker.split("/")[0] ?? item.displayTicker);
+      }
     }
     setRefreshingAll(false);
-    if (failed > 0) {
+    setRefreshingId(null);
+    if (failed.length > 0) {
       setWatchError(
-        failed === list.length
-          ? "Não foi possível reavaliar nenhum par. Confira a rede e o backend."
-          : `${failed} par(es) falharam na reavaliação.`,
+        failed.length === list.length
+          ? `Nenhum par reavaliado. Confira a rede e o backend. (${failed.join(", ")})`
+          : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
   }
@@ -359,7 +366,6 @@ export default function App() {
           />
         )}
 
-        {/* Assistente flutuante sempre que houver análise carregada */}
         {result ? <ScenarioAssistant analysis={result} /> : null}
       </View>
     </SafeAreaView>
