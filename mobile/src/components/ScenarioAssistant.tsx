@@ -8,6 +8,11 @@ import {
   View,
 } from "react-native";
 import { MessageCircle, Sparkles, X } from "lucide-react-native";
+import {
+  ASSISTANT_QUESTIONS,
+  answerAssistantQuestion,
+  type AssistantQuestionId,
+} from "../assistant-qa";
 import { narrateScenario } from "../narrate";
 import { colors, radius } from "../theme";
 import type { StoredAnalysis } from "../types";
@@ -15,14 +20,21 @@ import type { StoredAnalysis } from "../types";
 export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | null }) {
   const [open, setOpen] = useState(false);
   const [hint, setHint] = useState(true);
+  const [qaId, setQaId] = useState<AssistantQuestionId | null>(null);
   const narrative = useMemo(
     () => (analysis ? narrateScenario(analysis) : null),
     [analysis],
   );
 
+  const qaAnswer = useMemo(() => {
+    if (!analysis || !qaId) return null;
+    return answerAssistantQuestion(analysis, qaId);
+  }, [analysis, qaId]);
+
   useEffect(() => {
     if (!analysis) return;
     setHint(true);
+    setQaId(null);
   }, [analysis?.id]);
 
   if (!analysis || !narrative) return null;
@@ -84,11 +96,29 @@ export function ScenarioAssistant({ analysis }: { analysis: StoredAnalysis | nul
               </Pressable>
             </View>
 
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.qaRow}>
+              {ASSISTANT_QUESTIONS.map((q) => (
+                <Pressable
+                  key={q.id}
+                  onPress={() => setQaId(q.id)}
+                  style={[styles.qaChip, qaId === q.id && styles.qaChipOn]}
+                >
+                  <Text style={[styles.qaChipText, qaId === q.id && { color: colors.accentFg }]}>
+                    {q.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
             <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-              <Text style={styles.hintBody}>
-                Texto montado a partir dos números desta análise. Não é chat com IA nem
-                recomendação.
-              </Text>
+              {qaAnswer ? (
+                <Text style={styles.qaAnswer}>{qaAnswer}</Text>
+              ) : (
+                <Text style={styles.hintBody}>
+                  Use os atalhos acima (caminho, amostra, liquidez). Texto só com os números desta
+                  análise — não é chat livre.
+                </Text>
+              )}
               {narrative.paragraphs.map((p, i) => (
                 <Text key={i} style={styles.paragraph}>
                   {p}
@@ -200,11 +230,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeBtn: { padding: 4 },
+  qaRow: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  qaChip: {
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qaChipOn: { backgroundColor: colors.accent },
+  qaChipText: { fontSize: 11, fontWeight: "500", color: colors.muted },
   body: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 32,
     gap: 12,
+  },
+  qaAnswer: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.fg,
+    backgroundColor: colors.bg,
+    padding: 12,
+    borderRadius: radius.md,
   },
   hintBody: {
     fontSize: 11,

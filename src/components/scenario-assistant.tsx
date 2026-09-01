@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessageCircle, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ASSISTANT_QUESTIONS,
+  answerAssistantQuestion,
+  type AssistantQuestionId,
+} from "@/lib/market/assistant-qa";
 import { narrateScenario } from "@/lib/market/narrate";
 import type { StoredAnalysis } from "@/lib/market/types";
 import { cn } from "@/lib/utils";
@@ -8,27 +13,28 @@ import { cn } from "@/lib/utils";
 type Props = {
   analysis: StoredAnalysis | null;
   className?: string;
-  /** Abre o painel ao montar (ex.: após nova análise). */
   preferOpen?: boolean;
 };
 
-/**
- * Assistente flutuante: narra o cenário com padrões históricos.
- * Texto determinístico — não é chat nem ordem de exposição.
- */
 export function ScenarioAssistant({ analysis, className, preferOpen = false }: Props) {
   const [open, setOpen] = useState(preferOpen);
   const [hint, setHint] = useState(true);
+  const [qaId, setQaId] = useState<AssistantQuestionId | null>(null);
 
   const narrative = useMemo(
     () => (analysis ? narrateScenario(analysis) : null),
     [analysis],
   );
 
-  // Nova análise → reexibe dica e respeita preferOpen
+  const qaAnswer = useMemo(() => {
+    if (!analysis || !qaId) return null;
+    return answerAssistantQuestion(analysis, qaId);
+  }, [analysis, qaId]);
+
   useEffect(() => {
     if (!analysis) return;
     setHint(true);
+    setQaId(null);
     if (preferOpen) setOpen(true);
   }, [analysis?.id, preferOpen]);
 
@@ -67,11 +73,35 @@ export function ScenarioAssistant({ analysis, className, preferOpen = false }: P
             </button>
           </header>
 
+          <div className="flex flex-wrap gap-1.5 border-b border-border px-4 py-2">
+            {ASSISTANT_QUESTIONS.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => setQaId(q.id)}
+                className={cn(
+                  "h-7 rounded-full px-2.5 text-[11px] font-medium",
+                  qaId === q.id
+                    ? "bg-accent text-accent-fg"
+                    : "bg-bg text-muted hover:text-fg",
+                )}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-            <p className="text-[11px] leading-relaxed text-subtle">
-              Texto montado a partir dos números desta análise — frequência e caminho no passado
-              parecido. Não é chat com IA nem recomendação.
-            </p>
+            {qaAnswer ? (
+              <p className="rounded-lg bg-bg/60 px-3 py-2 text-sm leading-relaxed text-fg ring-1 ring-border">
+                {qaAnswer}
+              </p>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-subtle">
+                Texto montado a partir dos números desta análise. Use os atalhos acima para
+                caminho, amostra ou liquidez — sem chat livre.
+              </p>
+            )}
             {narrative.paragraphs.map((p, i) => (
               <p key={i} className="text-sm leading-relaxed text-fg">
                 {p}
@@ -97,7 +127,7 @@ export function ScenarioAssistant({ analysis, className, preferOpen = false }: P
           )}
         >
           {weak
-            ? "Amostra frágil — toque para ler o cenário em português e o aviso de cautela."
+            ? "Amostra frágil — toque para ler o cenário e o aviso de cautela."
             : "Toque para ler o cenário: o que os números dizem, em português."}
         </button>
       ) : null}
