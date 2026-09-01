@@ -13,6 +13,11 @@ import {
   type WatchSortKey,
   type WatchTab,
 } from "@/lib/market/watch-filters";
+import {
+  WATCH_REFRESH_MINUTES,
+  type WatchRefreshMinutes,
+} from "@/lib/market/types";
+import { watchRefreshLabel } from "@/lib/watch-refresh";
 import type { WatchItem } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +28,8 @@ type Props = {
   refreshingId?: string | null;
   refreshingAll?: boolean;
   error?: string | null;
+  autoRefreshMin?: WatchRefreshMinutes;
+  onAutoRefreshMin?: (v: WatchRefreshMinutes) => void;
   onSelect: (item: WatchItem) => void;
   onRemove: (id: string) => void;
   onRefresh?: (item: WatchItem) => void;
@@ -36,7 +43,6 @@ const TAB_LABEL: Record<WatchTab, string> = {
   fragile: "frágeis",
 };
 
-/** ● ok · ○ frágil · ▲ extremo — a mesma leitura de risco do checklist do Risk Rail, num glifo. */
 function signal(item: WatchItem): { glyph: string; tone: "up" | "warn" | "muted"; title: string } {
   if (item.near20High || item.near20Low) {
     return { glyph: "▲", tone: "warn", title: "Colado num extremo de 20 barras" };
@@ -54,14 +60,14 @@ export function WatchPanel({
   refreshingId = null,
   refreshingAll = false,
   error = null,
+  autoRefreshMin = 0,
+  onAutoRefreshMin,
   onSelect,
   onRemove,
   onRefresh,
   onRefreshAll,
   className,
 }: Props) {
-  // A versão compacta (preview na home, sem "Reavaliar todos") não ganha
-  // abas/filtros/sort — o pedido é ver os últimos pares, não peneirar.
   const richView = Boolean(onRefreshAll);
 
   const [tab, setTab] = useState<WatchTab>("mine");
@@ -147,6 +153,32 @@ export function WatchPanel({
           ) : null}
         </div>
       </div>
+
+      {richView && onAutoRefreshMin ? (
+        <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
+          <span className="mr-1 text-[9px] tracking-wide text-subtle uppercase">auto</span>
+          {WATCH_REFRESH_MINUTES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onAutoRefreshMin(m)}
+              className={cn(
+                "h-5 rounded-sm px-1.5 text-[10px] font-medium",
+                autoRefreshMin === m
+                  ? "bg-accent text-accent-fg"
+                  : "bg-bg text-muted hover:text-fg",
+              )}
+              title={
+                m === 0
+                  ? "Desliga atualização automática"
+                  : `Reavalia a watch a cada ${m} min (snapshot, não websocket)`
+              }
+            >
+              {watchRefreshLabel(m)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {richView ? (
         <>
