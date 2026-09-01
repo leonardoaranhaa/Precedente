@@ -371,7 +371,7 @@ function Home() {
         </header>
 
         <div className="xl:grid xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start xl:gap-6">
-          <div className="hidden xl:block xl:pt-6">
+          <div className="hidden xl:sticky xl:top-4 xl:block xl:pt-6">
             <WatchPanel
               items={watch}
               focusIds={focusIds}
@@ -512,7 +512,7 @@ function Home() {
         </div>
       </div>
 
-      {result ? <ScenarioAssistant analysis={result} /> : null}
+      {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
     </div>
   );
 }
