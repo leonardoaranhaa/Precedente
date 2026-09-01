@@ -1,49 +1,83 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Theater } from "lucide-react";
 import {
   runScenario,
   SCENARIO_KEYS,
   type ScenarioKey,
 } from "@/lib/market/scenario";
-import { formatPct } from "@/lib/market/labels";
+import { formatPct, timeframeLabel } from "@/lib/market/labels";
+import { loadHistory } from "@/lib/history";
 import type { StoredAnalysis } from "@/lib/market/types";
 import { cn } from "@/lib/utils";
 
 type Props = { analysis: StoredAnalysis };
 
-function formatUsd(n: number): string {
+function formatMoney(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
-  return `${sign}US$ ${Math.abs(n).toLocaleString("pt-BR", {
+  return `${sign}${Math.abs(n).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
+function analysisKey(a: StoredAnalysis): string {
+  return `${a.ticker}:${a.timeframe}`;
+}
+
 /**
- * Encenação hipotética em USD — nunca ordem de exposição.
+ * Encenação hipotética sobre o ativo em foco (ou o escolhido no filtro).
+ * Capital é só unidade de conta — o cenário não é “de USD”, é do par tratado.
  */
 export function ScenarioPanel({ analysis }: Props) {
+  const [catalog, setCatalog] = useState<StoredAnalysis[]>([analysis]);
+  const [focusId, setFocusId] = useState(analysisKey(analysis));
+
+  useEffect(() => {
+    const hist = loadHistory();
+    // Análise atual primeiro; depois histórico (par+TF únicos, mais recente).
+    const map = new Map<string, StoredAnalysis>();
+    map.set(analysisKey(analysis), analysis);
+    for (const h of hist) {
+      const k = analysisKey(h);
+      if (!map.has(k)) map.set(k, h);
+    }
+    setCatalog([...map.values()]);
+    setFocusId(analysisKey(analysis));
+  }, [analysis.id, analysis.ticker, analysis.timeframe]);
+
+  const focus =
+    catalog.find((a) => analysisKey(a) === focusId) ?? analysis;
+
   const defaultBars =
-    analysis.precedent.horizons.find((h) => h.bars === 10)?.bars ??
-    analysis.precedent.horizons[0]?.bars ??
+    focus.precedent.horizons.find((h) => h.bars === 10)?.bars ??
+    focus.precedent.horizons[0]?.bars ??
     10;
 
-  const [usdText, setUsdText] = useState("1000");
+  const [capitalText, setCapitalText] = useState("1000");
   const [leverage, setLeverage] = useState(1);
   const [bars, setBars] = useState(defaultBars);
   const [key, setKey] = useState<ScenarioKey>("typical_path");
 
-  const usd = Number(String(usdText).replace(",", "."));
+  // Ao trocar de ativo/momento, realinha o horizonte padrão.
+  useEffect(() => {
+    const next =
+      focus.precedent.horizons.find((h) => h.bars === 10)?.bars ??
+      focus.precedent.horizons[0]?.bars ??
+      10;
+    setBars(next);
+  }, [focus.id]);
+
+  const capital = Number(String(capitalText).replace(",", "."));
 
   const result = useMemo(
     () =>
-      runScenario(analysis, {
-        usd: Number.isFinite(usd) ? usd : 0,
+      runScenario(focus, {
+        capital: Number.isFinite(capital) ? capital : 0,
         leverage,
         horizonBars: bars,
         key,
       }),
-    [analysis, usd, leverage, bars, key],
+    [focus, capital, leverage, bars, key],
   );
 
   return (
@@ -53,21 +87,64 @@ export function ScenarioPanel({ analysis }: Props) {
         <div className="min-w-0 flex-1">
           <h2 className="text-xs tracking-wide text-muted uppercase">Encenar cenário</h2>
           <p className="mt-1 text-[11px] leading-relaxed text-subtle">
-            Hipótese em USD sobre o caminho ou o desfecho nos precedentes — não diz o que fazer.
-            Positivo ou negativo, a decisão continua sendo só sua.
+            Sobre o ativo que você está tratando agora — ou outro par/momento do histórico neste
+            aparelho. Capital é só unidade de conta. Não diz o que fazer.
           </p>
         </div>
       </div>
 
       <div className="space-y-4 p-4">
+        <div className="space-y-1.5">
+          <p className="text-[10px] tracking-wide text-subtle uppercase">
+            Ativo e momento
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {catalog.slice(0, 12).map((a) => {
+              const id = analysisKey(a);
+              const active = id === focusId;
+              const isCurrent = id === analysisKey(analysis);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFocusId(id)}
+                  className={cn(
+                    "h-8 rounded-full px-3 text-[11px] font-medium",
+                    active
+                      ? "bg-accent text-accent-fg"
+                      : "bg-bg text-muted hover:text-fg",
+                  )}
+                  title={`${a.displayTicker} · ${timeframeLabel(a.timeframe)}`}
+                >
+                  {(a.displayTicker.split("/")[0] ?? a.displayTicker)}
+                  <span className="opacity-70"> · {a.timeframe}</span>
+                  {isCurrent && !active ? (
+                    <span className="ml-1 opacity-60">agora</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-muted">
+            Em foco:{" "}
+            <span className="font-medium text-fg">{focus.displayTicker}</span>
+            {" · "}
+            {timeframeLabel(focus.timeframe)}
+            {" · n="}
+            {focus.precedent.matches}
+          </p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="space-y-1.5">
-            <span className="text-[10px] tracking-wide text-subtle uppercase">US$ (hipótese)</span>
+            <span className="text-[10px] tracking-wide text-subtle uppercase">
+              Capital (unidade de conta)
+            </span>
             <input
               type="text"
               inputMode="decimal"
-              value={usdText}
-              onChange={(e) => setUsdText(e.target.value)}
+              value={capitalText}
+              onChange={(e) => setCapitalText(e.target.value)}
               className="h-9 w-full rounded-md bg-bg px-3 font-mono text-sm text-fg shadow-[var(--shadow-border)] focus:outline-none"
             />
           </label>
@@ -94,7 +171,7 @@ export function ScenarioPanel({ analysis }: Props) {
           <label className="space-y-1.5">
             <span className="text-[10px] tracking-wide text-subtle uppercase">Horizonte</span>
             <div className="flex gap-1 rounded-md bg-bg p-1 shadow-[var(--shadow-border)]">
-              {analysis.precedent.horizons.map((h) => (
+              {focus.precedent.horizons.map((h) => (
                 <button
                   key={h.bars}
                   type="button"
@@ -133,21 +210,23 @@ export function ScenarioPanel({ analysis }: Props) {
         {result ? (
           <div className="space-y-3 rounded-lg bg-bg/70 p-3 ring-1 ring-border">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-xs text-muted">{result.keyLabel}</p>
+              <p className="text-xs text-muted">
+                {result.displayTicker} · {result.timeframeLabel} · {result.keyLabel}
+              </p>
               <p
                 className={cn(
                   "font-mono text-lg tabular-nums",
-                  result.pnlUsd > 0 && "text-up",
-                  result.pnlUsd < 0 && "text-down",
-                  result.pnlUsd === 0 && "text-fg",
+                  result.pnl > 0 && "text-up",
+                  result.pnl < 0 && "text-down",
+                  result.pnl === 0 && "text-fg",
                 )}
               >
-                {formatUsd(result.pnlUsd)}
+                {formatMoney(result.pnl)}
               </p>
             </div>
             <p className="font-mono text-xs tabular-nums text-muted">
               movimento {formatPct(result.movePct)} · notional{" "}
-              {formatUsd(result.notional).replace(/^[+−]/, "")}
+              {formatMoney(result.notional).replace(/^[+−]/, "")}
             </p>
             <p className="text-[11px] leading-relaxed text-subtle">{result.timeNote}</p>
             {result.sampleWarning ? (
@@ -163,7 +242,7 @@ export function ScenarioPanel({ analysis }: Props) {
             </p>
           </div>
         ) : (
-          <p className="text-sm text-muted">Informe um valor em US$ maior que zero.</p>
+          <p className="text-sm text-muted">Informe um capital de referência maior que zero.</p>
         )}
       </div>
     </section>

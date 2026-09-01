@@ -4,10 +4,11 @@ import type { HorizonOutcome, StoredAnalysis, Timeframe } from "./types";
 export type ScenarioKey = "typical_path" | "stress_path" | "median_end";
 
 export type ScenarioInput = {
-  usd: number;
+  /** Capital de referência (unidade de conta). Não é a "moeda do cenário". */
+  capital: number;
   /** Multiplicador educativo de estresse (1–5). Não é recomendação de alavancagem. */
   leverage: number;
-  /** Índice do horizonte (5 / 10 / 20 barras). */
+  /** Horizonte em barras (5 / 10 / 20). */
   horizonBars: number;
   key: ScenarioKey;
 };
@@ -15,18 +16,20 @@ export type ScenarioInput = {
 export type ScenarioResult = {
   key: ScenarioKey;
   keyLabel: string;
-  usd: number;
+  /** Ativo da encenação (o que o usuário está tratando). */
+  displayTicker: string;
+  timeframe: Timeframe;
+  timeframeLabel: string;
+  capital: number;
   leverage: number;
   notional: number;
   horizonLabel: string;
-  /** Movimento % usado no cenário (já com sinal). */
   movePct: number;
-  /** Resultado hipotético em USD no notional (pode ser negativo). */
-  pnlUsd: number;
+  /** Resultado hipotético na unidade de conta do capital. */
+  pnl: number;
   sampleNote: "ok" | "small" | "tiny";
   sampleWarning: string | null;
   timeNote: string;
-  /** Frases factuais — nunca ordem. */
   lines: string[];
   disclaimer: string;
 };
@@ -50,7 +53,7 @@ export const SCENARIO_KEYS: { id: ScenarioKey; label: string; hint: string }[] =
 ];
 
 const DISCLAIMER =
-  "Encenação hipotética com base em frequência e caminho no passado parecido. " +
+  "Encenação hipotética sobre o ativo em foco, com base em frequência e caminho no passado parecido. " +
   "Não é previsão, não é ordem de compra, venda, long ou short, e não diz o que você deve fazer. " +
   "Qualquer decisão — no verde ou no vermelho — é inteiramente sua.";
 
@@ -81,19 +84,19 @@ function minutesPerBar(tf: Timeframe): number {
 function timeNote(tf: Timeframe, bars: number): string {
   const mins = minutesPerBar(tf) * bars;
   if (mins <= 5) {
-    return `Neste TF (${timeframeLabel(tf)}), ${bars} barras ≈ ${mins} min de calendário.`;
+    return `Momento gráfico ${timeframeLabel(tf)}: ${bars} barras ≈ ${mins} min de calendário.`;
   }
   if (mins < 60) {
-    return `Neste TF (${timeframeLabel(tf)}), ${bars} barras ≈ ${mins} min — não é uma janela de 1–5 min reais.`;
+    return `Momento gráfico ${timeframeLabel(tf)}: ${bars} barras ≈ ${mins} min — não é uma janela de 1–5 min reais.`;
   }
   const h = mins / 60;
-  return `Neste TF (${timeframeLabel(tf)}), ${bars} barras ≈ ${h % 1 === 0 ? h : h.toFixed(1).replace(".", ",")}h — horizonte maior que minutos.`;
+  return `Momento gráfico ${timeframeLabel(tf)}: ${bars} barras ≈ ${h % 1 === 0 ? h : h.toFixed(1).replace(".", ",")}h.`;
 }
 
-function formatUsd(n: number): string {
+function formatMoney(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   const abs = Math.abs(n);
-  return `${sign}US$ ${abs.toLocaleString("pt-BR", {
+  return `${sign}${abs.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -105,24 +108,31 @@ function clampLeverage(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function clampUsd(n: number): number {
+function clampCapital(n: number): number {
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.min(n, 10_000_000);
 }
 
+/** @deprecated use capital */
+export type ScenarioInputLegacy = ScenarioInput & { usd?: number };
+
 export function runScenario(
   analysis: StoredAnalysis,
-  input: ScenarioInput,
+  input: ScenarioInput | (ScenarioInput & { usd?: number }),
 ): ScenarioResult | null {
-  const usd = clampUsd(input.usd);
+  const raw =
+    "capital" in input && input.capital != null
+      ? input.capital
+      : (input as { usd?: number }).usd ?? 0;
+  const capital = clampCapital(raw);
   const leverage = clampLeverage(input.leverage);
-  if (usd <= 0) return null;
+  if (capital <= 0) return null;
 
   const horizon = pickHorizon(analysis.precedent.horizons, input.horizonBars);
   if (!horizon || horizon.samples <= 0) return null;
 
   const keyMeta = SCENARIO_KEYS.find((k) => k.id === input.key)!;
-  const notional = usd * leverage;
+  const notional = capital * leverage;
 
   let movePct = 0;
   if (input.key === "typical_path") {
@@ -133,7 +143,10 @@ export function runScenario(
     movePct = horizon.medianPct;
   }
 
-  const pnlUsd = (notional * movePct) / 100;
+  const pnl = (notional * movePct) / 100;
+  const asset = analysis.displayTicker;
+  const tf = analysis.timeframe;
+  const tfLabel = timeframeLabel(tf);
 
   const sampleNote = analysis.precedent.sampleNote;
   let sampleWarning: string | null = null;
@@ -146,12 +159,14 @@ export function runScenario(
   }
 
   const lines: string[] = [
-    `Hipótese: capital de referência US$ ${usd.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` +
+    `Ativo em foco: ${asset} · tempo gráfico ${tfLabel}.`,
+    `Hipótese de capital de referência ${formatMoney(capital).replace(/^[+−]/, "")}` +
       (leverage > 1
-        ? ` com multiplicador educativo ${leverage}× (notional ${formatUsd(notional).replace(/^[+−]/, "")}).`
-        : "."),
-    `Chave “${keyMeta.label}”: movimento aplicado ${formatPct(movePct)} sobre o notional → ${formatUsd(pnlUsd)} hipotéticos.`,
-    `Horizonte: ${horizon.bars} barras (${horizon.label}). n=${horizon.samples} precedentes neste setup.`,
+        ? ` com multiplicador educativo ${leverage}× (notional ${formatMoney(notional).replace(/^[+−]/, "")}).`
+        : ".") +
+      ` O capital é só unidade de conta — o cenário é sobre ${asset}, não sobre uma moeda fixa.`,
+    `Chave “${keyMeta.label}”: movimento ${formatPct(movePct)} sobre o notional → ${formatMoney(pnl)} hipotéticos.`,
+    `Horizonte: ${horizon.bars} barras (${horizon.label}). n=${horizon.samples} precedentes neste setup de ${asset}.`,
   ];
 
   if (input.key !== "median_end") {
@@ -171,15 +186,18 @@ export function runScenario(
   return {
     key: input.key,
     keyLabel: keyMeta.label,
-    usd,
+    displayTicker: asset,
+    timeframe: tf,
+    timeframeLabel: tfLabel,
+    capital,
     leverage,
     notional,
     horizonLabel: horizon.label,
     movePct,
-    pnlUsd,
+    pnl,
     sampleNote,
     sampleWarning,
-    timeNote: timeNote(analysis.timeframe, horizon.bars),
+    timeNote: timeNote(tf, horizon.bars),
     lines,
     disclaimer: DISCLAIMER,
   };

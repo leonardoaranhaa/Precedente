@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Theater } from "lucide-react-native";
 import {
@@ -6,39 +6,70 @@ import {
   SCENARIO_KEYS,
   type ScenarioKey,
 } from "../scenario";
-import { formatPct } from "../format";
+import { formatPct, timeframeLabel } from "../format";
+import { loadHistory } from "../history";
 import { colors, radius } from "../theme";
 import type { StoredAnalysis } from "../types";
 
-function formatUsd(n: number): string {
+function formatMoney(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
-  return `${sign}US$ ${Math.abs(n).toLocaleString("pt-BR", {
+  return `${sign}${Math.abs(n).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
+function analysisKey(a: StoredAnalysis): string {
+  return `${a.ticker}:${a.timeframe}`;
+}
+
 export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
+  const [catalog, setCatalog] = useState<StoredAnalysis[]>([analysis]);
+  const [focusId, setFocusId] = useState(analysisKey(analysis));
+
+  useEffect(() => {
+    void loadHistory().then((hist) => {
+      const map = new Map<string, StoredAnalysis>();
+      map.set(analysisKey(analysis), analysis);
+      for (const h of hist) {
+        const k = analysisKey(h);
+        if (!map.has(k)) map.set(k, h);
+      }
+      setCatalog([...map.values()]);
+      setFocusId(analysisKey(analysis));
+    });
+  }, [analysis.id, analysis.ticker, analysis.timeframe]);
+
+  const focus = catalog.find((a) => analysisKey(a) === focusId) ?? analysis;
+
   const defaultBars =
-    analysis.precedent.horizons.find((h) => h.bars === 10)?.bars ??
-    analysis.precedent.horizons[0]?.bars ??
+    focus.precedent.horizons.find((h) => h.bars === 10)?.bars ??
+    focus.precedent.horizons[0]?.bars ??
     10;
 
-  const [usdText, setUsdText] = useState("1000");
+  const [capitalText, setCapitalText] = useState("1000");
   const [leverage, setLeverage] = useState(1);
   const [bars, setBars] = useState(defaultBars);
   const [key, setKey] = useState<ScenarioKey>("typical_path");
 
-  const usd = Number(String(usdText).replace(",", "."));
+  useEffect(() => {
+    const next =
+      focus.precedent.horizons.find((h) => h.bars === 10)?.bars ??
+      focus.precedent.horizons[0]?.bars ??
+      10;
+    setBars(next);
+  }, [focus.id]);
+
+  const capital = Number(String(capitalText).replace(",", "."));
   const result = useMemo(
     () =>
-      runScenario(analysis, {
-        usd: Number.isFinite(usd) ? usd : 0,
+      runScenario(focus, {
+        capital: Number.isFinite(capital) ? capital : 0,
         leverage,
         horizonBars: bars,
         key,
       }),
-    [analysis, usd, leverage, bars, key],
+    [focus, capital, leverage, bars, key],
   );
 
   return (
@@ -48,16 +79,40 @@ export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>Encenar cenário</Text>
           <Text style={styles.sub}>
-            Hipótese em USD — não diz o que fazer. A decisão é só sua.
+            Do ativo em foco (ou outro do histórico). Capital é só unidade de conta — não diz o que
+            fazer.
           </Text>
         </View>
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.label}>US$ (hipótese)</Text>
+        <Text style={styles.label}>Ativo e momento</Text>
+        <View style={styles.rowWrap}>
+          {catalog.slice(0, 10).map((a) => {
+            const id = analysisKey(a);
+            const active = id === focusId;
+            return (
+              <Pressable
+                key={id}
+                onPress={() => setFocusId(id)}
+                style={[styles.keyChip, active && styles.chipOn]}
+              >
+                <Text style={[styles.chipText, active && { color: colors.accentFg }]}>
+                  {(a.displayTicker.split("/")[0] ?? a.displayTicker)} · {a.timeframe}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.muted}>
+          Em foco: {focus.displayTicker} · {timeframeLabel(focus.timeframe)} · n=
+          {focus.precedent.matches}
+        </Text>
+
+        <Text style={styles.label}>Capital (unidade de conta)</Text>
         <TextInput
-          value={usdText}
-          onChangeText={setUsdText}
+          value={capitalText}
+          onChangeText={setCapitalText}
           keyboardType="decimal-pad"
           style={styles.input}
           placeholderTextColor={colors.subtle}
@@ -80,7 +135,7 @@ export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
 
         <Text style={styles.label}>Horizonte</Text>
         <View style={styles.row}>
-          {analysis.precedent.horizons.map((h) => (
+          {focus.precedent.horizons.map((h) => (
             <Pressable
               key={h.bars}
               onPress={() => setBars(h.bars)}
@@ -111,20 +166,22 @@ export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
         {result ? (
           <View style={styles.result}>
             <View style={styles.resultTop}>
-              <Text style={styles.muted}>{result.keyLabel}</Text>
+              <Text style={styles.muted}>
+                {result.displayTicker} · {result.timeframeLabel} · {result.keyLabel}
+              </Text>
               <Text
                 style={[
                   styles.pnl,
-                  result.pnlUsd > 0 && { color: colors.up },
-                  result.pnlUsd < 0 && { color: colors.down },
+                  result.pnl > 0 && { color: colors.up },
+                  result.pnl < 0 && { color: colors.down },
                 ]}
               >
-                {formatUsd(result.pnlUsd)}
+                {formatMoney(result.pnl)}
               </Text>
             </View>
             <Text style={styles.mono}>
               {formatPct(result.movePct)} · notional{" "}
-              {formatUsd(result.notional).replace(/^[+−]/, "")}
+              {formatMoney(result.notional).replace(/^[+−]/, "")}
             </Text>
             <Text style={styles.hint}>{result.timeNote}</Text>
             {result.sampleWarning ? (
@@ -138,7 +195,7 @@ export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
             <Text style={styles.disclaimer}>{result.disclaimer}</Text>
           </View>
         ) : (
-          <Text style={styles.muted}>Informe um US$ maior que zero.</Text>
+          <Text style={styles.muted}>Informe um capital maior que zero.</Text>
         )}
       </View>
     </View>
@@ -215,8 +272,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
+    gap: 8,
   },
-  muted: { fontSize: 12, color: colors.muted },
+  muted: { fontSize: 12, color: colors.muted, flexShrink: 1 },
   pnl: { fontSize: 18, fontVariant: ["tabular-nums"], color: colors.fg },
   mono: { fontSize: 11, color: colors.muted, fontVariant: ["tabular-nums"] },
   hint: { fontSize: 11, lineHeight: 15, color: colors.subtle },
