@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ArrowLeft,
   Eye,
+  Loader2,
   Star,
   TrendingDown,
   TrendingUp,
@@ -23,7 +24,12 @@ import {
   timeframeLabel,
 } from "@/lib/market/labels";
 import { sampleTitle } from "@/lib/market/sample-copy";
-import type { HorizonOutcome, StoredAnalysis } from "@/lib/market/types";
+import {
+  TIMEFRAMES,
+  type HorizonOutcome,
+  type StoredAnalysis,
+  type Timeframe,
+} from "@/lib/market/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -31,6 +37,10 @@ type Props = {
   onBack: () => void;
   watched?: boolean;
   onToggleWatch?: () => void;
+  /** Reanalisa o mesmo par em outro tempo gráfico. */
+  onChangeTimeframe?: (tf: Timeframe) => void;
+  reanalyzing?: boolean;
+  reanalyzeError?: string | null;
 };
 
 export function AnalysisResult({
@@ -38,6 +48,9 @@ export function AnalysisResult({
   onBack,
   watched = false,
   onToggleWatch,
+  onChangeTimeframe,
+  reanalyzing = false,
+  reanalyzeError = null,
 }: Props) {
   const { snapshot, precedent, vision, onchain } = analysis;
   const [horizonIdx, setHorizonIdx] = useState(
@@ -55,7 +68,12 @@ export function AnalysisResult({
   const fp = precedent.fingerprint;
 
   return (
-    <article className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24">
+    <article
+      className={cn(
+        "mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24",
+        reanalyzing && "pointer-events-none opacity-70",
+      )}
+    >
       <header className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)] sm:p-5">
         <div className="flex flex-wrap items-start gap-3">
           <Button
@@ -64,6 +82,7 @@ export function AnalysisResult({
             onClick={onBack}
             aria-label="Voltar"
             className="-ml-1 shrink-0"
+            disabled={reanalyzing}
           >
             <ArrowLeft className="size-5" />
           </Button>
@@ -73,6 +92,7 @@ export function AnalysisResult({
               {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
               {formatInt(analysis.candleCount)} candles
               {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
+              {reanalyzing ? " · reanalisando…" : ""}
             </p>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="font-display text-2xl leading-tight tracking-tight text-fg sm:text-3xl">
@@ -99,6 +119,7 @@ export function AnalysisResult({
                 variant={watched ? "secondary" : "outline"}
                 size="sm"
                 onClick={onToggleWatch}
+                disabled={reanalyzing}
                 className="gap-1.5"
               >
                 <Star className={cn("size-3.5", watched && "fill-current")} />
@@ -107,6 +128,59 @@ export function AnalysisResult({
             ) : null}
           </div>
         </div>
+
+        {onChangeTimeframe ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] tracking-wide text-subtle uppercase">
+                Momento gráfico · mesmo par
+              </p>
+              {reanalyzing ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <Loader2 className="size-3 animate-spin" />
+                  Atualizando OHLC…
+                </span>
+              ) : null}
+            </div>
+            <div
+              className="flex gap-1 rounded-lg bg-bg p-1 shadow-[var(--shadow-border)]"
+              role="group"
+              aria-label="Reanalisar em outro tempo gráfico"
+            >
+              {TIMEFRAMES.map((tf) => {
+                const active = tf === analysis.timeframe;
+                return (
+                  <button
+                    key={tf}
+                    type="button"
+                    disabled={reanalyzing}
+                    onClick={() => {
+                      if (tf === analysis.timeframe || reanalyzing) return;
+                      onChangeTimeframe(tf);
+                    }}
+                    title={`Reanalisar ${analysis.displayTicker} em ${timeframeLabel(tf)}`}
+                    className={cn(
+                      "h-9 flex-1 rounded-md text-xs font-medium tabular-nums transition-colors",
+                      active
+                        ? "bg-surface text-fg shadow-[var(--shadow-border)]"
+                        : "text-muted hover:text-fg",
+                      reanalyzing && "opacity-60",
+                    )}
+                  >
+                    {tf}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] leading-relaxed text-subtle">
+              Trocar o TF busca candles novos e recalcula precedentes — não é só filtro visual.
+              Horizontes 5/10/20 barras passam a valer neste momento.
+            </p>
+            {reanalyzeError ? (
+              <p className="rounded-md bg-down/10 px-3 py-2 text-sm text-down">{reanalyzeError}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           {precedent.horizons.map((h, i) => (
@@ -351,7 +425,7 @@ export function AnalysisResult({
       </div>
 
       <p className="text-xs leading-relaxed text-subtle">
-        Frequência, caminho e encenação em USD são contexto — nunca ordem de compra ou venda.
+        Frequência, caminho e encenação são contexto — nunca ordem de compra ou venda.
         O passado não garante o próximo movimento. O que você faz com os números é só seu.
         Use <span className="text-fg">Ler o cenário</span> para o texto corrido.
       </p>
