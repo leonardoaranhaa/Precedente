@@ -13,6 +13,7 @@ import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
 import { SampleBanner } from "../components/SampleBanner";
+import { ScenarioCard } from "../components/ScenarioCard";
 import { SplitBar } from "../components/SplitBar";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
@@ -162,6 +163,8 @@ export function ResultScreen({
 
       {onchain ? <OnchainCard onchain={onchain} /> : null}
 
+      <ScenarioCard analysis={analysis} />
+
       <View style={[styles.card, { padding: 16, gap: 14 }]}>
         <View style={styles.rowBetween}>
           <View>
@@ -303,9 +306,8 @@ export function ResultScreen({
       ) : null}
 
       <Text style={styles.disclaimer}>
-        Frequência e caminho em condições parecidas — nunca ordem de compra ou venda. Use{" "}
-        <Text style={{ color: colors.fg }}>Ler o cenário</Text> para o texto corrido. OHLC:{" "}
-        {analysis.source}.
+        Frequência, caminho e encenação em USD são contexto — nunca ordem. A decisão é só sua. Use{" "}
+        <Text style={{ color: colors.fg }}>Ler o cenário</Text>. OHLC: {analysis.source}.
       </Text>
     </ScrollView>
   );
