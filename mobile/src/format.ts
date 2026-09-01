@@ -22,6 +22,10 @@ export function normalizeTicker(raw: string): string {
 
 export function timeframeLabel(tf: Timeframe): string {
   switch (tf) {
+    case "1m":
+      return "1 min";
+    case "5m":
+      return "5 min";
     case "15m":
       return "15 min";
     case "1h":
@@ -74,7 +78,6 @@ export function formatInt(n: number): string {
   return n.toLocaleString("pt-BR");
 }
 
-/** Compacto: "agora", "5m", "3h", "2d". */
 export function formatAgo(ts: number, now = Date.now()): string {
   const diffMs = Math.max(0, now - ts);
   const min = Math.floor(diffMs / 60_000);

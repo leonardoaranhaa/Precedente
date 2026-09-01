@@ -1,7 +1,8 @@
-// Espelha src/lib/market/types.ts do app web — mesmo formato de payload.
-
-export const TIMEFRAMES = ["15m", "1h", "4h", "1d"] as const;
+export const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
+
+export const WATCH_REFRESH_MINUTES = [0, 1, 5, 15] as const;
+export type WatchRefreshMinutes = (typeof WATCH_REFRESH_MINUTES)[number];
 
 export const POPULAR_TICKERS = [
   "BTC",
