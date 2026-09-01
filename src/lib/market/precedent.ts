@@ -49,6 +49,10 @@ function extremeOf(price: number, high20: number, low20: number): Extreme {
 
 function flatThreshold(tf: Timeframe): number {
   switch (tf) {
+    case "1m":
+      return 0.08;
+    case "5m":
+      return 0.12;
     case "15m":
       return 0.15;
     case "1h":
@@ -139,7 +143,6 @@ function buildHorizon(
       highest = Math.max(highest, highs[i + k]!);
     }
     paths.push(path);
-    // Excursão máxima contra e a favor, medida na mínima/máxima do caminho.
     if (Number.isFinite(lowest)) drawdowns.push(((lowest - base) / base) * 100);
     if (Number.isFinite(highest)) runups.push(((highest - base) / base) * 100);
   }
@@ -244,8 +247,6 @@ export function analyzeSeries(
       return {
         t: candles[i]!.t,
         forward: base > 0 ? ((closes[fwdIdx]! - base) / base) * 100 : 0,
-        // >=5 = todos os critérios bateram; abaixo disso, o match só entrou
-        // porque algum critério foi relaxado (ver `relaxed` acima).
         score,
       };
     });
@@ -290,12 +291,6 @@ export function analyzeSeries(
     };
   });
 
-  // `recentMatches` (a tape) is the N most recent occurrences regardless of
-  // how far back they are; the chart only draws the last CHART_BARS candles.
-  // Those two windows rarely overlap — a fingerprint that recurs every ~15
-  // bars can easily have zero of its 6 most recent hits inside a 120-bar
-  // chart. Marking matches on the chart needs its own set, scoped to what
-  // the chart actually shows.
   const chartMatches = used
     .filter((c) => c.i >= from)
     .map(({ i, score }) => ({ t: candles[i]!.t, score }));
