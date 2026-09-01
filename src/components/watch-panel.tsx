@@ -252,6 +252,9 @@ export function WatchPanel({
                     onClick={() => onSelect(item)}
                     className="flex min-w-0 items-baseline gap-1 text-left disabled:cursor-wait"
                   >
+                    {refreshingId === item.id ? (
+                      <Loader2 className="size-2.5 shrink-0 animate-spin text-subtle" />
+                    ) : null}
                     <span className="truncate text-xs font-semibold text-fg">
                       {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
@@ -259,7 +262,9 @@ export function WatchPanel({
                       className="shrink-0 truncate text-[10px] text-subtle"
                       title={`Última avaliação: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`}
                     >
-                      {timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
+                      {refreshingId === item.id
+                        ? "reavaliando…"
+                        : timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
                       {" · "}
                       {formatAgo(item.updatedAt)}
                     </span>
