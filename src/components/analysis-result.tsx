@@ -25,7 +25,7 @@ import {
 } from "@/lib/market/labels";
 import { sampleTitle } from "@/lib/market/sample-copy";
 import {
-  TIMEFRAMES,
+  TIMEFRAME_GROUPS,
   type HorizonOutcome,
   type StoredAnalysis,
   type Timeframe,
@@ -143,34 +143,43 @@ export function AnalysisResult({
               ) : null}
             </div>
             <div
-              className="flex gap-1 rounded-lg bg-bg p-1 shadow-[var(--shadow-border)]"
+              className="flex flex-wrap gap-2"
               role="group"
               aria-label="Reanalisar em outro tempo gráfico"
             >
-              {TIMEFRAMES.map((tf) => {
-                const active = tf === analysis.timeframe;
-                return (
-                  <button
-                    key={tf}
-                    type="button"
-                    disabled={reanalyzing}
-                    onClick={() => {
-                      if (tf === analysis.timeframe || reanalyzing) return;
-                      onChangeTimeframe(tf);
-                    }}
-                    title={`Reanalisar ${analysis.displayTicker} em ${timeframeLabel(tf)}`}
-                    className={cn(
-                      "h-9 flex-1 rounded-md text-xs font-medium tabular-nums transition-colors",
-                      active
-                        ? "bg-surface text-fg shadow-[var(--shadow-border)]"
-                        : "text-muted hover:text-fg",
-                      reanalyzing && "opacity-60",
-                    )}
-                  >
-                    {tf}
-                  </button>
-                );
-              })}
+              {TIMEFRAME_GROUPS.map((group) => (
+                <div key={group.key} className="flex flex-1 flex-col gap-1">
+                  <span className="text-[9px] tracking-wide text-subtle uppercase">
+                    {group.label}
+                  </span>
+                  <div className="flex flex-1 gap-1 rounded-lg bg-bg p-1 shadow-[var(--shadow-border)]">
+                    {group.tfs.map((tf) => {
+                      const active = tf === analysis.timeframe;
+                      return (
+                        <button
+                          key={tf}
+                          type="button"
+                          disabled={reanalyzing}
+                          onClick={() => {
+                            if (tf === analysis.timeframe || reanalyzing) return;
+                            onChangeTimeframe(tf);
+                          }}
+                          title={`Reanalisar ${analysis.displayTicker} em ${timeframeLabel(tf)}`}
+                          className={cn(
+                            "h-9 flex-1 rounded-md text-xs font-medium tabular-nums transition-colors",
+                            active
+                              ? "bg-surface text-fg shadow-[var(--shadow-border)]"
+                              : "text-muted hover:text-fg",
+                            reanalyzing && "opacity-60",
+                          )}
+                        >
+                          {tf}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
             <p className="text-[11px] leading-relaxed text-subtle">
               Trocar o TF busca candles novos e recalcula precedentes — não é só filtro visual.

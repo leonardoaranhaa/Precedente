@@ -15,14 +15,17 @@ import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from ".
 import {
   applyQuickFilter,
   filterByTab,
+  filterByTimeframe,
   quickFilterLabel,
   WATCH_QUICK_FILTERS,
   WATCH_TABS,
+  WATCH_TF_FILTER_ALL,
   type WatchQuickFilter,
   type WatchTab,
+  type WatchTfFilter,
 } from "../watch-filters";
 import { watchRefreshLabel } from "../watch-refresh";
-import { WATCH_REFRESH_MINUTES, type WatchRefreshMinutes } from "../types";
+import { TIMEFRAMES, WATCH_REFRESH_MINUTES, type WatchRefreshMinutes } from "../types";
 import type { WatchItem } from "../watchlist";
 
 const TAB_LABEL: Record<WatchTab, string> = {
@@ -58,12 +61,14 @@ export function WatchScreen({
 }) {
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
+  const [tfFilter, setTfFilter] = useState<WatchTfFilter>(WATCH_TF_FILTER_ALL);
 
   const visible = useMemo(() => {
     let out = filterByTab(items, tab, focusIds);
     out = applyQuickFilter(out, quickFilter);
+    out = filterByTimeframe(out, tfFilter);
     return out;
-  }, [items, tab, focusIds, quickFilter]);
+  }, [items, tab, focusIds, quickFilter, tfFilter]);
 
   if (items.length === 0) {
     return (
@@ -161,6 +166,40 @@ export function WatchScreen({
               >
                 <Text style={[styles.chipText, quickFilter === f && { color: colors.accentFg }]}>
                   {quickFilterLabel(f)}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            <Pressable
+              onPress={() => setTfFilter(WATCH_TF_FILTER_ALL)}
+              style={[
+                styles.chip,
+                tfFilter === WATCH_TF_FILTER_ALL && { backgroundColor: colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  tfFilter === WATCH_TF_FILTER_ALL && { color: colors.accentFg },
+                ]}
+              >
+                Todos TFs
+              </Text>
+            </Pressable>
+            {TIMEFRAMES.map((tf) => (
+              <Pressable
+                key={tf}
+                onPress={() => setTfFilter(tf)}
+                style={[styles.chip, tfFilter === tf && { backgroundColor: colors.accent }]}
+              >
+                <Text style={[styles.chipText, tfFilter === tf && { color: colors.accentFg }]}>
+                  {tf}
                 </Text>
               </Pressable>
             ))}

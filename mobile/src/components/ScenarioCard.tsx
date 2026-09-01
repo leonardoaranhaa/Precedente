@@ -6,7 +6,7 @@ import {
   SCENARIO_KEYS,
   type ScenarioKey,
 } from "../scenario";
-import { formatPct, timeframeLabel } from "../format";
+import { barsToHuman, formatPct, timeframeLabel } from "../format";
 import { loadHistory } from "../history";
 import { colors, radius } from "../theme";
 import type { StoredAnalysis } from "../types";
@@ -140,6 +140,7 @@ export function ScenarioCard({ analysis }: { analysis: StoredAnalysis }) {
               key={h.bars}
               onPress={() => setBars(h.bars)}
               style={[styles.chip, bars === h.bars && styles.chipOn]}
+              accessibilityLabel={`${h.bars} barras ≈ ${barsToHuman(focus.timeframe, h.bars)} em ${timeframeLabel(focus.timeframe)}`}
             >
               <Text style={[styles.chipText, bars === h.bars && { color: colors.accentFg }]}>
                 {h.bars}b

@@ -1,6 +1,14 @@
 export const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
 
+/** Agrupamento de momento gráfico pra organizar os chips de TF na UI. */
+export const TIMEFRAME_GROUPS = [
+  { key: "scalp", label: "Scalp", tfs: ["1m", "5m"] },
+  { key: "intraday", label: "Intraday", tfs: ["15m", "1h"] },
+  { key: "swing", label: "Swing", tfs: ["4h", "1d"] },
+] as const satisfies { key: string; label: string; tfs: readonly Timeframe[] }[];
+export type TimeframeGroupKey = (typeof TIMEFRAME_GROUPS)[number]["key"];
+
 export const WATCH_REFRESH_MINUTES = [0, 1, 5, 15] as const;
 export type WatchRefreshMinutes = (typeof WATCH_REFRESH_MINUTES)[number];
 

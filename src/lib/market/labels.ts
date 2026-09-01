@@ -1,4 +1,8 @@
-import type { Extreme, Fingerprint, MaSide, Timeframe } from "./types.ts";
+import { TIMEFRAME_GROUPS, type Extreme, type Fingerprint, type MaSide, type Timeframe } from "./types.ts";
+
+export function timeframeGroupLabel(tf: Timeframe): string {
+  return TIMEFRAME_GROUPS.find((g) => (g.tfs as readonly Timeframe[]).includes(tf))!.label;
+}
 
 export function displayTicker(symbol: string): string {
   const quotes = ["USDT", "BUSD", "USDC", "BRL", "FDUSD", "BTC", "ETH"];

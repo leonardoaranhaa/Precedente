@@ -5,7 +5,7 @@ import {
   SCENARIO_KEYS,
   type ScenarioKey,
 } from "@/lib/market/scenario";
-import { formatPct, timeframeLabel } from "@/lib/market/labels";
+import { barsToHuman, formatPct, timeframeLabel } from "@/lib/market/labels";
 import { loadHistory } from "@/lib/history";
 import type { StoredAnalysis } from "@/lib/market/types";
 import { cn } from "@/lib/utils";
@@ -176,6 +176,7 @@ export function ScenarioPanel({ analysis }: Props) {
                   key={h.bars}
                   type="button"
                   onClick={() => setBars(h.bars)}
+                  title={`${h.bars} barras ≈ ${barsToHuman(focus.timeframe, h.bars)} em ${timeframeLabel(focus.timeframe)}`}
                   className={cn(
                     "h-7 flex-1 rounded-sm text-xs font-medium tabular-nums",
                     bars === h.bars ? "bg-surface text-fg" : "text-muted hover:text-fg",
