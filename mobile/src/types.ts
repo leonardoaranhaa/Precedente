@@ -117,9 +117,16 @@ export type OnchainContext = {
   pairUrl: string | null;
   liquidityUsd: number | null;
   volume24hUsd: number | null;
+  volume6hUsd?: number | null;
+  volume1hUsd?: number | null;
   buys24h: number | null;
   sells24h: number | null;
+  buys6h?: number | null;
+  sells6h?: number | null;
   priceChange24hPct: number | null;
+  priceChange6hPct?: number | null;
+  priceChange1hPct?: number | null;
+  pairAgeHours?: number | null;
   dexSource: string | null;
   sources: string[];
 };

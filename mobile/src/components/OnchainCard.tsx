@@ -4,7 +4,7 @@ import { colors, radius } from "../theme";
 import { formatInt, formatPct } from "../format";
 import type { OnchainContext } from "../types";
 
-function formatUsd(n: number | null): string {
+function formatUsd(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -19,6 +19,12 @@ function formatFunding(rate: number | null): string {
   return `${sign}${pct.toFixed(4).replace(".", ",")}%`;
 }
 
+function formatAge(hours: number | null | undefined): string {
+  if (hours == null || !Number.isFinite(hours)) return "—";
+  if (hours < 48) return `~${Math.round(hours)}h`;
+  return `~${Math.round(hours / 24)}d`;
+}
+
 export function OnchainCard({ onchain }: { onchain: OnchainContext }) {
   const hasDeriv = onchain.fundingRate != null || onchain.openInterest != null;
   const hasDex = onchain.liquidityUsd != null || onchain.volume24hUsd != null;
@@ -26,6 +32,8 @@ export function OnchainCard({ onchain }: { onchain: OnchainContext }) {
 
   const buys = onchain.buys24h ?? 0;
   const sells = onchain.sells24h ?? 0;
+  const buys6 = onchain.buys6h;
+  const sells6 = onchain.sells6h;
 
   return (
     <View style={styles.card}>
@@ -64,11 +72,29 @@ export function OnchainCard({ onchain }: { onchain: OnchainContext }) {
           </Text>
           <Row label="Liquidez" value={formatUsd(onchain.liquidityUsd)} />
           <Row label="Vol 24h" value={formatUsd(onchain.volume24hUsd)} />
+          {onchain.volume6hUsd != null ? (
+            <Row label="Vol 6h" value={formatUsd(onchain.volume6hUsd)} />
+          ) : null}
+          {onchain.volume1hUsd != null ? (
+            <Row label="Vol 1h" value={formatUsd(onchain.volume1hUsd)} />
+          ) : null}
           {onchain.priceChange24hPct != null ? (
-            <Row label="Δ 24h DEX" value={formatPct(onchain.priceChange24hPct)} />
+            <Row label="Δ 24h" value={formatPct(onchain.priceChange24hPct)} />
+          ) : null}
+          {onchain.priceChange6hPct != null ? (
+            <Row label="Δ 6h" value={formatPct(onchain.priceChange6hPct)} />
+          ) : null}
+          {onchain.priceChange1hPct != null ? (
+            <Row label="Δ 1h" value={formatPct(onchain.priceChange1hPct)} />
           ) : null}
           {buys + sells > 0 ? (
             <Row label="Txns 24h" value={`${formatInt(buys)}B / ${formatInt(sells)}S`} />
+          ) : null}
+          {buys6 != null && sells6 != null ? (
+            <Row label="Txns 6h" value={`${formatInt(buys6)}B / ${formatInt(sells6)}S`} />
+          ) : null}
+          {onchain.pairAgeHours != null ? (
+            <Row label="Idade do par" value={formatAge(onchain.pairAgeHours)} />
           ) : null}
           {onchain.pairUrl ? (
             <Pressable
@@ -80,7 +106,7 @@ export function OnchainCard({ onchain }: { onchain: OnchainContext }) {
             </Pressable>
           ) : null}
           <Text style={styles.hint}>
-            Liquidez rasa aumenta risco de escorregamento on-chain — contexto de fragilidade.
+            Vol/txns curtos e par novo aumentam risco de escorregamento — fragilidade, não entrada.
           </Text>
         </View>
       ) : null}
