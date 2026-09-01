@@ -169,6 +169,45 @@ export default function App() {
     }
   }
 
+  async function changeTimeframe(tf: Timeframe) {
+    setTimeframe(tf);
+    if (view !== "result" || !result) return;
+    if (tf === result.timeframe) return;
+    setError(null);
+    setBusy(true);
+    setStep("ohlc");
+    try {
+      const payload = await analyze({
+        ticker: result.ticker,
+        timeframe: tf,
+        imageDataUrl: null,
+      });
+      const stored: StoredAnalysis = {
+        ...payload,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        createdAt: Date.now(),
+        hasImage: false,
+        thumbUri: null,
+      };
+      setResult(stored);
+      const nextHistory = await pushHistory(historyRef.current, stored);
+      setHistory(nextHistory);
+      historyRef.current = nextHistory;
+      if (isWatched(watchRef.current, stored)) {
+        const nextWatch = await upsertWatch(watchRef.current, stored);
+        setWatch(nextWatch);
+        watchRef.current = nextWatch;
+        void syncPush(alertRules, nextWatch, pushToken);
+      }
+      touchFocus(`${stored.ticker}:${stored.timeframe}`);
+      setStep("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível reanalisar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggleWatch(analysis: StoredAnalysis) {
     let next: WatchItem[];
     if (isWatched(watchRef.current, analysis)) {
@@ -340,6 +379,9 @@ export default function App() {
             onBack={() => setView("home")}
             watched={resultWatched}
             onToggleWatch={() => void toggleWatch(result)}
+            onChangeTimeframe={(tf) => void changeTimeframe(tf)}
+            reanalyzing={busy && view === "result"}
+            reanalyzeError={view === "result" ? error : null}
           />
         ) : view === "watch" ? (
           <WatchScreen
