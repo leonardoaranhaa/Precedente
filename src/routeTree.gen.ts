@@ -10,14 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
@@ -28,6 +35,11 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
 const ApiUniverseRoute = ApiUniverseRouteImport.update({
   id: '/api/universe',
   path: '/api/universe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
@@ -43,23 +55,29 @@ const ApiPushScanRoute = ApiPushScanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -67,30 +85,38 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/api/analyze'
     | '/api/universe'
+    | '/api/auth/$'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/api/analyze'
     | '/api/universe'
+    | '/api/auth/$'
     | '/api/push/register'
     | '/api/push/scan'
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/api/analyze'
     | '/api/universe'
+    | '/api/auth/$'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
 }
@@ -102,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analyze': {
@@ -116,6 +149,13 @@ declare module '@tanstack/react-router' {
       path: '/api/universe'
       fullPath: '/api/universe'
       preLoaderRoute: typeof ApiUniverseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/push/register': {
@@ -137,8 +177,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiUniverseRoute: ApiUniverseRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,
 }
