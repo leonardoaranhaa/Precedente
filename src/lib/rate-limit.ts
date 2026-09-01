@@ -39,12 +39,24 @@ export function checkRateLimit(key: string, limit: number, windowMs: number): Ra
   return { allowed: true };
 }
 
-/** Best-effort client IP from common proxy headers (Railway/Vercel/etc). */
+/**
+ * Best-effort client IP from proxy headers. Confirmed against Railway's
+ * actual edge (via a live header dump): it writes `x-forwarded-for` as
+ * `<railway-edge-ip>, <ip that connected to the edge>` — its own hop
+ * FIRST, not appended last like the conventional reading of the header
+ * assumes. `x-real-ip` mirrors that same first (edge) value, so it is not
+ * useful here either. Taking the first entry, or `x-real-ip`, keys every
+ * request by Railway's small rotating edge-node pool instead of the
+ * client — which silently defeats the whole rate limiter (every caller
+ * looks like a handful of different "clients"). The last entry is the
+ * one actually worth keying on.
+ */
 export function clientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
+    const parts = forwarded.split(",").map((p) => p.trim());
+    const last = parts[parts.length - 1];
+    if (last) return last;
   }
   const real = request.headers.get("x-real-ip");
   if (real) return real.trim();

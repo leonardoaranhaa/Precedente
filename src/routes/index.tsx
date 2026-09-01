@@ -114,12 +114,10 @@ function Home() {
 
   async function refreshWatchItem(
     item: WatchItem,
-    opts?: { openResult?: boolean; silent?: boolean },
+    opts?: { openResult?: boolean; silent?: boolean; showProgress?: boolean },
   ): Promise<StoredAnalysis | null> {
-    if (!opts?.silent) {
-      setWatchError(null);
-      setRefreshingId(item.id);
-    }
+    if (!opts?.silent) setWatchError(null);
+    if (!opts?.silent || opts?.showProgress) setRefreshingId(item.id);
     try {
       const payload = await analyzeSetup({
         data: {
@@ -147,7 +145,7 @@ function Home() {
       if (!opts?.silent) setWatchError(cleanError(message));
       return null;
     } finally {
-      if (!opts?.silent) setRefreshingId(null);
+      if (!opts?.silent || opts?.showProgress) setRefreshingId(null);
     }
   }
 
@@ -156,17 +154,21 @@ function Home() {
     setWatchError(null);
     setRefreshingAll(true);
     const list = [...watch];
-    let failed = 0;
+    // Uma linha de cada vez, mostrando qual par está sendo reavaliado agora
+    // (refreshingId) — silent só evita que uma falha isolada substitua o
+    // banner de erro no meio do lote; os nomes que falharam vão na mensagem
+    // final, não uma contagem genérica.
+    const failedTickers: string[] = [];
     for (const item of list) {
-      const ok = await refreshWatchItem(item, { silent: true });
-      if (!ok) failed += 1;
+      const ok = await refreshWatchItem(item, { silent: true, showProgress: true });
+      if (!ok) failedTickers.push(item.displayTicker);
     }
     setRefreshingAll(false);
-    if (failed > 0) {
+    if (failedTickers.length > 0) {
       setWatchError(
-        failed === list.length
+        failedTickers.length === list.length
           ? "Não foi possível reavaliar nenhum par. Confira a rede."
-          : `${failed} par(es) falharam na reavaliação.`,
+          : `Falha ao reavaliar: ${failedTickers.join(", ")}.`,
       );
     }
   }

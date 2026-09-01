@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
-import { formatPct, timeframeLabel } from "@/lib/market/labels";
+import { formatAgo, formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
   filterByTab,
@@ -252,11 +252,21 @@ export function WatchPanel({
                     onClick={() => onSelect(item)}
                     className="flex min-w-0 items-baseline gap-1 text-left disabled:cursor-wait"
                   >
+                    {refreshingId === item.id ? (
+                      <Loader2 className="size-2.5 shrink-0 animate-spin text-subtle" />
+                    ) : null}
                     <span className="truncate text-xs font-semibold text-fg">
                       {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
-                    <span className="shrink-0 text-[10px] text-subtle">
-                      {timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
+                    <span
+                      className="shrink-0 truncate text-[10px] text-subtle"
+                      title={`Última avaliação: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`}
+                    >
+                      {refreshingId === item.id
+                        ? "reavaliando…"
+                        : timeframeLabel(item.timeframe).replace(" horas", "h").replace(" hora", "h")}
+                      {" · "}
+                      {formatAgo(item.updatedAt)}
                     </span>
                   </button>
                   <span className="text-right text-[11px] tabular-nums text-muted">
