@@ -13,6 +13,7 @@ import { OnchainPanel } from "@/components/onchain-panel";
 import { PathChart } from "@/components/path-chart";
 import { RiskRail } from "@/components/risk-rail";
 import { SampleBanner } from "@/components/sample-banner";
+import { ScenarioPanel } from "@/components/scenario-panel";
 import { SplitBar } from "@/components/split-bar";
 import {
   formatInt,
@@ -188,6 +189,8 @@ export function AnalysisResult({
 
           {onchain ? <OnchainPanel onchain={onchain} /> : null}
 
+          <ScenarioPanel analysis={analysis} />
+
           <section className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)]">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -348,9 +351,9 @@ export function AnalysisResult({
       </div>
 
       <p className="text-xs leading-relaxed text-subtle">
-        Frequência e caminho em condições parecidas — nunca ordem de compra ou venda. O
-        passado não garante o próximo movimento. Use o botão{" "}
-        <span className="text-fg">Ler o cenário</span> para a mesma leitura em texto corrido.
+        Frequência, caminho e encenação em USD são contexto — nunca ordem de compra ou venda.
+        O passado não garante o próximo movimento. O que você faz com os números é só seu.
+        Use <span className="text-fg">Ler o cenário</span> para o texto corrido.
       </p>
     </article>
   );
