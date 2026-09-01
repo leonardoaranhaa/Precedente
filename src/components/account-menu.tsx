@@ -1,13 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LogOut, User } from "lucide-react";
+import { LogOut, Sparkles, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { getMyEntitlement } from "@/lib/billing/entitlements";
+import { openBillingPortal, startPremiumCheckout } from "@/lib/billing/checkout";
+import { cn } from "@/lib/utils";
 
 export function AccountMenu() {
   const { user, isPending } = useCurrentUserState();
   const [signingOut, setSigningOut] = useState(false);
+  const [active, setActive] = useState(false);
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getMyEntitlement()
+      .then((r) => setActive(r.active))
+      .catch(() => setActive(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa recarregar quando o id muda, não a cada nova identidade do objeto user
+  }, [user?.id]);
 
   if (isPending) return null;
 
@@ -23,6 +37,18 @@ export function AccountMenu() {
   }
 
   const label = user.displayName ?? user.primaryEmail ?? "Conta";
+
+  async function goToBilling() {
+    setBillingError(null);
+    setBillingBusy(true);
+    try {
+      const { url } = active ? await openBillingPortal() : await startPremiumCheckout();
+      window.location.href = url;
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Não deu pra continuar agora.");
+      setBillingBusy(false);
+    }
+  }
 
   return (
     <Popover>
@@ -44,6 +70,30 @@ export function AccountMenu() {
         {user.primaryEmail ? (
           <p className="truncate text-xs text-subtle">{user.primaryEmail}</p>
         ) : null}
+
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-md bg-bg px-2.5 py-2">
+          <span
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              active ? "text-accent" : "text-subtle",
+            )}
+          >
+            <Sparkles className="size-3.5" />
+            {active ? "Premium ativo" : "Plano gratuito"}
+          </span>
+          <button
+            type="button"
+            disabled={billingBusy}
+            onClick={() => void goToBilling()}
+            className="rounded-sm bg-accent px-2 py-1 text-[11px] font-medium text-accent-fg hover:opacity-90 disabled:cursor-wait disabled:opacity-50"
+          >
+            {billingBusy ? "Um instante…" : active ? "Gerenciar" : "Virar Premium"}
+          </button>
+        </div>
+        {billingError ? (
+          <p className="mt-1.5 text-[11px] leading-relaxed text-down">{billingError}</p>
+        ) : null}
+
         <button
           type="button"
           disabled={signingOut}

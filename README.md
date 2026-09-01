@@ -69,12 +69,14 @@ src/
     api/push/register.ts    # POST/DELETE — registra token de push
     api/push/scan.ts        # POST — dispara avaliação + push (cron)
     api/auth/$.ts            # catch-all do Better Auth (/api/auth/*)
+    api/billing/webhook.ts    # eventos do Stripe — única rota que escreve entitlement
     login.tsx                 # entrar/criar conta — só email/senha
   lib/
     analyze.ts               # validação de input + orquestra o pipeline
     rate-limit.ts             # rate limit em memória por IP
     sync.ts                   # server functions de sync (watch/histórico por conta)
     auth/                      # Better Auth pré-instalado — não editar (ver skill)
+    billing/                    # entitlements + Stripe (checkout/portal) — nenhum gate ativo ainda
     market/
       precedent.ts            # o motor: fingerprint, matching, horizontes
       indicators.ts            # RSI (Wilder), SMA, percentil/mediana
@@ -93,7 +95,7 @@ mobile/
     components/              # espelham os componentes web (RN + react-native-svg)
     watchlist.ts, history.ts # mesma persistência local, via AsyncStorage (sem login ainda)
 
-migrations/                 # schema do Postgres (push_subscriptions, auth, sync)
+migrations/                 # schema do Postgres (push_subscriptions, auth, sync, billing)
 scripts/                    # build/dev/migrate/cron worker + testes de infra
 AGENTS.md                   # contrato da plataforma (Grok App Builder) — não editar
 ```
@@ -137,6 +139,9 @@ celular físico — use o IP da sua máquina na rede local. Mais detalhes em
 | `EXPO_PUBLIC_API_BASE_URL` | mobile | Sim (fora do Expo Go em rede local) | URL pública do backend web que o mobile consome. |
 | `BETTER_AUTH_URL` | web | **Sim, se login estiver ligado** | Origin público do próprio deploy (ex. `https://seu-app.up.railway.app`). Sem ela, a sessão só aceita `localhost`/preview do Grok — login real falha com "Invalid origin" em qualquer outro host. |
 | `BETTER_AUTH_SECRET` | web | **Sim, se login estiver ligado** | Assina as sessões. Sem ela, cai num segredo aleatório por processo — todo deploy/restart derruba todo mundo logado. |
+| `STRIPE_SECRET_KEY` | web | Não (ver **Assinatura premium**) | Sem ela, checkout/portal voltam "Pagamento indisponível" — erro limpo, não quebra o app. |
+| `STRIPE_WEBHOOK_SECRET` | web | Junto com `STRIPE_SECRET_KEY` | Verifica a assinatura dos eventos do Stripe em `/api/billing/webhook`. |
+| `STRIPE_PREMIUM_PRICE_ID` | web | Junto com `STRIPE_SECRET_KEY` | Price id do plano premium (criado no Stripe Dashboard). |
 
 ## Conta e sincronização
 
@@ -160,6 +165,42 @@ e não depende de nada disso.
   depois disso sincroniza em segundo plano (`src/lib/sync.ts`,
   `createServerFn` + `authMiddleware`, escopado por `context.userId`).
 - **Mobile**: ainda não tem login — só web por enquanto.
+
+## Assinatura premium
+
+Infraestrutura de cobrança pronta, **mas nenhum recurso está travado ainda** —
+com `STRIPE_SECRET_KEY` ausente, ninguém consegue virar premium de verdade
+(o checkout falha com erro limpo), então travar qualquer coisa agora
+deixaria o recurso inacessível pra todo mundo. Ativar um gate real é uma
+decisão de produto separada, feita quando fizer sentido.
+
+- **Schema**: `user_entitlements` (`migrations/0003_billing.sql`) — uma
+  linha por usuário: `plan` (`free`/`premium`), `status`
+  (`inactive`/`active`/`past_due`/`canceled`), ids do Stripe e
+  `current_period_end`. Só o webhook escreve aqui.
+- **`src/lib/billing/`**:
+  - `entitlement-logic.ts` — `isEntitlementActive()`, lógica pura (sem
+    import de banco) e testada (`entitlements.test.ts`).
+  - `entitlements.ts` — acesso a dado (`getEntitlement`,
+    `upsertEntitlement`, `hasPremium(userId)`) + `getMyEntitlement`
+    (server function pro cliente saber o próprio plano).
+  - `stripe.ts` — client Stripe sob demanda; sem chave, toda função lança
+    "Pagamento indisponível" em vez de derrubar o app.
+  - `checkout.ts` — `startPremiumCheckout` (cria/reusa o Customer, abre um
+    Checkout Session de assinatura) e `openBillingPortal` (pra
+    quem já assina gerenciar/cancelar).
+- **`/api/billing/webhook`**: recebe `checkout.session.completed`,
+  `customer.subscription.updated` e `customer.subscription.deleted`,
+  verifica a assinatura (`STRIPE_WEBHOOK_SECRET`) e é a **única** rota que
+  escreve em `user_entitlements` — o app nunca confia em nada que o
+  cliente diga sobre o próprio plano.
+- **UI**: menu de conta (`account-menu.tsx`) mostra o plano atual e um
+  botão que abre o checkout ou o portal, dependendo do estado.
+
+**Pra ligar de verdade**: criar o produto/price no Stripe Dashboard (ou via
+MCP do Stripe), configurar as 3 env vars acima, apontar o webhook do Stripe
+pra `/api/billing/webhook`, e decidir qual recurso passa a exigir
+`hasPremium(userId)` — nenhum ainda exige.
 
 ## O motor de precedentes
 
