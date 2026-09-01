@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchTopTraded } from "@/lib/market/universe";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+
+const RATE_LIMIT = 30;
+const RATE_WINDOW_MS = 5 * 60 * 1000;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +29,11 @@ export const Route = createFileRoute("/api/universe")({
     handlers: {
       OPTIONS: () => new Response(null, { status: 204, headers: CORS_HEADERS }),
       GET: async ({ request }) => {
+        const limit_ = checkRateLimit(`universe:${clientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
+        if (!limit_.allowed) {
+          return json({ error: "Muitas tentativas. Tente de novo em instantes." }, 429);
+        }
+
         const raw = new URL(request.url).searchParams.get("limit");
         const parsed = Number(raw);
         const limit =
