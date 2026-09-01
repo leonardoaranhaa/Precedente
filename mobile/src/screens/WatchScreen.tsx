@@ -21,6 +21,8 @@ import {
   type WatchQuickFilter,
   type WatchTab,
 } from "../watch-filters";
+import { watchRefreshLabel } from "../watch-refresh";
+import { WATCH_REFRESH_MINUTES, type WatchRefreshMinutes } from "../types";
 import type { WatchItem } from "../watchlist";
 
 const TAB_LABEL: Record<WatchTab, string> = {
@@ -35,6 +37,8 @@ export function WatchScreen({
   refreshingId,
   refreshingAll,
   error,
+  autoRefreshMin = 0,
+  onAutoRefreshMin,
   onOpen,
   onRemove,
   onRefresh,
@@ -45,6 +49,8 @@ export function WatchScreen({
   refreshingId: string | null;
   refreshingAll: boolean;
   error: string | null;
+  autoRefreshMin?: WatchRefreshMinutes;
+  onAutoRefreshMin?: (v: WatchRefreshMinutes) => void;
   onOpen: (item: WatchItem) => void;
   onRemove: (id: string) => void;
   onRefresh: (item: WatchItem) => void;
@@ -84,7 +90,7 @@ export function WatchScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Watch</Text>
               <Text style={styles.subtitle}>
-                Pares pinados — Δ, amostra e DD do caminho. Sem conta.
+                Pares pinados — Δ, amostra e DD. Auto = snapshot, não websocket.
               </Text>
             </View>
             <Pressable
@@ -102,6 +108,31 @@ export function WatchScreen({
             </Pressable>
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          {onAutoRefreshMin ? (
+            <View style={styles.autoRow}>
+              <Text style={styles.autoLabel}>Auto</Text>
+              {WATCH_REFRESH_MINUTES.map((m) => (
+                <Pressable
+                  key={m}
+                  onPress={() => onAutoRefreshMin(m)}
+                  style={[
+                    styles.autoChip,
+                    autoRefreshMin === m && { backgroundColor: colors.accent },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.autoChipText,
+                      autoRefreshMin === m && { color: colors.accentFg },
+                    ]}
+                  >
+                    {watchRefreshLabel(m)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.tabRow}>
             {WATCH_TABS.map((t) => (
@@ -235,6 +266,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   refreshAllText: { fontSize: 12, fontWeight: "500", color: colors.fg },
+  autoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  autoLabel: {
+    fontSize: 10,
+    letterSpacing: 0.4,
+    color: colors.subtle,
+    textTransform: "uppercase",
+    marginRight: 2,
+  },
+  autoChip: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  autoChipText: { fontSize: 11, fontWeight: "500", color: colors.muted },
   error: {
     fontSize: 12,
     color: colors.down,
@@ -250,7 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderRadius: radius.sm,
     padding: 4,
-    marginTop: 8,
+    marginTop: 4,
   },
   tab: { flex: 1, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   tabText: { fontSize: 12, fontWeight: "500", color: colors.muted },
