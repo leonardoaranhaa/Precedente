@@ -6,6 +6,8 @@ const BASES = [
 ] as const;
 
 const INTERVAL_MS: Record<Timeframe, number> = {
+  "1m": 60 * 1000,
+  "5m": 5 * 60 * 1000,
   "15m": 15 * 60 * 1000,
   "1h": 60 * 60 * 1000,
   "4h": 4 * 60 * 60 * 1000,
@@ -67,10 +69,6 @@ async function fetchPage(
   return raw.map(parseKline);
 }
 
-/**
- * CCXT-shaped fetchOHLCV against Binance public REST (no API key).
- * Same OHLC a `ccxt.binance.fetchOHLCV` would return for a USDT pair.
- */
 export async function fetchOHLCV(
   symbol: string,
   interval: Timeframe,
@@ -97,9 +95,6 @@ export async function fetchOHLCV(
       }
 
       candles.sort((a, b) => a.t - b.t);
-      // Drop an in-progress last bar only if it is clearly still open
-      // (close time would be in the future). Keep it — Binance klines
-      // include the forming candle, which is what the user is looking at.
       return { candles, source: "Binance" };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));

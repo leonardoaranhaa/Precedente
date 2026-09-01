@@ -26,6 +26,10 @@ export function normalizeTicker(raw: string): string {
 
 export function timeframeLabel(tf: Timeframe): string {
   switch (tf) {
+    case "1m":
+      return "1 min";
+    case "5m":
+      return "5 min";
     case "15m":
       return "15 min";
     case "1h":
@@ -39,6 +43,8 @@ export function timeframeLabel(tf: Timeframe): string {
 
 export function barsToHuman(tf: Timeframe, bars: number): string {
   const minutes: Record<Timeframe, number> = {
+    "1m": 1,
+    "5m": 5,
     "15m": 15,
     "1h": 60,
     "4h": 240,
@@ -99,7 +105,6 @@ export function formatInt(n: number): string {
   return n.toLocaleString("pt-BR");
 }
 
-/** Compacto pra linha de terminal: "agora", "5m", "3h", "2d" — não a data cheia. */
 export function formatAgo(ts: number, now = Date.now()): string {
   const diffMs = Math.max(0, now - ts);
   const min = Math.floor(diffMs / 60_000);

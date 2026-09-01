@@ -1,5 +1,9 @@
-export const TIMEFRAMES = ["15m", "1h", "4h", "1d"] as const;
+export const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
+
+/** Cadência de auto-atualização da Watch (minutos). 0 = desligado. */
+export const WATCH_REFRESH_MINUTES = [0, 1, 5, 15] as const;
+export type WatchRefreshMinutes = (typeof WATCH_REFRESH_MINUTES)[number];
 
 export const POPULAR_TICKERS = [
   "BTCUSDT",
@@ -47,12 +51,6 @@ export type HorizonOutcome = {
   p10: number;
   p90: number;
   medianPath: number[];
-  /**
-   * Excursão do caminho, não do fim: o quanto o preço afundou (drawdown) e
-   * subiu (runup) ANTES de chegar ao fim do horizonte. Em ativos que disparam
-   * e despencam, o retorno final é quase moeda ao ar enquanto o caminho
-   * decide quem sobrevive — é o drawdown que liquida posição alavancada.
-   */
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
@@ -106,17 +104,13 @@ export type PrecedentResult = {
   sampleNote: "ok" | "small" | "tiny";
   horizons: HorizonOutcome[];
   recentMatches: { t: number; forward: number; score: number }[];
-  /** Matches cujo timestamp cai dentro do `chart` (últimas barras visíveis) — pra marcar no candle chart. */
   chartMatches: { t: number; score: number }[];
 };
 
-/** Contexto de derivativos + liquidez DEX (quando disponível). */
 export type OnchainContext = {
   fetchedAt: number;
-  /** Funding atual (fração por período, ex. 0.0001 = 0,01%). */
   fundingRate: number | null;
   markPrice: number | null;
-  /** Open interest em contratos (unidade da exchange). */
   openInterest: number | null;
   nextFundingTime: number | null;
   derivativesSource: string | null;
@@ -134,7 +128,6 @@ export type OnchainContext = {
   priceChange24hPct: number | null;
   priceChange6hPct: number | null;
   priceChange1hPct: number | null;
-  /** Idade aproximada do par no DEX, em horas (pairCreatedAt). */
   pairAgeHours: number | null;
   dexSource: string | null;
   sources: string[];
@@ -152,7 +145,6 @@ export type AnalysisPayload = {
   vision: VisionReading | null;
   visionError: string | null;
   source: string;
-  /** Opcional: funding/OI + liquidez DEX. Null se todas as fontes falharem. */
   onchain: OnchainContext | null;
 };
 
