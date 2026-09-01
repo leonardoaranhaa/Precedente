@@ -14,7 +14,7 @@ import { Button } from "../components/Button";
 import { Pipeline, type PipelineStep } from "../components/Pipeline";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
-import { POPULAR_TICKERS, TIMEFRAMES, type Timeframe } from "../types";
+import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type Timeframe } from "../types";
 import { normalizeTicker } from "../format";
 
 export type PickedImage = { uri: string; width: number; height: number };
@@ -134,19 +134,26 @@ export function HomeScreen({
 
           <View style={{ gap: 8 }}>
             <Text style={styles.label}>Tempo gráfico</Text>
-            <View style={styles.tfRow}>
-              {TIMEFRAMES.map((tf) => {
-                const active = timeframe === tf;
-                return (
-                  <Pressable
-                    key={tf}
-                    onPress={() => onTimeframe(tf)}
-                    style={[styles.tfButton, active && { backgroundColor: colors.bgElevated }]}
-                  >
-                    <Text style={[styles.tfText, active && { color: colors.fg }]}>{tf}</Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.tfGroupsRow}>
+              {TIMEFRAME_GROUPS.map((group) => (
+                <View key={group.key} style={{ flex: 1, gap: 3 }}>
+                  <Text style={styles.tfGroupLabel}>{group.label}</Text>
+                  <View style={styles.tfRow}>
+                    {group.tfs.map((tf) => {
+                      const active = timeframe === tf;
+                      return (
+                        <Pressable
+                          key={tf}
+                          onPress={() => onTimeframe(tf)}
+                          style={[styles.tfButton, active && { backgroundColor: colors.bgElevated }]}
+                        >
+                          <Text style={[styles.tfText, active && { color: colors.fg }]}>{tf}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
             </View>
           </View>
 
@@ -196,6 +203,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   chipText: { fontSize: 12, fontWeight: "500", color: colors.muted },
+  tfGroupsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  tfGroupLabel: {
+    fontSize: 9,
+    letterSpacing: 0.3,
+    color: colors.subtle,
+    textTransform: "uppercase",
+  },
   tfRow: {
     flexDirection: "row",
     gap: 4,

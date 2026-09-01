@@ -1,7 +1,16 @@
 import type { WatchItem } from "../watchlist";
+import type { Timeframe } from "./types";
 
 export const WATCH_TABS = ["mine", "focus", "fragile"] as const;
 export type WatchTab = (typeof WATCH_TABS)[number];
+
+export const WATCH_TF_FILTER_ALL = "all" as const;
+export type WatchTfFilter = Timeframe | typeof WATCH_TF_FILTER_ALL;
+
+export function filterByTimeframe(items: WatchItem[], tf: WatchTfFilter): WatchItem[] {
+  if (tf === WATCH_TF_FILTER_ALL) return items;
+  return items.filter((i) => i.timeframe === tf);
+}
 
 export const WATCH_QUICK_FILTERS = [
   "all",

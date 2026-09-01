@@ -4,16 +4,20 @@ import { formatAgo, formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
   filterByTab,
+  filterByTimeframe,
   quickFilterLabel,
   sortWatch,
   WATCH_QUICK_FILTERS,
   WATCH_TABS,
+  WATCH_TF_FILTER_ALL,
   type WatchQuickFilter,
   type WatchSortDir,
   type WatchSortKey,
   type WatchTab,
+  type WatchTfFilter,
 } from "@/lib/market/watch-filters";
 import {
+  TIMEFRAMES,
   WATCH_REFRESH_MINUTES,
   type WatchRefreshMinutes,
 } from "@/lib/market/types";
@@ -72,6 +76,7 @@ export function WatchPanel({
 
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
+  const [tfFilter, setTfFilter] = useState<WatchTfFilter>(WATCH_TF_FILTER_ALL);
   const [sortKey, setSortKey] = useState<WatchSortKey | null>(null);
   const [sortDir, setSortDir] = useState<WatchSortDir>("desc");
 
@@ -79,9 +84,10 @@ export function WatchPanel({
     if (!richView) return items;
     let out = filterByTab(items, tab, focusIds);
     out = applyQuickFilter(out, quickFilter);
+    out = filterByTimeframe(out, tfFilter);
     if (sortKey) out = sortWatch(out, sortKey, sortDir);
     return out;
-  }, [items, richView, tab, focusIds, quickFilter, sortKey, sortDir]);
+  }, [items, richView, tab, focusIds, quickFilter, tfFilter, sortKey, sortDir]);
 
   function toggleSort(key: WatchSortKey) {
     if (sortKey !== key) {
@@ -209,6 +215,34 @@ export function WatchPanel({
                 )}
               >
                 {quickFilterLabel(f)}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
+            <span className="mr-1 text-[9px] tracking-wide text-subtle uppercase">tf</span>
+            <button
+              type="button"
+              onClick={() => setTfFilter(WATCH_TF_FILTER_ALL)}
+              className={cn(
+                "h-5 rounded-sm px-1.5 text-[10px] font-medium",
+                tfFilter === WATCH_TF_FILTER_ALL
+                  ? "bg-accent text-accent-fg"
+                  : "bg-bg text-muted hover:text-fg",
+              )}
+            >
+              todos
+            </button>
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setTfFilter(tf)}
+                className={cn(
+                  "h-5 rounded-sm px-1.5 text-[10px] font-medium",
+                  tfFilter === tf ? "bg-accent text-accent-fg" : "bg-bg text-muted hover:text-fg",
+                )}
+              >
+                {tf}
               </button>
             ))}
           </div>

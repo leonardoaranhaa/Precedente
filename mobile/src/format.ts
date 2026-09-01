@@ -37,6 +37,25 @@ export function timeframeLabel(tf: Timeframe): string {
   }
 }
 
+export function barsToHuman(tf: Timeframe, bars: number): string {
+  const minutes: Record<Timeframe, number> = {
+    "1m": 1,
+    "5m": 5,
+    "15m": 15,
+    "1h": 60,
+    "4h": 240,
+    "1d": 1440,
+  };
+  const total = minutes[tf] * bars;
+  if (total < 60) return `${total} min`;
+  if (total < 1440) {
+    const h = total / 60;
+    return Number.isInteger(h) ? `${h}h` : `${h.toFixed(1).replace(".", ",")}h`;
+  }
+  const d = total / 1440;
+  return Number.isInteger(d) ? `${d}d` : `${d.toFixed(1).replace(".", ",")}d`;
+}
+
 function maLabel(side: MaSide, name: string): string {
   if (side === "near") return `junto da ${name}`;
   if (side === "above") return `acima da ${name}`;

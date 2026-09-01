@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UploadZone } from "@/components/upload-zone";
-import { POPULAR_TICKERS, TIMEFRAMES, type Timeframe } from "@/lib/market/types";
+import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker, shortTicker } from "@/lib/market/labels";
 import { cn } from "@/lib/utils";
 
@@ -84,22 +84,31 @@ export function AnalyzeForm({
 
       <div className="space-y-2">
         <p className="text-xs tracking-wide text-muted uppercase">Tempo gráfico</p>
-        <div className="flex gap-1 rounded-lg bg-surface p-1 shadow-[var(--shadow-border)]">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf}
-              type="button"
-              disabled={busy}
-              onClick={() => onTimeframe(tf)}
-              className={cn(
-                "h-10 flex-1 rounded-md text-sm font-medium transition-colors duration-150",
-                timeframe === tf
-                  ? "bg-bg-elevated text-fg shadow-[var(--shadow-border)]"
-                  : "text-muted hover:text-fg",
-              )}
-            >
-              {tf}
-            </button>
+        <div className="flex flex-wrap gap-2">
+          {TIMEFRAME_GROUPS.map((group) => (
+            <div key={group.key} className="flex flex-1 flex-col gap-1">
+              <span className="text-[10px] tracking-wide text-subtle uppercase">
+                {group.label}
+              </span>
+              <div className="flex flex-1 gap-1 rounded-lg bg-surface p-1 shadow-[var(--shadow-border)]">
+                {group.tfs.map((tf) => (
+                  <button
+                    key={tf}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onTimeframe(tf)}
+                    className={cn(
+                      "h-10 flex-1 rounded-md text-sm font-medium transition-colors duration-150",
+                      timeframe === tf
+                        ? "bg-bg-elevated text-fg shadow-[var(--shadow-border)]"
+                        : "text-muted hover:text-fg",
+                    )}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

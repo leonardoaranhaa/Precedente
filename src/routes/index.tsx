@@ -14,7 +14,12 @@ import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory } from "@/lib/history";
-import { TIMEFRAMES, type StoredAnalysis, type Timeframe, type WatchRefreshMinutes } from "@/lib/market/types";
+import {
+  TIMEFRAME_GROUPS,
+  type StoredAnalysis,
+  type Timeframe,
+  type WatchRefreshMinutes,
+} from "@/lib/market/types";
 import { loadWatchRefreshMinutes, saveWatchRefreshMinutes } from "@/lib/watch-refresh";
 import {
   isWatched,
@@ -298,20 +303,25 @@ function Home() {
               role="group"
               aria-label="Tempo gráfico"
             >
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void changeGlobalTimeframe(tf)}
-                  title={`Trocar para ${tf}${view === "result" && result ? ` — reanalisa ${result.displayTicker}` : ""}`}
-                  className={cn(
-                    "h-7 rounded-sm px-1.5 text-[10px] font-medium disabled:opacity-50",
-                    tf === timeframe ? "bg-accent text-accent-fg" : "text-muted hover:text-fg",
-                  )}
-                >
-                  {tf}
-                </button>
+              {TIMEFRAME_GROUPS.map((group, gi) => (
+                <div key={group.key} className="flex items-center gap-0.5">
+                  {gi > 0 ? <span className="mx-0.5 h-4 w-px bg-border" aria-hidden /> : null}
+                  {group.tfs.map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void changeGlobalTimeframe(tf)}
+                      title={`${group.label} · trocar para ${tf}${view === "result" && result ? ` — reanalisa ${result.displayTicker}` : ""}`}
+                      className={cn(
+                        "h-7 rounded-sm px-1.5 text-[10px] font-medium disabled:opacity-50",
+                        tf === timeframe ? "bg-accent text-accent-fg" : "text-muted hover:text-fg",
+                      )}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
 
