@@ -49,11 +49,14 @@ análise via `POST /api/analyze`.
   para o mobile e qualquer outro cliente.
 - **Mobile** (`mobile/`) não tem lógica de análise própria — é um cliente Expo
   puro que chama a mesma API REST do web (`mobile/src/api.ts`).
-- **Persistência**: watchlist e histórico ficam só no aparelho
-  (`localStorage` no web, `AsyncStorage` no mobile) — não há conta de
-  usuário. O único dado no servidor são as *push subscriptions* de alerta
-  (tabela `push_subscriptions`, Postgres), que degradam para um fallback em
-  memória quando não há banco configurado (preview/local).
+- **Persistência**: watchlist e histórico ficam por padrão só no aparelho
+  (`localStorage` no web, `AsyncStorage` no mobile) — **conta é opcional**,
+  só pra quem quer sincronizar watch/histórico entre aparelhos (web, por
+  enquanto — ver seção **Conta e sincronização**). Sem login, nada muda:
+  100% local, como sempre foi. O único outro dado no servidor são as *push
+  subscriptions* de alerta (tabela `push_subscriptions`, Postgres), que
+  degradam para um fallback em memória quando não há banco configurado
+  (preview/local).
 
 ## Estrutura do repositório
 
@@ -65,9 +68,13 @@ src/
     api/universe.ts         # GET  — ranking de pares mais negociados
     api/push/register.ts    # POST/DELETE — registra token de push
     api/push/scan.ts        # POST — dispara avaliação + push (cron)
+    api/auth/$.ts            # catch-all do Better Auth (/api/auth/*)
+    login.tsx                 # entrar/criar conta — só email/senha
   lib/
     analyze.ts               # validação de input + orquestra o pipeline
     rate-limit.ts             # rate limit em memória por IP
+    sync.ts                   # server functions de sync (watch/histórico por conta)
+    auth/                      # Better Auth pré-instalado — não editar (ver skill)
     market/
       precedent.ts            # o motor: fingerprint, matching, horizontes
       indicators.ts            # RSI (Wilder), SMA, percentil/mediana
@@ -76,7 +83,7 @@ src/
       scenario.ts                 # simulação hipotética de capital/alavancagem
       types.ts                     # tipos compartilhados do payload de análise
     push/                    # subscriptions, avaliação de alertas, envio via Expo
-    watchlist.ts, history.ts # persistência local (localStorage)
+    watchlist.ts, history.ts # persistência local (localStorage) + sync opcional
   components/                # UI do resultado, watch, risk rail, cenário…
 
 mobile/
@@ -84,9 +91,9 @@ mobile/
     api.ts                  # cliente REST pro mesmo backend
     screens/                # Home, Resultado, Watch, Histórico, Alertas
     components/              # espelham os componentes web (RN + react-native-svg)
-    watchlist.ts, history.ts # mesma persistência local, via AsyncStorage
+    watchlist.ts, history.ts # mesma persistência local, via AsyncStorage (sem login ainda)
 
-migrations/                 # schema do Postgres (push_subscriptions)
+migrations/                 # schema do Postgres (push_subscriptions, auth, sync)
 scripts/                    # build/dev/migrate/cron worker + testes de infra
 AGENTS.md                   # contrato da plataforma (Grok App Builder) — não editar
 ```
@@ -128,6 +135,31 @@ celular físico — use o IP da sua máquina na rede local. Mais detalhes em
 | `PUBLIC_APP_URL` / `SCAN_URL` | cron worker | Uma das duas | Pra onde `scripts/push-scan-cron.mjs` envia o POST do scan. |
 | `NITRO_PRESET` | web (build) | Recomendado fora da Vercel | `node-server` para hosts Node genéricos (ex. Railway); default é `vercel`. |
 | `EXPO_PUBLIC_API_BASE_URL` | mobile | Sim (fora do Expo Go em rede local) | URL pública do backend web que o mobile consome. |
+| `BETTER_AUTH_URL` | web | **Sim, se login estiver ligado** | Origin público do próprio deploy (ex. `https://seu-app.up.railway.app`). Sem ela, a sessão só aceita `localhost`/preview do Grok — login real falha com "Invalid origin" em qualquer outro host. |
+| `BETTER_AUTH_SECRET` | web | **Sim, se login estiver ligado** | Assina as sessões. Sem ela, cai num segredo aleatório por processo — todo deploy/restart derruba todo mundo logado. |
+
+## Conta e sincronização
+
+Login é **opcional** e usa o [Better Auth](https://better-auth.com) que já vem
+pré-instalado na plataforma (`src/lib/auth/`) — não é uma integração
+paralela. Habilitado seguindo `.grok/skills/auth/SKILL.md` ("Turning sign-in
+on"), mas só com **email/senha**: o app roda na Railway, não no deploy da
+própria Grok, então o broker federado (Google/X, via `auth.grok.me`) não tem
+como funcionar aqui — precisaria de credenciais de cliente que só a Grok
+injeta no próprio pipeline de deploy dela. Email/senha é local a este app
+(própria tabela `user` em Postgres, migrada de `migrations/auth/0001_auth.sql`)
+e não depende de nada disso.
+
+- **Sem login**: tudo exatamente como sempre foi — watch e histórico só no
+  `localStorage`, nenhuma chamada extra.
+- **Com login**: `user_sync_data` (`migrations/0002_user_sync_data.sql`)
+  guarda um blob JSON por usuário por tipo (`watch` | `history`). No primeiro
+  login, o que já existia localmente sobe pro servidor; num segundo aparelho
+  (ou logins seguintes), o servidor manda — evita um aparelho velho
+  sobrescrever o que já estava sincronizado. Toda mudança na watch/histórico
+  depois disso sincroniza em segundo plano (`src/lib/sync.ts`,
+  `createServerFn` + `authMiddleware`, escopado por `context.userId`).
+- **Mobile**: ainda não tem login — só web por enquanto.
 
 ## O motor de precedentes
 

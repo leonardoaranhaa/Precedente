@@ -5,9 +5,12 @@ import type { StoredAnalysis } from "@/lib/market/types";
 export function HistoryPanel({
   items,
   onOpen,
+  synced = false,
 }: {
   items: StoredAnalysis[];
   onOpen: (item: StoredAnalysis) => void;
+  /** Conta logada: o histórico sincroniza entre aparelhos em vez de ficar só local. */
+  synced?: boolean;
 }) {
   if (items.length === 0) {
     return (
@@ -15,7 +18,9 @@ export function HistoryPanel({
         <Clock className="size-6 text-subtle" />
         <p className="text-sm text-muted">Nenhuma análise ainda.</p>
         <p className="max-w-xs text-xs text-subtle">
-          As leituras ficam neste aparelho. Nada é enviado a uma conta.
+          {synced
+            ? "Sincronizado na sua conta — aparece nos outros aparelhos também."
+            : "As leituras ficam neste aparelho. Nada é enviado a uma conta."}
         </p>
       </div>
     );

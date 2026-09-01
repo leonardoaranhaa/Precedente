@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
+import { AccountMenu } from "@/components/account-menu";
 import { AnalysisResult } from "@/components/analysis-result";
 import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
@@ -13,7 +14,7 @@ import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
 import { makeThumb } from "@/lib/compress";
-import { loadHistory, pushHistory } from "@/lib/history";
+import { loadHistory, pushHistory, saveHistory } from "@/lib/history";
 import {
   TIMEFRAME_GROUPS,
   type StoredAnalysis,
@@ -25,10 +26,13 @@ import {
   isWatched,
   loadWatchlist,
   removeWatch,
+  saveWatchlist,
   upsertWatch,
   type WatchItem,
 } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
+import { getSyncData, setSyncData } from "@/lib/sync";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -63,6 +67,52 @@ function Home() {
     setWatch(loadWatchlist());
     setAutoRefreshMin(loadWatchRefreshMinutes());
   }, []);
+
+  // Sincronização opcional: só entra em ação com login. Sem conta, tudo
+  // continua 100% local, exatamente como antes — nenhuma chamada extra.
+  const { user } = useCurrentUserState();
+  const syncedUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current === user.id) return;
+    const userId = user.id;
+    let cancelled = false;
+    (async () => {
+      const [serverWatch, serverHistory] = await Promise.all([
+        getSyncData({ data: "watch" }).catch(() => null),
+        getSyncData({ data: "history" }).catch(() => null),
+      ]);
+      if (cancelled) return;
+      if (serverWatch == null && serverHistory == null) {
+        // Primeiro login: sobe o que já existe só neste aparelho.
+        void setSyncData({ data: { kind: "watch", data: watchRef.current } }).catch(() => {});
+        void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+      } else {
+        // Já sincronizou antes (neste ou noutro aparelho): a conta manda.
+        const nextWatch = (serverWatch as WatchItem[] | null) ?? [];
+        const nextHistory = (serverHistory as StoredAnalysis[] | null) ?? [];
+        setWatch(nextWatch);
+        setHistory(nextHistory);
+        saveWatchlist(nextWatch);
+        saveHistory(nextHistory);
+      }
+      syncedUserIdRef.current = userId;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara na transição de login, não a cada mudança de watch/history
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current !== user.id) return;
+    void setSyncData({ data: { kind: "watch", data: watch } }).catch(() => {});
+  }, [user, watch]);
+
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current !== user.id) return;
+    void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+  }, [user, history]);
 
   useEffect(() => {
     if (autoRefreshMin <= 0) return;
@@ -367,6 +417,8 @@ function Home() {
                 <p className="mt-3 text-xs leading-relaxed text-subtle">{productBoundary()}</p>
               </PopoverContent>
             </Popover>
+
+            <AccountMenu />
           </div>
         </header>
 
@@ -408,7 +460,9 @@ function Home() {
                 <div>
                   <h1 className="font-display text-3xl tracking-tight">Watch</h1>
                   <p className="mt-1 mb-6 text-sm text-muted">
-                    Pares pinados neste aparelho — amostra e drawdown, sem conta.
+                    {user
+                      ? "Pares pinados — sincronizados na sua conta entre aparelhos."
+                      : "Pares pinados neste aparelho — amostra e drawdown, sem conta."}
                   </p>
                   <WatchPanel
                     items={watch}
@@ -443,9 +497,12 @@ function Home() {
             ) : view === "history" ? (
               <div className="mt-6">
                 <h1 className="font-display text-3xl tracking-tight">Histórico</h1>
-                <p className="mt-1 mb-6 text-sm text-muted">Neste aparelho, sem conta.</p>
+                <p className="mt-1 mb-6 text-sm text-muted">
+                  {user ? "Sincronizado na sua conta entre aparelhos." : "Neste aparelho, sem conta."}
+                </p>
                 <HistoryPanel
                   items={history}
+                  synced={Boolean(user)}
                   onOpen={(item) => {
                     setResult(item);
                     setTicker(item.displayTicker.split("/")[0] ?? item.ticker);
