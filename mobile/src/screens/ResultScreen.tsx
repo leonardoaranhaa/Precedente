@@ -14,6 +14,7 @@ import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
 import { SampleBanner } from "../components/SampleBanner";
 import { ScenarioCard } from "../components/ScenarioCard";
+import { TimeframeSwitch } from "../components/TimeframeSwitch";
 import { SplitBar } from "../components/SplitBar";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
@@ -26,18 +27,24 @@ import {
   timeframeLabel,
 } from "../format";
 import { sampleTitle } from "../sample-copy";
-import type { HorizonOutcome, StoredAnalysis } from "../types";
+import type { HorizonOutcome, StoredAnalysis, Timeframe } from "../types";
 
 export function ResultScreen({
   analysis,
   onBack,
   watched = false,
   onToggleWatch,
+  onChangeTimeframe,
+  reanalyzing = false,
+  reanalyzeError = null,
 }: {
   analysis: StoredAnalysis;
   onBack: () => void;
   watched?: boolean;
   onToggleWatch?: () => void;
+  onChangeTimeframe?: (tf: Timeframe) => void;
+  reanalyzing?: boolean;
+  reanalyzeError?: string | null;
 }) {
   const { snapshot, precedent, vision, onchain } = analysis;
   const [horizonIdx, setHorizonIdx] = useState(
@@ -58,6 +65,7 @@ export function ResultScreen({
             {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
             {formatInt(analysis.candleCount)} candles
             {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
+            {reanalyzing ? " · reanalisando…" : ""}
           </Text>
           <Text style={styles.ticker} numberOfLines={1}>
             {analysis.displayTicker}
@@ -75,6 +83,7 @@ export function ResultScreen({
         <Pressable
           onPress={onToggleWatch}
           style={[styles.watchBtn, watched && styles.watchBtnOn]}
+          disabled={reanalyzing}
         >
           <Star
             size={14}
@@ -85,6 +94,22 @@ export function ResultScreen({
             {watched ? "Na watch" : "+ Watch"}
           </Text>
         </Pressable>
+      ) : null}
+
+      {onChangeTimeframe ? (
+        <View style={{ gap: 6 }}>
+          <TimeframeSwitch
+            current={analysis.timeframe}
+            disabled={reanalyzing}
+            onChange={onChangeTimeframe}
+          />
+          {reanalyzing ? (
+            <Text style={[styles.muted, { fontSize: 11 }]}>Atualizando OHLC…</Text>
+          ) : null}
+          {reanalyzeError ? (
+            <Text style={{ color: colors.down, fontSize: 13 }}>{reanalyzeError}</Text>
+          ) : null}
+        </View>
       ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -306,7 +331,7 @@ export function ResultScreen({
       ) : null}
 
       <Text style={styles.disclaimer}>
-        Frequência, caminho e encenação em USD são contexto — nunca ordem. A decisão é só sua. Use{" "}
+        Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
         <Text style={{ color: colors.fg }}>Ler o cenário</Text>. OHLC: {analysis.source}.
       </Text>
     </ScrollView>
