@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { scanAllSubscriptions } from "@/lib/push/scan";
 import { subscriptionCount } from "@/lib/push/store";
+import { dbSource } from "@/lib/db";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,13 @@ function json(body: unknown, status = 200): Response {
 
 function authorized(request: Request): boolean {
   const secret = process.env.PUSH_CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    // No secret configured: fine on the local/preview PGLite fallback (no
+    // real subscribers to spam), but a real deploy (DATABASE_URL set) that
+    // forgot to set the secret must not leave "push everyone now" world
+    // callable — fail closed there instead of silently allowing it.
+    return dbSource !== "neon";
+  }
   const header =
     request.headers.get("x-cron-secret") ??
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");

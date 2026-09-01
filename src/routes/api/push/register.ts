@@ -3,6 +3,14 @@ import { DEFAULT_ALERT_RULES, type AlertRules, type WatchTarget } from "@/lib/pu
 import { removeSubscription, subscriptionCount, upsertSubscription } from "@/lib/push/store";
 import { TIMEFRAMES, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker } from "@/lib/market/labels";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 5 * 60 * 1000;
+
+// Tokens reais do Expo Push seguem um destes formatos; qualquer outra coisa
+// nunca vai entregar notificação — não vale a pena guardar linha na tabela.
+const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +61,11 @@ export const Route = createFileRoute("/api/push/register")({
     handlers: {
       OPTIONS: () => new Response(null, { status: 204, headers: CORS_HEADERS }),
       POST: async ({ request }) => {
+        const limit = checkRateLimit(`push-register:${clientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
+        if (!limit.allowed) {
+          return json({ error: "Muitas tentativas. Tente de novo em instantes." }, 429);
+        }
+
         let body: unknown;
         try {
           body = await request.json();
@@ -61,6 +74,9 @@ export const Route = createFileRoute("/api/push/register")({
         }
         const raw = body as Record<string, unknown>;
         const token = typeof raw.token === "string" ? raw.token : "";
+        if (token && !EXPO_TOKEN_RE.test(token)) {
+          return json({ error: "Token de push em formato inválido." }, 400);
+        }
         try {
           const sub = await upsertSubscription({
             token,
@@ -80,6 +96,11 @@ export const Route = createFileRoute("/api/push/register")({
         }
       },
       DELETE: async ({ request }) => {
+        const limit = checkRateLimit(`push-register:${clientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
+        if (!limit.allowed) {
+          return json({ error: "Muitas tentativas. Tente de novo em instantes." }, 429);
+        }
+
         let body: unknown;
         try {
           body = await request.json();

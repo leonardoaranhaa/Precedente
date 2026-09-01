@@ -1,0 +1,52 @@
+/**
+ * Fixed-window rate limiter, in-memory per process. The app runs as one
+ * long-lived Node process (Railway), so this actually holds across requests
+ * — it just does not share state across multiple instances/replicas. That
+ * tradeoff is fine here: the goal is blocking a single script hammering a
+ * paid endpoint (Anthropic vision, Binance), not perfect multi-instance
+ * fairness.
+ */
+
+type Bucket = { count: number; resetAt: number };
+
+const buckets = new Map<string, Bucket>();
+
+// Buckets accumulate one entry per distinct key seen; without a cap a
+// sustained flood from rotating IPs would grow this map unbounded.
+const MAX_BUCKETS = 5000;
+
+export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSec: number };
+
+export function checkRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+  const now = Date.now();
+  const existing = buckets.get(key);
+
+  if (!existing || existing.resetAt <= now) {
+    if (buckets.size >= MAX_BUCKETS && !existing) {
+      // Drop the oldest-looking entry rather than let the map grow forever.
+      const firstKey = buckets.keys().next().value;
+      if (firstKey !== undefined) buckets.delete(firstKey);
+    }
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+
+  if (existing.count >= limit) {
+    return { allowed: false, retryAfterSec: Math.ceil((existing.resetAt - now) / 1000) };
+  }
+
+  existing.count += 1;
+  return { allowed: true };
+}
+
+/** Best-effort client IP from common proxy headers (Railway/Vercel/etc). */
+export function clientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const real = request.headers.get("x-real-ip");
+  if (real) return real.trim();
+  return "unknown";
+}

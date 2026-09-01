@@ -1,4 +1,4 @@
-import type { Extreme, Fingerprint, MaSide, Timeframe } from "./types";
+import type { Extreme, Fingerprint, MaSide, Timeframe } from "./types.ts";
 
 export function displayTicker(symbol: string): string {
   const quotes = ["USDT", "BUSD", "USDC", "BRL", "FDUSD", "BTC", "ETH"];
