@@ -246,10 +246,16 @@ mobile chama de fora do navegador):
 npm run typecheck   # tsc --noEmit
 npm run lint         # eslint .
 npm test              # scripts/*.test.mjs + testes TS (motor, rate-limit, auth)
+npm run test:e2e       # Playwright — fluxo real de navegador contra o dev server
 npm run build          # build de produção (Vite + Nitro) + migrate
 ```
 
 No mobile: `cd mobile && npm run typecheck`.
+
+`npm run test:e2e` sobe o `npm run dev` sozinho se nenhum já estiver rodando em
+`localhost:8080` (ou reaproveita o que já estiver de pé). Roda contra a
+Binance de verdade — sem mock — então precisa de rede. `.github/workflows/ci.yml`
+roda typecheck/lint/testes unitários e a suíte E2E em todo PR e push em `main`.
 
 ## Deploy
 
