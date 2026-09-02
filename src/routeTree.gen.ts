@@ -10,7 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvisoDeRiscoRouteImport } from './routes/aviso-de-risco'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -24,9 +27,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisoDeRiscoRoute = AvisoDeRiscoRouteImport.update({
+  id: '/aviso-de-risco',
+  path: '/aviso-de-risco',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
@@ -67,7 +85,10 @@ const ApiPushScanRoute = ApiPushScanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -78,7 +99,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -90,7 +114,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -103,7 +130,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
     | '/api/universe'
     | '/api/auth/$'
@@ -114,7 +144,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
     | '/api/universe'
     | '/api/auth/$'
@@ -125,7 +158,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
     | '/api/universe'
     | '/api/auth/$'
@@ -137,7 +173,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvisoDeRiscoRoute: typeof AvisoDeRiscoRoute
   LoginRoute: typeof LoginRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -156,11 +195,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aviso-de-risco': {
+      id: '/aviso-de-risco'
+      path: '/aviso-de-risco'
+      fullPath: '/aviso-de-risco'
+      preLoaderRoute: typeof AvisoDeRiscoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analyze': {
@@ -217,7 +277,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvisoDeRiscoRoute: AvisoDeRiscoRoute,
   LoginRoute: LoginRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiUniverseRoute: ApiUniverseRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

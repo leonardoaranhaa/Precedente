@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
 import { AccountMenu } from "@/components/account-menu";
@@ -581,6 +581,20 @@ function Home() {
           </div>
         </div>
       </div>
+
+      <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-[11px] text-subtle xl:max-w-[1680px]">
+        <Link to="/termos" className="underline-offset-4 hover:text-fg hover:underline">
+          Termos
+        </Link>
+        {" · "}
+        <Link to="/privacidade" className="underline-offset-4 hover:text-fg hover:underline">
+          Privacidade
+        </Link>
+        {" · "}
+        <Link to="/aviso-de-risco" className="underline-offset-4 hover:text-fg hover:underline">
+          Aviso de risco
+        </Link>
+      </footer>
 
       {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
     </div>
