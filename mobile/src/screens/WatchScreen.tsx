@@ -76,7 +76,7 @@ export function WatchScreen({
         <Star size={22} color={colors.subtle} />
         <Text style={styles.emptyTitle}>Nenhum par na watch.</Text>
         <Text style={styles.emptyHint}>
-          Após uma análise, toque em + Watch para acompanhar amostra e drawdown neste aparelho.
+          Depois de analisar um par, toque em + Watch para acompanhar amostra e drawdown aqui.
         </Text>
       </View>
     );
@@ -95,7 +95,7 @@ export function WatchScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Watch</Text>
               <Text style={styles.subtitle}>
-                Pares pinados — Δ, amostra e DD. Auto = snapshot, não websocket.
+                Pares pinados — Δ, amostra e DD. Atualização automática, não é preço ao vivo.
               </Text>
             </View>
             <Pressable

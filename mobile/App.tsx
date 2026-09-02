@@ -102,7 +102,7 @@ function AppInner() {
       const res = await syncPushSubscription({ token, watches, rules });
       setPushSyncing(false);
       if (!res.ok) setPushStatus(res.error ?? "Falha ao sincronizar.");
-      else if (rules.enabled && token) setPushStatus("Watch sincronizada com o backend.");
+      else if (rules.enabled && token) setPushStatus("Watch sincronizada.");
       else if (!rules.enabled) setPushStatus("Alertas desativados.");
     },
     [],
@@ -354,7 +354,7 @@ function AppInner() {
     if (failed.length > 0) {
       setWatchError(
         failed.length === list.length
-          ? `Nenhum par reavaliado. Confira a rede e o backend. (${failed.join(", ")})`
+          ? `Nenhum par reavaliado. Confira sua conexão e tente de novo. (${failed.join(", ")})`
           : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
@@ -390,7 +390,7 @@ function AppInner() {
       token = await registerForPushAsync();
       setPushToken(token);
       if (!token) {
-        setPushStatus("Sem token de push. Use aparelho físico e aceite a permissão.");
+        setPushStatus("Não deu pra ativar notificações. Use um aparelho físico e aceite a permissão.");
       }
     }
     await syncPush(next, watchRef.current, token);
@@ -400,10 +400,10 @@ function AppInner() {
     const token = await registerForPushAsync();
     setPushToken(token);
     if (!token) {
-      setPushStatus("Permissão negada ou token indisponível neste ambiente.");
+      setPushStatus("Permissão negada, ou notificações indisponíveis neste aparelho.");
       return;
     }
-    setPushStatus("Token obtido.");
+    setPushStatus("Notificações ativadas.");
     if (alertRules.enabled) {
       await syncPush(alertRules, watchRef.current, token);
     }
@@ -411,11 +411,11 @@ function AppInner() {
 
   async function handleScanNow() {
     setPushSyncing(true);
-    setPushStatus("Solicitando scan no backend…");
+    setPushStatus("Verificando sua Watch…");
     await syncPush(alertRules, watchRef.current, pushToken);
     await requestPushScan();
     setPushSyncing(false);
-    setPushStatus("Scan solicitado. Se houver condição, o push chega em instantes.");
+    setPushStatus("Verificação feita. Se houver alerta, o push chega em instantes.");
   }
 
   async function handleSignIn(email: string, password: string) {
@@ -518,6 +518,7 @@ function AppInner() {
         ) : view === "history" ? (
           <HistoryScreen
             items={history}
+            signedIn={Boolean(user)}
             onOpen={(item) => {
               setResult(item);
               setView("result");
