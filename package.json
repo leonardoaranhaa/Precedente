@@ -17,7 +17,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs'; s1=$?; node --experimental-strip-types --test src/lib/analyze-rate-limit-logic.test.ts src/lib/anthropic-cost.test.ts src/lib/app-data/app-data.test.ts src/lib/market/baseline-copy.test.ts src/lib/auth/gate-identity.test.ts src/lib/billing/entitlements.test.ts src/lib/market/indicators.test.ts src/lib/market/precedent.test.ts src/lib/rate-limit.test.ts src/lib/sync-limits.test.ts; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]",
+    "test": "node --test 'scripts/**/*.test.mjs'; s1=$?; node --experimental-strip-types --test src/lib/analyze-rate-limit-logic.test.ts src/lib/anthropic-cost.test.ts src/lib/app-data/app-data.test.ts src/lib/concurrency.test.ts src/lib/market/baseline-copy.test.ts src/lib/push/scan-logic.test.ts src/lib/auth/gate-identity.test.ts src/lib/billing/entitlements.test.ts src/lib/market/indicators.test.ts src/lib/market/precedent.test.ts src/lib/rate-limit.test.ts src/lib/sync-limits.test.ts; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
