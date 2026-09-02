@@ -150,6 +150,9 @@ const CATEGORY_KEYWORDS: Record<NewsCategory, string[]> = {
   ],
 };
 
+/** Lista de tickers reconhecidos — reusada pelo seletor de moedas na UI. */
+export const KNOWN_COINS: string[] = Object.keys(COIN_ALIASES);
+
 function wordBoundaryMatch(haystack: string, needle: string): boolean {
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i").test(haystack);
