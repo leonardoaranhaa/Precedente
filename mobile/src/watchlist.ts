@@ -4,6 +4,11 @@ import type { StoredAnalysis, Timeframe } from "./types";
 const KEY = "precedente.watch.v1";
 const MAX = 24;
 
+/** Zona de preço configurada pra este par — dispara push quando o fechamento cai na faixa. */
+export type PriceZone = { enabled: boolean; min: number | null; max: number | null };
+/** Zona de RSI configurada pra este par — dispara push quando o RSI cruza um dos limites. */
+export type RsiZone = { enabled: boolean; below: number | null; above: number | null };
+
 export type WatchItem = {
   id: string;
   ticker: string;
@@ -20,6 +25,8 @@ export type WatchItem = {
   near20High: boolean;
   near20Low: boolean;
   fingerprintLabel: string;
+  priceZone?: PriceZone;
+  rsiZone?: RsiZone;
 };
 
 function pickHorizonDrawdown(a: StoredAnalysis): number {
@@ -72,7 +79,21 @@ export async function upsertWatch(
   analysis: StoredAnalysis,
 ): Promise<WatchItem[]> {
   const next = analysisToWatchItem(analysis);
+  const previous = current.find((w) => w.id === next.id);
+  if (previous?.priceZone) next.priceZone = previous.priceZone;
+  if (previous?.rsiZone) next.rsiZone = previous.rsiZone;
   const items = [next, ...current.filter((w) => w.id !== next.id)].slice(0, MAX);
+  await saveWatchlist(items);
+  return items;
+}
+
+/** Atualiza a zona de alerta de um único item, sem mexer no resto da watch. */
+export async function updateZone(
+  current: WatchItem[],
+  id: string,
+  zones: { priceZone?: PriceZone; rsiZone?: RsiZone },
+): Promise<WatchItem[]> {
+  const items = current.map((w) => (w.id === id ? { ...w, ...zones } : w));
   await saveWatchlist(items);
   return items;
 }

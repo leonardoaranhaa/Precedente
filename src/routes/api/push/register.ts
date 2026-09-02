@@ -38,6 +38,10 @@ function parseWatches(raw: unknown): WatchTarget[] {
       ticker,
       timeframe,
       displayTicker: typeof r.displayTicker === "string" ? r.displayTicker : undefined,
+      // Validação/limpeza de verdade acontece em store.ts (sanitizeWatchTarget) —
+      // aqui só repassa o que veio, sem confiar no formato.
+      priceZone: r.priceZone as WatchTarget["priceZone"],
+      rsiZone: r.rsiZone as WatchTarget["rsiZone"],
     });
   }
   return out.slice(0, 24);

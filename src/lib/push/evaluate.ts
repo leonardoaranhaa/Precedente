@@ -1,5 +1,5 @@
 import type { AnalysisPayload } from "@/lib/market/types";
-import type { AlertEvent, AlertRules, PushSubscription } from "./types";
+import type { AlertEvent, AlertRules, PushSubscription, WatchTarget } from "./types";
 
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h por par+tipo
 
@@ -8,12 +8,19 @@ function horizon10(payload: AnalysisPayload) {
   return hs.find((h) => h.bars === 10) ?? hs[Math.min(1, hs.length - 1)] ?? hs[0];
 }
 
+function formatPrice(n: number): string {
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: n < 1 ? 6 : 2 });
+}
+
 /**
  * Gera eventos de alerta a partir de uma análise — só prevenção/contexto.
- * Nunca usa linguagem de compra/venda.
+ * Nunca usa linguagem de compra/venda. `watch` carrega a configuração de zona
+ * específica deste par (preço/RSI) — diferente das outras regras, que são
+ * globais pra toda a watchlist da subscription.
  */
 export function evaluateAlerts(
   payload: AnalysisPayload,
+  watch: Pick<WatchTarget, "priceZone" | "rsiZone">,
   rules: AlertRules,
   lastSent: Record<string, number>,
   now = Date.now(),
@@ -72,6 +79,43 @@ export function evaluateAlerts(
       title: `${payload.displayTicker} · extremo 20 barras`,
       body: `Preço colado na ${side} de 20 barras. Contexto de fragilidade no fingerprint — sem ordem de exposição.`,
     });
+  }
+
+  const zone = watch.priceZone;
+  if (zone?.enabled && (zone.min != null || zone.max != null) && !cool("price_zone")) {
+    const price = payload.snapshot.last.c;
+    const inZone = (zone.min == null || price >= zone.min) && (zone.max == null || price <= zone.max);
+    if (inZone) {
+      const range =
+        zone.min != null && zone.max != null
+          ? `${formatPrice(zone.min)}–${formatPrice(zone.max)}`
+          : zone.min != null
+            ? `acima de ${formatPrice(zone.min)}`
+            : `abaixo de ${formatPrice(zone.max!)}`;
+      events.push({
+        ...base,
+        kind: "price_zone",
+        title: `${payload.displayTicker} · na zona de preço`,
+        body: `Preço em ${formatPrice(price)}, dentro da faixa configurada (${range}).`,
+      });
+    }
+  }
+
+  const rsiZone = watch.rsiZone;
+  if (rsiZone?.enabled && (rsiZone.below != null || rsiZone.above != null) && !cool("rsi_zone")) {
+    const rsi = payload.snapshot.rsi14;
+    const below = rsiZone.below != null && rsi <= rsiZone.below;
+    const above = rsiZone.above != null && rsi >= rsiZone.above;
+    if (below || above) {
+      events.push({
+        ...base,
+        kind: "rsi_zone",
+        title: `${payload.displayTicker} · RSI em zona`,
+        body: `RSI em ${rsi.toFixed(0)}, ${below ? "abaixo" : "acima"} do limite configurado (${
+          below ? rsiZone.below : rsiZone.above
+        }).`,
+      });
+    }
   }
 
   return events;

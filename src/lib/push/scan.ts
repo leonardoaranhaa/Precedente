@@ -68,7 +68,7 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
     for (const w of sub.watches) {
       const result = resultByPair.get(pairKey(w.ticker, w.timeframe));
       if (!result?.ok) continue; // erro já reportado uma vez, por par
-      const events = evaluateAlerts(result.payload, sub.rules, sub.lastSent);
+      const events = evaluateAlerts(result.payload, w, sub.rules, sub.lastSent);
       eventsForToken.push(...events);
     }
 

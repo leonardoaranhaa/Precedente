@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { RefreshCw, Star, Trash2 } from "lucide-react-native";
+import { RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { colors, radius } from "../theme";
 import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from "../format";
@@ -46,6 +46,7 @@ export function WatchScreen({
   onRemove,
   onRefresh,
   onRefreshAll,
+  onOpenZone,
 }: {
   items: WatchItem[];
   focusIds?: string[];
@@ -58,6 +59,7 @@ export function WatchScreen({
   onRemove: (id: string) => void;
   onRefresh: (item: WatchItem) => void;
   onRefreshAll: () => void;
+  onOpenZone: (item: WatchItem) => void;
 }) {
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
@@ -223,6 +225,7 @@ export function WatchScreen({
         const up = item.changePct >= 0;
         const extreme = item.near20High || item.near20Low;
         const rowBusy = refreshingId === item.id;
+        const zoneActive = Boolean(item.priceZone?.enabled || item.rsiZone?.enabled);
         return (
           <View style={[styles.row, rowBusy && styles.rowBusy]}>
             <Pressable
@@ -236,6 +239,7 @@ export function WatchScreen({
                     {item.displayTicker.split("/")[0] ?? item.displayTicker}
                   </Text>
                   {extreme ? <Text style={{ color: colors.warn, fontSize: 10 }}>▲</Text> : null}
+                  {zoneActive ? <Target size={11} color={colors.warn} /> : null}
                 </View>
                 {rowBusy ? (
                   <Text style={[styles.meta, { color: colors.warn }]}>reavaliando…</Text>
@@ -258,6 +262,15 @@ export function WatchScreen({
                 warn={item.sampleNote !== "ok"}
               />
               <Text style={styles.dd}>{formatPct(item.medianDrawdownPct, 1)}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onOpenZone(item)}
+              disabled={busy}
+              hitSlop={8}
+              style={styles.iconBtn}
+              accessibilityLabel={`Zona de alerta de ${item.displayTicker}`}
+            >
+              <Target size={15} color={zoneActive ? colors.warn : colors.subtle} />
             </Pressable>
             <Pressable
               onPress={() => onRefresh(item)}

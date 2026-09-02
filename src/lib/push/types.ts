@@ -1,6 +1,11 @@
 import type { Timeframe } from "@/lib/market/types";
 
-export type AlertKind = "sample_weak" | "drawdown_path" | "extreme_20";
+export type AlertKind =
+  | "sample_weak"
+  | "drawdown_path"
+  | "extreme_20"
+  | "price_zone"
+  | "rsi_zone";
 
 export type AlertRules = {
   /** Avisa se amostra small ou tiny. */
@@ -19,10 +24,30 @@ export const DEFAULT_ALERT_RULES: AlertRules = {
   extreme20: true,
 };
 
+/** Zona de preço configurada por ativo — dispara quando o fechamento cai dentro da faixa. */
+export type PriceZone = {
+  enabled: boolean;
+  /** null = sem piso. */
+  min: number | null;
+  /** null = sem teto. */
+  max: number | null;
+};
+
+/** Zona de RSI configurada por ativo — dispara quando o RSI cruza um dos limites. */
+export type RsiZone = {
+  enabled: boolean;
+  /** Dispara quando RSI <= below. null = desligado. */
+  below: number | null;
+  /** Dispara quando RSI >= above. null = desligado. */
+  above: number | null;
+};
+
 export type WatchTarget = {
   ticker: string;
   timeframe: Timeframe;
   displayTicker?: string;
+  priceZone?: PriceZone;
+  rsiZone?: RsiZone;
 };
 
 export type PushSubscription = {

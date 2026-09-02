@@ -43,9 +43,13 @@ import {
   loadWatchlist,
   removeWatch,
   saveWatchlist,
+  updateZone,
   upsertWatch,
+  type PriceZone,
+  type RsiZone,
   type WatchItem,
 } from "./src/watchlist";
+import { ZoneModal } from "./src/components/ZoneModal";
 
 type Screen = "home" | "history" | "result" | "watch" | "alerts" | "account";
 
@@ -80,6 +84,7 @@ function AppInner() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
+  const [zoneItem, setZoneItem] = useState<WatchItem | null>(null);
 
   const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -509,6 +514,7 @@ function AppInner() {
               })
             }
             onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+            onOpenZone={setZoneItem}
             onRefreshAll={() => void refreshAllWatch()}
             autoRefreshMin={autoRefreshMin}
             onAutoRefreshMin={setAutoRefresh}
@@ -563,6 +569,20 @@ function AppInner() {
 
         {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
       </View>
+
+      <ZoneModal
+        visible={zoneItem != null}
+        item={zoneItem}
+        onClose={() => setZoneItem(null)}
+        onSave={(zones: { priceZone: PriceZone; rsiZone: RsiZone }) => {
+          if (!zoneItem) return;
+          void updateZone(watchRef.current, zoneItem.id, zones).then((next) => {
+            setWatch(next);
+            watchRef.current = next;
+            void syncPush(alertRules, next, pushToken);
+          });
+        }}
+      />
     </SafeAreaView>
   );
 }
