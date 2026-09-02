@@ -10,11 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvisoDeRiscoRouteImport } from './routes/aviso-de-risco'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiSyncRouteImport } from './routes/api/sync'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
+import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
+import { Route as ApiBillingStatusRouteImport } from './routes/api/billing/status'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
+import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 
@@ -23,14 +31,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisoDeRiscoRoute = AvisoDeRiscoRouteImport.update({
+  id: '/aviso-de-risco',
+  path: '/aviso-de-risco',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncRoute = ApiSyncRouteImport.update({
+  id: '/api/sync',
+  path: '/api/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUniverseRoute = ApiUniverseRouteImport.update({
@@ -43,9 +71,29 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
+  id: '/api/billing/checkout',
+  path: '/api/billing/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
+  id: '/api/billing/portal',
+  path: '/api/billing/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingStatusRoute = ApiBillingStatusRouteImport.update({
+  id: '/api/billing/status',
+  path: '/api/billing/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
   id: '/api/billing/webhook',
   path: '/api/billing/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
+  id: '/api/ops/analysis',
+  path: '/api/ops/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
@@ -61,32 +109,56 @@ const ApiPushScanRoute = ApiPushScanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -94,42 +166,74 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
+    | '/api/sync'
     | '/api/universe'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
+    | '/api/sync'
     | '/api/universe'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   id:
     | '__root__'
     | '/'
+    | '/aviso-de-risco'
     | '/login'
+    | '/privacidade'
+    | '/termos'
     | '/api/analyze'
+    | '/api/sync'
     | '/api/universe'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvisoDeRiscoRoute: typeof AvisoDeRiscoRoute
   LoginRoute: typeof LoginRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiSyncRoute: typeof ApiSyncRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
+  ApiBillingPortalRoute: typeof ApiBillingPortalRoute
+  ApiBillingStatusRoute: typeof ApiBillingStatusRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
+  ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
 }
@@ -143,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aviso-de-risco': {
+      id: '/aviso-de-risco'
+      path: '/aviso-de-risco'
+      fullPath: '/aviso-de-risco'
+      preLoaderRoute: typeof AvisoDeRiscoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -150,11 +261,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analyze': {
       id: '/api/analyze'
       path: '/api/analyze'
       fullPath: '/api/analyze'
       preLoaderRoute: typeof ApiAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync': {
+      id: '/api/sync'
+      path: '/api/sync'
+      fullPath: '/api/sync'
+      preLoaderRoute: typeof ApiSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/universe': {
@@ -171,11 +303,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/checkout': {
+      id: '/api/billing/checkout'
+      path: '/api/billing/checkout'
+      fullPath: '/api/billing/checkout'
+      preLoaderRoute: typeof ApiBillingCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/portal': {
+      id: '/api/billing/portal'
+      path: '/api/billing/portal'
+      fullPath: '/api/billing/portal'
+      preLoaderRoute: typeof ApiBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/status': {
+      id: '/api/billing/status'
+      path: '/api/billing/status'
+      fullPath: '/api/billing/status'
+      preLoaderRoute: typeof ApiBillingStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/billing/webhook': {
       id: '/api/billing/webhook'
       path: '/api/billing/webhook'
       fullPath: '/api/billing/webhook'
       preLoaderRoute: typeof ApiBillingWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ops/analysis': {
+      id: '/api/ops/analysis'
+      path: '/api/ops/analysis'
+      fullPath: '/api/ops/analysis'
+      preLoaderRoute: typeof ApiOpsAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/push/register': {
@@ -197,11 +357,19 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvisoDeRiscoRoute: AvisoDeRiscoRoute,
   LoginRoute: LoginRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiSyncRoute: ApiSyncRoute,
   ApiUniverseRoute: ApiUniverseRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
+  ApiBillingPortalRoute: ApiBillingPortalRoute,
+  ApiBillingStatusRoute: ApiBillingStatusRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
+  ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,
 }

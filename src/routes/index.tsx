@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
 import { AccountMenu } from "@/components/account-menu";
@@ -37,6 +37,10 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 export const Route = createFileRoute("/")({ component: Home });
 
 type View = "home" | "history" | "result" | "watch";
+
+// Espera de inatividade antes de sincronizar watch/history com o servidor —
+// absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
+const SYNC_DEBOUNCE_MS = 1500;
 
 function Home() {
   const [view, setView] = useState<View>("home");
@@ -104,14 +108,23 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara na transição de login, não a cada mudança de watch/history
   }, [user?.id]);
 
+  // Debounced: watch/history mudam em rajada (ex.: "Reavaliar todos" atualiza
+  // item por item), e cada mutação reescreve o blob inteiro no Postgres — sem
+  // isso, uma rajada de N mudanças em poucos segundos vira N escritas.
   useEffect(() => {
     if (!user || syncedUserIdRef.current !== user.id) return;
-    void setSyncData({ data: { kind: "watch", data: watch } }).catch(() => {});
+    const id = window.setTimeout(() => {
+      void setSyncData({ data: { kind: "watch", data: watch } }).catch(() => {});
+    }, SYNC_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
   }, [user, watch]);
 
   useEffect(() => {
     if (!user || syncedUserIdRef.current !== user.id) return;
-    void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+    const id = window.setTimeout(() => {
+      void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+    }, SYNC_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
   }, [user, history]);
 
   useEffect(() => {
@@ -568,6 +581,20 @@ function Home() {
           </div>
         </div>
       </div>
+
+      <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-[11px] text-subtle xl:max-w-[1680px]">
+        <Link to="/termos" className="underline-offset-4 hover:text-fg hover:underline">
+          Termos
+        </Link>
+        {" · "}
+        <Link to="/privacidade" className="underline-offset-4 hover:text-fg hover:underline">
+          Privacidade
+        </Link>
+        {" · "}
+        <Link to="/aviso-de-risco" className="underline-offset-4 hover:text-fg hover:underline">
+          Aviso de risco
+        </Link>
+      </footer>
 
       {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
     </div>

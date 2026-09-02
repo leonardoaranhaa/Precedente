@@ -17,6 +17,15 @@ const MAX_BUCKETS = 5000;
 
 export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSec: number };
 
+/** Thrown by call sites that enforce a rate limit outside a plain REST handler. */
+export class RateLimitError extends Error {
+  readonly status = 429;
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 export function checkRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   const existing = buckets.get(key);

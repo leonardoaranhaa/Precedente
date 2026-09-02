@@ -93,6 +93,15 @@ export function AccountMenu() {
         {billingError ? (
           <p className="mt-1.5 text-[11px] leading-relaxed text-down">{billingError}</p>
         ) : null}
+        {!active ? (
+          <p className="mt-1.5 text-[11px] leading-relaxed text-subtle">
+            Assinar não muda o que o app mostra: sempre estatística do passado, nunca
+            recomendação.{" "}
+            <Link to="/aviso-de-risco" className="underline-offset-4 hover:text-fg hover:underline">
+              Aviso de risco
+            </Link>
+          </p>
+        ) : null}
 
         <button
           type="button"

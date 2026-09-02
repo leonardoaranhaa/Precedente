@@ -12,7 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.precedente.app",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -57,7 +59,8 @@
           "defaultChannel": "precedente-alerts",
           "sounds": []
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

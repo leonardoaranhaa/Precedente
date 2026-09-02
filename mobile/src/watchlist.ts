@@ -59,7 +59,7 @@ export async function loadWatchlist(): Promise<WatchItem[]> {
   }
 }
 
-async function saveWatchlist(items: WatchItem[]): Promise<void> {
+export async function saveWatchlist(items: WatchItem[]): Promise<void> {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(items.slice(0, MAX)));
   } catch {

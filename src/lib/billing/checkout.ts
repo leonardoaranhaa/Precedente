@@ -39,38 +39,45 @@ async function ensureStripeCustomer(userId: string): Promise<string> {
   return customer.id;
 }
 
-/** Abre um Stripe Checkout de assinatura pro plano premium. Volta a URL pra redirecionar o navegador. */
-export const startPremiumCheckout = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .handler(async ({ context }) => {
-    const stripe = getStripe();
-    const customerId = await ensureStripeCustomer(context.userId);
-    const origin = appOrigin();
+/**
+ * Abre um Stripe Checkout de assinatura pro plano premium. Volta a URL pra
+ * redirecionar — o navegador (web) ou `Linking.openURL` (mobile).
+ */
+export async function startPremiumCheckoutFor(userId: string): Promise<{ url: string }> {
+  const stripe = getStripe();
+  const customerId = await ensureStripeCustomer(userId);
+  const origin = appOrigin();
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: getPremiumPriceId(), quantity: 1 }],
-      success_url: `${origin}/?premium=sucesso`,
-      cancel_url: `${origin}/?premium=cancelado`,
-    });
-
-    if (!session.url) throw new Error("O Stripe não retornou uma URL de checkout.");
-    return { url: session.url };
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: customerId,
+    line_items: [{ price: getPremiumPriceId(), quantity: 1 }],
+    success_url: `${origin}/?premium=sucesso`,
+    cancel_url: `${origin}/?premium=cancelado`,
   });
+
+  if (!session.url) throw new Error("O Stripe não retornou uma URL de checkout.");
+  return { url: session.url };
+}
 
 /** Abre o portal do Stripe pra quem já é assinante gerenciar/cancelar. */
+export async function openBillingPortalFor(userId: string): Promise<{ url: string }> {
+  const entitlement = await getEntitlement(userId);
+  if (!entitlement?.stripeCustomerId) {
+    throw new Error("Você ainda não iniciou uma assinatura.");
+  }
+  const stripe = getStripe();
+  const session = await stripe.billingPortal.sessions.create({
+    customer: entitlement.stripeCustomerId,
+    return_url: `${appOrigin()}/`,
+  });
+  return { url: session.url };
+}
+
+export const startPremiumCheckout = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(({ context }) => startPremiumCheckoutFor(context.userId));
+
 export const openBillingPortal = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) => {
-    const entitlement = await getEntitlement(context.userId);
-    if (!entitlement?.stripeCustomerId) {
-      throw new Error("Você ainda não iniciou uma assinatura.");
-    }
-    const stripe = getStripe();
-    const session = await stripe.billingPortal.sessions.create({
-      customer: entitlement.stripeCustomerId,
-      return_url: `${appOrigin()}/`,
-    });
-    return { url: session.url };
-  });
+  .handler(({ context }) => openBillingPortalFor(context.userId));

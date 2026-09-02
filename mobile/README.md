@@ -52,8 +52,21 @@ npm run build:apk   # gera .apk direto, sem passar pela Play Store
 - `src/api.ts` — chama `/api/analyze` no backend do web app.
 - `src/image.ts` — redimensiona o print (mesmo critério do `src/lib/compress.ts`
   web) antes de enviar, e gera a miniatura do histórico.
-- `src/history.ts` — histórico local via `AsyncStorage` (equivalente ao
-  `localStorage` do web), sem conta/servidor.
+- `src/history.ts`, `src/watchlist.ts` — histórico/watch locais via
+  `AsyncStorage` (equivalente ao `localStorage` do web). Conta é opcional;
+  sem login tudo fica só no aparelho.
+- `src/auth.ts` — login/cadastro por email/senha contra o mesmo Better Auth
+  do web (`/api/auth/*`). Sem cookie jar no React Native, guarda o token de
+  sessão (plugin `bearer()` do Better Auth) via `expo-secure-store` e manda
+  `Authorization: Bearer <token>` em toda chamada autenticada.
+- `src/sync.ts`, `src/billing.ts` — clientes das rotas REST
+  `/api/sync`, `/api/billing/status|checkout|portal` (a mesma lógica dos
+  server functions do web, exposta em REST porque o mobile não fala o
+  protocolo interno de server function do TanStack Start).
+- `src/screens/AccountScreen.tsx` — login/cadastro e, logado, plano
+  atual + assinar/gerenciar (abre o Stripe Checkout/portal no navegador do
+  sistema via `Linking.openURL` — sem in-app purchase, o que só vale
+  enquanto a distribuição for APK direto, fora de loja de apps).
 - `src/types.ts`, `src/format.ts` — espelham `src/lib/market/types.ts` e
   `src/lib/market/labels.ts` do web, pro payload e formatação ficarem idênticos.
 - `src/theme.ts`, `src/fonts.ts` — paleta e tipografia (IBM Plex Sans +

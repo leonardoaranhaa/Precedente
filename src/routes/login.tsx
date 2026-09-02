@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Mark } from "@/components/mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +116,18 @@ function Login() {
         >
           {mode === "signup" ? "Já tem conta? Entrar" : "Não tem conta? Criar uma"}
         </button>
+
+        <p className="text-xs text-subtle">
+          Ao continuar, você concorda com os{" "}
+          <Link to="/termos" className="underline-offset-4 hover:text-fg hover:underline">
+            termos de uso
+          </Link>{" "}
+          e a{" "}
+          <Link to="/privacidade" className="underline-offset-4 hover:text-fg hover:underline">
+            política de privacidade
+          </Link>
+          .
+        </p>
       </div>
     </main>
   );

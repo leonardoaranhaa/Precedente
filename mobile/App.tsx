@@ -8,22 +8,26 @@ import {
   saveAlertRules,
   type AlertRules,
 } from "./src/alert-settings";
+import { getStoredUser, signIn, signOut, signUp, type AuthUser } from "./src/auth";
+import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
 import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
-import { loadHistory, pushHistory } from "./src/history";
+import { loadHistory, pushHistory, saveHistory } from "./src/history";
 import {
   registerForPushAsync,
   requestPushScan,
   syncPushSubscription,
 } from "./src/notifications";
+import { AccountScreen } from "./src/screens/AccountScreen";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
+import { getSyncData, setSyncData } from "./src/sync";
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
 import type { StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
@@ -35,11 +39,16 @@ import {
   isWatched,
   loadWatchlist,
   removeWatch,
+  saveWatchlist,
   upsertWatch,
   type WatchItem,
 } from "./src/watchlist";
 
-type Screen = "home" | "history" | "result" | "watch" | "alerts";
+type Screen = "home" | "history" | "result" | "watch" | "alerts" | "account";
+
+// Espera de inatividade antes de sincronizar watch/history com o servidor —
+// absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
+const SYNC_DEBOUNCE_MS = 1500;
 
 export default function App() {
   return (
@@ -74,6 +83,11 @@ function AppInner() {
   const [pushSyncing, setPushSyncing] = useState(false);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
 
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const syncedUserIdRef = useRef<string | null>(null);
+
   const historyRef = useRef(history);
   const watchRef = useRef(watch);
   const refreshingAllRef = useRef(refreshingAll);
@@ -98,6 +112,7 @@ function AppInner() {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
     loadWatchRefreshMinutes().then(setAutoRefreshMin);
+    getStoredUser().then(setUser);
     loadAlertRules().then(async (rules) => {
       setAlertRules(rules);
       if (rules.enabled) {
@@ -114,6 +129,52 @@ function AppInner() {
       .then((pairs) => setTopTraded(pairs.map((p) => p.base)))
       .catch(() => {});
   }, []);
+
+  // Sincronização opcional: só entra em ação com login. Sem conta, tudo
+  // continua 100% local, exatamente como antes — nenhuma chamada extra.
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current === user.id) return;
+    const userId = user.id;
+    let cancelled = false;
+    (async () => {
+      const [serverWatch, serverHistory] = await Promise.all([getSyncData("watch"), getSyncData("history")]);
+      if (cancelled) return;
+      if (serverWatch == null && serverHistory == null) {
+        // Primeiro login: sobe o que já existe só neste aparelho.
+        void setSyncData("watch", watchRef.current);
+        void setSyncData("history", historyRef.current);
+      } else {
+        // Já sincronizou antes (neste ou noutro aparelho): a conta manda.
+        const nextWatch = (serverWatch as WatchItem[] | null) ?? [];
+        const nextHistory = (serverHistory as StoredAnalysis[] | null) ?? [];
+        setWatch(nextWatch);
+        setHistory(nextHistory);
+        watchRef.current = nextWatch;
+        historyRef.current = nextHistory;
+        await saveWatchlist(nextWatch);
+        await saveHistory(nextHistory);
+      }
+      syncedUserIdRef.current = userId;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara na transição de login, não a cada mudança de watch/history
+  }, [user?.id]);
+
+  // Debounced: watch/history mudam em rajada (ex.: "Reavaliar todos"), e cada
+  // mutação reescreveria o blob inteiro no servidor sem isso.
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current !== user.id) return;
+    const id = setTimeout(() => void setSyncData("watch", watch), SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [user, watch]);
+
+  useEffect(() => {
+    if (!user || syncedUserIdRef.current !== user.id) return;
+    const id = setTimeout(() => void setSyncData("history", history), SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [user, history]);
 
   useEffect(() => {
     if (autoRefreshMin <= 0) return;
@@ -357,6 +418,36 @@ function AppInner() {
     setPushStatus("Scan solicitado. Se houver condição, o push chega em instantes.");
   }
 
+  async function handleSignIn(email: string, password: string) {
+    setAuthError(null);
+    setAuthBusy(true);
+    const result = await signIn(email, password);
+    setAuthBusy(false);
+    if (!result.ok) {
+      setAuthError(result.error);
+      return;
+    }
+    setUser(result.user);
+  }
+
+  async function handleSignUp(name: string, email: string, password: string) {
+    setAuthError(null);
+    setAuthBusy(true);
+    const result = await signUp(name, email, password);
+    setAuthBusy(false);
+    if (!result.ok) {
+      setAuthError(result.error);
+      return;
+    }
+    setUser(result.user);
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    syncedUserIdRef.current = null;
+    setUser(null);
+  }
+
   const resultWatched = result ? isWatched(watch, result) : false;
 
   return (
@@ -378,6 +469,7 @@ function AppInner() {
           <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
           <Tab active={view === "alerts"} onPress={() => setView("alerts")} label="Alertas" />
           <Tab active={view === "history"} onPress={() => setView("history")} label="Hist." />
+          <Tab active={view === "account"} onPress={() => setView("account")} label="Conta" />
         </View>
       </View>
 
@@ -430,6 +522,17 @@ function AppInner() {
               setResult(item);
               setView("result");
             }}
+          />
+        ) : view === "account" ? (
+          <AccountScreen
+            user={user}
+            busy={authBusy}
+            error={authError}
+            onSignIn={(email, password) => void handleSignIn(email, password)}
+            onSignUp={(name, email, password) => void handleSignUp(name, email, password)}
+            onSignOut={() => void handleSignOut()}
+            onCheckout={startPremiumCheckout}
+            onManage={openBillingPortal}
           />
         ) : (
           <HomeScreen
