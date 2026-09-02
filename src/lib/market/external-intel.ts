@@ -89,8 +89,22 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): ExternalInt
   return sources;
 }
 
+/**
+ * Achado do teste de campo: entre buscas, o modelo às vezes narra o próprio
+ * raciocínio em blocos de texto soltos ("Tenho material suficiente pra
+ * elaborar um resumo...") antes da síntese final — se juntássemos todo
+ * bloco de texto, esse "pensar alto" vazava pro resumo entregue ao usuário.
+ * Em vez disso, pega só os blocos de texto depois do último bloco de
+ * ferramenta — a síntese final de verdade, sem a narração do meio do
+ * caminho.
+ */
 function extractSummary(content: Anthropic.Messages.ContentBlock[]): string {
+  let lastToolIndex = -1;
+  content.forEach((b, i) => {
+    if (b.type !== "text") lastToolIndex = i;
+  });
   return content
+    .slice(lastToolIndex + 1)
     .filter((b): b is Anthropic.Messages.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n")

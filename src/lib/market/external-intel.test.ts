@@ -105,3 +105,17 @@ test("parseExternalIntelResponse sem texto retorna resumo vazio (sem inventar)",
   const result = parseExternalIntelResponse(content, { input_tokens: 10, output_tokens: 10 });
   assert.equal(result.summary, "");
 });
+
+test("parseExternalIntelResponse ignora narração entre buscas (achado do teste de campo)", () => {
+  // O modelo às vezes intercala texto de "pensar alto" entre buscas antes da
+  // síntese final — só o texto depois do último bloco de ferramenta conta.
+  const content: ContentBlock[] = [
+    textBlock("Vou buscar as últimas notícias sobre este ativo."),
+    searchResultBlock([{ url: "https://a.com/1", title: "A" }]),
+    textBlock("Tenho material suficiente pra elaborar um resumo."),
+    searchResultBlock([{ url: "https://b.com/2", title: "B" }]),
+    textBlock("Resumo final: nada de relevante nas últimas 48h."),
+  ];
+  const result = parseExternalIntelResponse(content, { input_tokens: 100, output_tokens: 50 });
+  assert.equal(result.summary, "Resumo final: nada de relevante nas últimas 48h.");
+});
