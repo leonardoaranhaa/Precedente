@@ -114,6 +114,28 @@ function scoreMatch(target: Fingerprint, candidate: Fingerprint): number {
   return score;
 }
 
+/**
+ * Candles i e i+1 com o mesmo fingerprint não são observações independentes
+ * — seus horizontes de N barras se sobrepõem quase por inteiro. Descarta
+ * qualquer match a menos de `minGap` barras do match anterior aceito, pra
+ * não contar o mesmo movimento várias vezes como "ocorrências" diferentes.
+ * Assume `matches` já ordenado crescente por `i` (varredura gulosa).
+ */
+export function dedupeOverlappingMatches<T extends { i: number }>(
+  matches: T[],
+  minGap: number,
+): T[] {
+  const kept: T[] = [];
+  let lastAcceptedI = -Infinity;
+  for (const m of matches) {
+    if (m.i - lastAcceptedI >= minGap) {
+      kept.push(m);
+      lastAcceptedI = m.i;
+    }
+  }
+  return kept;
+}
+
 function buildHorizon(
   tf: Timeframe,
   bars: number,
@@ -213,18 +235,18 @@ export function analyzeSeries(
     if (score >= 2) candidates.push({ i, score });
   }
 
-  let used = candidates.filter((c) => c.score >= 5);
+  let used = dedupeOverlappingMatches(candidates.filter((c) => c.score >= 5), maxHorizon);
   const relaxed: string[] = [];
   if (used.length < 12) {
-    used = candidates.filter((c) => c.score >= 4);
+    used = dedupeOverlappingMatches(candidates.filter((c) => c.score >= 4), maxHorizon);
     if (used.length >= 12) relaxed.push("extrema de 20 barras");
   }
   if (used.length < 12) {
-    used = candidates.filter((c) => c.score >= 3);
+    used = dedupeOverlappingMatches(candidates.filter((c) => c.score >= 3), maxHorizon);
     if (used.length >= 12) relaxed.push("posição vs SMA50");
   }
   if (used.length < 12) {
-    used = candidates.filter((c) => c.score >= 2);
+    used = dedupeOverlappingMatches(candidates.filter((c) => c.score >= 2), maxHorizon);
     if (candidates.length) relaxed.push("posição vs SMA20");
   }
 

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeSeries } from "./precedent.ts";
+import { analyzeSeries, dedupeOverlappingMatches } from "./precedent.ts";
 import type { Candle, Timeframe } from "./types.ts";
 
 const HOUR = 60 * 60 * 1000;
@@ -93,6 +93,20 @@ describe("analyzeSeries — shape and invariants", () => {
     }
   });
 
+  it("ENG-01: no two counted matches are within the max horizon of each other", () => {
+    // Overlapping matches share almost the entire forward path — they are not
+    // independent observations. maxHorizon is the largest configured horizon (20).
+    const maxHorizonMs = 20 * HOUR;
+    for (let i = 1; i < precedent.recentMatches.length; i++) {
+      // sorted most-recent-first, so the previous entry is the larger timestamp.
+      const gap = precedent.recentMatches[i - 1]!.t - precedent.recentMatches[i]!.t;
+      assert.ok(
+        gap >= maxHorizonMs,
+        `matches at ${precedent.recentMatches[i - 1]!.t} and ${precedent.recentMatches[i]!.t} are only ${gap / HOUR} bars apart`,
+      );
+    }
+  });
+
   it("chartMatches only contains timestamps that are actually in the visible chart window", () => {
     const chartTimes = new Set(chart.map((c) => c.t));
     for (const m of precedent.chartMatches) {
@@ -112,6 +126,38 @@ describe("analyzeSeries — shape and invariants", () => {
 
   it("near20High and near20Low are never both true", () => {
     assert.ok(!(snapshot.near20High && snapshot.near20Low));
+  });
+});
+
+describe("dedupeOverlappingMatches — ENG-01", () => {
+  it("20 consecutive candidate indices (identical/overlapping candles) collapse to at most floor(20/maxHorizon)", () => {
+    const maxHorizon = 20;
+    const twentyConsecutive = Array.from({ length: 20 }, (_, i) => ({ i, score: 5 }));
+    const kept = dedupeOverlappingMatches(twentyConsecutive, maxHorizon);
+    assert.ok(kept.length <= Math.floor(20 / maxHorizon));
+    assert.equal(kept.length, 1);
+  });
+
+  it("keeps matches that are already spaced at least minGap apart", () => {
+    const spaced = [
+      { i: 0, score: 5 },
+      { i: 20, score: 5 },
+      { i: 40, score: 5 },
+    ];
+    assert.deepEqual(dedupeOverlappingMatches(spaced, 20), spaced);
+  });
+
+  it("keeps the earliest match in each overlapping cluster, greedily", () => {
+    const clustered = [
+      { i: 0, score: 5 },
+      { i: 5, score: 5 }, // within 20 of i=0 — dropped
+      { i: 25, score: 5 }, // 25 - 0 = 25 >= 20 — kept, resets the window
+      { i: 30, score: 5 }, // within 20 of i=25 — dropped
+    ];
+    assert.deepEqual(dedupeOverlappingMatches(clustered, 20), [
+      { i: 0, score: 5 },
+      { i: 25, score: 5 },
+    ]);
   });
 });
 
