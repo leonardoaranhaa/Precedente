@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Precedente";
@@ -33,6 +34,8 @@ export const Route = createRootRoute({
     <html lang="pt-BR" className="antialiased" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* aplica o tema salvo antes do 1º paint, evita flash de tema errado */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         <PreviewHostBridge />

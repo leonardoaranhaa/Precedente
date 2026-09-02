@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { HelpCircle, Search } from "lucide-react";
 import { AnalyzeForm } from "@/components/analyze-form";
 import { AccountMenu } from "@/components/account-menu";
+import { SettingsModal } from "@/components/settings-modal";
 import { AnalysisResult } from "@/components/analysis-result";
 import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
@@ -430,6 +431,8 @@ function Home() {
                 <p className="mt-3 text-xs leading-relaxed text-subtle">{productBoundary()}</p>
               </PopoverContent>
             </Popover>
+
+            <SettingsModal />
 
             <AccountMenu />
           </div>

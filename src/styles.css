@@ -30,6 +30,30 @@
   --shadow-border-hover: 0 0 0 1px rgba(236, 234, 228, 0.14);
 }
 
+/*
+ * Tema claro — mesma paleta "ledger" quente, invertida. `data-theme` fica no
+ * <html> (ver src/lib/theme.ts); sem o atributo o app continua no escuro de
+ * sempre, então nada muda pra quem nunca abrir as configurações.
+ */
+html[data-theme="light"] {
+  --color-bg: #f5f3ee;
+  --color-bg-elevated: #ffffff;
+  --color-surface: #ffffff;
+  --color-fg: #1b1a16;
+  --color-muted: #5b5850;
+  --color-subtle: #8a877c;
+  --color-accent: #1b1a16;
+  --color-accent-fg: #f5f3ee;
+  --color-border: #ddd9cc;
+  --color-up: #4f7a4b;
+  --color-down: #a8503c;
+  --color-warn: #8a6a1f;
+  --color-ring: #1b1a16;
+
+  --shadow-border: 0 0 0 1px rgba(27, 26, 22, 0.1);
+  --shadow-border-hover: 0 0 0 1px rgba(27, 26, 22, 0.18);
+}
+
 @layer base {
   html {
     background: var(--color-bg);
