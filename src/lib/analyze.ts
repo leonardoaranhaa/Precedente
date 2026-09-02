@@ -141,6 +141,9 @@ export function validateAnalyzeInput(input: unknown): AnalyzeInput {
 }
 
 export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> {
+  const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
+  assertAnalyzeRateLimit(data.imageDataUrl != null);
+
   const { fetchOHLCV } = await import("./market/exchange");
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
 
