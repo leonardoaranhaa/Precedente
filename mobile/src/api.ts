@@ -20,9 +20,7 @@ export async function analyze(input: AnalyzeRequest): Promise<AnalysisPayload> {
       body: JSON.stringify(input),
     });
   } catch {
-    throw new Error(
-      "Não foi possível conectar ao backend. Confira EXPO_PUBLIC_API_BASE_URL e sua rede.",
-    );
+    throw new Error("Não foi possível conectar ao servidor. Confira sua conexão.");
   }
 
   const body = await response.json().catch(() => null);

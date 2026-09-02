@@ -75,7 +75,7 @@ export function AlertsScreen({
 
         {!pushToken ? (
           <Pressable style={styles.secondaryBtn} onPress={onRequestPermission}>
-            <Text style={styles.secondaryBtnText}>Pedir permissão / obter token</Text>
+            <Text style={styles.secondaryBtnText}>Ativar notificações</Text>
           </Pressable>
         ) : null}
 
@@ -139,17 +139,18 @@ export function AlertsScreen({
       <View style={styles.card}>
         <View style={styles.titleRow}>
           <ShieldAlert size={16} color={colors.muted} />
-          <Text style={styles.section}>Scan manual</Text>
+          <Text style={styles.section}>Verificação manual</Text>
         </View>
         <Text style={styles.rowHint}>
-          O backend reanalisa sua Watch e envia push se alguma regra disparar (cooldown 6h por
-          tipo). Em produção, configure um cron no Railway para POST /api/push/scan.
+          Sua Watch é verificada automaticamente a cada 30 minutos, e você recebe um push se
+          alguma regra disparar (no máximo 1 aviso a cada 6h por tipo). Toque abaixo pra verificar
+          agora, sem esperar.
         </Text>
         <Pressable
           style={[styles.primaryBtn, (!rules.enabled || syncing) && { opacity: 0.5 }]}
           disabled={!rules.enabled || syncing || watchCount === 0}
           onPress={() => {
-            setLocalMsg("Scan solicitado…");
+            setLocalMsg("Verificando…");
             onScanNow();
           }}
         >

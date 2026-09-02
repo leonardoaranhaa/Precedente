@@ -6,9 +6,11 @@ import type { StoredAnalysis } from "../types";
 
 export function HistoryScreen({
   items,
+  signedIn,
   onOpen,
 }: {
   items: StoredAnalysis[];
+  signedIn: boolean;
   onOpen: (item: StoredAnalysis) => void;
 }) {
   if (items.length === 0) {
@@ -17,7 +19,9 @@ export function HistoryScreen({
         <Clock size={22} color={colors.subtle} />
         <Text style={styles.emptyTitle}>Nenhuma análise ainda.</Text>
         <Text style={styles.emptyHint}>
-          As leituras ficam neste aparelho. Nada é enviado a uma conta.
+          {signedIn
+            ? "Suas análises sincronizam com sua conta entre aparelhos."
+            : "As análises ficam neste aparelho. Entre na sua conta pra sincronizar entre aparelhos."}
         </Text>
       </View>
     );

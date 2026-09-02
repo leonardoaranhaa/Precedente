@@ -177,7 +177,7 @@ export function WatchPanel({
               title={
                 m === 0
                   ? "Desliga atualização automática"
-                  : `Reavalia a watch a cada ${m} min (snapshot, não websocket)`
+                  : `Reavalia a watch a cada ${m} min (não é preço ao vivo)`
               }
             >
               {watchRefreshLabel(m)}
