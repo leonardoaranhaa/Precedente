@@ -62,6 +62,17 @@ export type HorizonOutcome = {
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
+  /**
+   * Distribuição incondicional deste mesmo horizonte, sem filtro de
+   * fingerprint (todo candle a partir do 50) — o que "52% subiu" precisa pra
+   * significar algo: 52% comparado a uma base incondicional de 51% não diz
+   * quase nada; comparado a 30% diz muito.
+   */
+  baseline: {
+    upPct: number;
+    medianPct: number;
+    medianDrawdownPct: number;
+  };
 };
 
 export type Snapshot = {

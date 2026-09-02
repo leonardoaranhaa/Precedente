@@ -27,6 +27,7 @@ import {
   timeframeLabel,
 } from "../format";
 import { sampleTitle } from "../sample-copy";
+import { baselineDeltaLabel } from "../baseline-copy";
 import type { HorizonOutcome, StoredAnalysis, Timeframe } from "../types";
 
 export function ResultScreen({
@@ -232,6 +233,9 @@ export function ResultScreen({
               <Text style={styles.mono}>med {formatPct(h.medianPct)}</Text>
               <Text style={[styles.mono, { color: colors.down, fontSize: 11 }]}>
                 DD {formatPct(h.medianDrawdownPct)}
+              </Text>
+              <Text style={[styles.muted, { fontSize: 10, marginTop: 2 }]}>
+                {baselineDeltaLabel(h.upPct, h.baseline.upPct)}
               </Text>
             </Pressable>
           ))}

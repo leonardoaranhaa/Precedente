@@ -16,6 +16,7 @@ import { RiskRail } from "@/components/risk-rail";
 import { SampleBanner } from "@/components/sample-banner";
 import { ScenarioPanel } from "@/components/scenario-panel";
 import { SplitBar } from "@/components/split-bar";
+import { baselineDeltaLabel } from "@/lib/market/baseline-copy";
 import {
   formatInt,
   formatPct,
@@ -503,6 +504,9 @@ function HorizonCard({
       </p>
       <p className="mt-1 font-mono text-xs tabular-nums text-down">
         DD med {formatPct(horizon.medianDrawdownPct)}
+      </p>
+      <p className="mt-1 text-[11px] text-subtle">
+        {baselineDeltaLabel(horizon.upPct, horizon.baseline.upPct)}
       </p>
     </button>
   );

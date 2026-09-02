@@ -143,7 +143,7 @@ function buildHorizon(
   closes: number[],
   lows: number[],
   highs: number[],
-): HorizonOutcome {
+): Omit<HorizonOutcome, "baseline"> {
   const flat = flatThreshold(tf);
   const returns: number[] = [];
   const paths: number[][] = [];
@@ -251,9 +251,26 @@ export function analyzeSeries(
   }
 
   const matchIdx = used.map((c) => c.i);
-  const horizons = HORIZONS.map((h) =>
-    buildHorizon(timeframe, h, matchIdx, closes, lows, highs),
-  );
+
+  // Distribuição incondicional do mesmo par/TF, sem filtro de fingerprint —
+  // "52% subiu" só significa algo comparado a essa base. Mesma janela [50, last)
+  // que os candidatos usam; buildHorizon já descarta índices próximos demais
+  // do fim da série pra cada horizonte.
+  const baselineIdx: number[] = [];
+  for (let i = 50; i < last; i++) baselineIdx.push(i);
+
+  const horizons = HORIZONS.map((h) => {
+    const conditional = buildHorizon(timeframe, h, matchIdx, closes, lows, highs);
+    const baseline = buildHorizon(timeframe, h, baselineIdx, closes, lows, highs);
+    return {
+      ...conditional,
+      baseline: {
+        upPct: baseline.upPct,
+        medianPct: baseline.medianPct,
+        medianDrawdownPct: baseline.medianDrawdownPct,
+      },
+    };
+  });
 
   let sampleNote: PrecedentResult["sampleNote"] = "ok";
   if (matchIdx.length < 8) sampleNote = "tiny";

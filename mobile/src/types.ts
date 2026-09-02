@@ -61,6 +61,11 @@ export type HorizonOutcome = {
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
+  baseline: {
+    upPct: number;
+    medianPct: number;
+    medianDrawdownPct: number;
+  };
 };
 
 export type Snapshot = {

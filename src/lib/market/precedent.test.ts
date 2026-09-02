@@ -161,6 +161,57 @@ describe("dedupeOverlappingMatches — ENG-01", () => {
   });
 });
 
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Deterministic random-walk candles — no real relationship between fingerprint and forward return. */
+function randomWalkCandles(count: number, seed: number): Candle[] {
+  const rnd = seededRandom(seed);
+  const out: Candle[] = [];
+  let price = 100;
+  for (let i = 0; i < count; i++) {
+    const open = price;
+    const changePct = (rnd() - 0.5) * 2; // ~[-1%, +1%] per bar
+    price = Math.max(1, price * (1 + changePct / 100));
+    const close = price;
+    const high = Math.max(open, close) * (1 + rnd() * 0.002);
+    const low = Math.min(open, close) * (1 - rnd() * 0.002);
+    out.push({ t: i * HOUR, o: open, h: high, l: low, c: close, v: 1000 });
+  }
+  return out;
+}
+
+describe("ENG-02: baseline (unconditional distribution)", () => {
+  const candles = syntheticCandles(300);
+  const { precedent } = analyzeSeries(candles, TF);
+
+  it("every horizon carries a baseline with the same shape as the conditional stats", () => {
+    for (const h of precedent.horizons) {
+      assert.ok(Number.isFinite(h.baseline.upPct));
+      assert.ok(Number.isFinite(h.baseline.medianPct));
+      assert.ok(Number.isFinite(h.baseline.medianDrawdownPct));
+    }
+  });
+
+  it("a purely random series produces a delta near zero (no real edge to find)", () => {
+    const random = randomWalkCandles(1000, 42);
+    const { precedent: p } = analyzeSeries(random, TF);
+    for (const h of p.horizons) {
+      if (h.samples === 0) continue;
+      const delta = Math.abs(h.upPct - h.baseline.upPct);
+      assert.ok(delta < 25, `H${h.bars}: |${h.upPct} - ${h.baseline.upPct}| = ${delta} too large`);
+    }
+  });
+});
+
 describe("analyzeSeries — degenerate but valid input", () => {
   it("handles a flat series (constant price) without throwing or producing NaN", () => {
     const flat: Candle[] = Array.from({ length: 120 }, (_, i) => ({
