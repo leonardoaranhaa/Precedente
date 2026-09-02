@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { fileToDataUrl } from "@/lib/compress";
-import { PLAN_LIMITS } from "@/lib/billing/plan-limits";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -62,7 +61,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
         accept="image/*"
         className="sr-only"
         disabled={disabled}
-        data-testid="upload-zone-input"
+        data-testid="print-file-input"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void ingest(file);
@@ -70,11 +69,13 @@ export function UploadZone({ value, onChange, disabled }: Props) {
         }}
       />
       {value ? (
-        <div className="relative overflow-hidden rounded-xl bg-surface p-1.5 shadow-[var(--shadow-border)]">
+        <div
+          className="relative overflow-hidden rounded-xl bg-surface p-1.5 shadow-[var(--shadow-border)]"
+          data-testid="print-preview"
+        >
           <img
             src={value}
             alt="Print do gráfico"
-            data-testid="upload-zone-preview"
             className="chart-print max-h-56 w-full rounded-lg object-contain"
           />
           <button
@@ -83,6 +84,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
             onClick={() => onChange(null)}
             className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-md bg-bg/80 text-fg shadow-[var(--shadow-border)]"
             aria-label="Remover print"
+            data-testid="print-remove"
           >
             <X className="size-4" />
           </button>
@@ -90,6 +92,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
       ) : (
         <label
           htmlFor={inputId}
+          data-testid="print-drop-label"
           onDragOver={(e) => {
             e.preventDefault();
             if (!disabled) setDrag(true);
@@ -117,15 +120,14 @@ export function UploadZone({ value, onChange, disabled }: Props) {
             <span className="block text-xs text-muted">
               Toque, solte o arquivo ou cole com Ctrl+V. Opcional — a estatística usa o OHLC real.
             </span>
-            <span className="block text-[11px] leading-relaxed text-subtle">
-              Leitura visual: até {PLAN_LIMITS.free.visionPerDay}/dia no plano gratuito (com
-              conta); Premium amplia para {PLAN_LIMITS.premium.visionPerDay}/dia. Nunca é ordem
-              de compra ou venda.
-            </span>
           </span>
         </label>
       )}
-      {error ? <p className="text-xs text-down">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-down" data-testid="print-upload-error">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
