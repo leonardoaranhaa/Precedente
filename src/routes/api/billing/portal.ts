@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { openBillingPortalFor } from "@/lib/billing/checkout";
 import { requireUserId, UnauthorizedError } from "@/lib/auth/verify.server";
+import { reportServerError } from "@/lib/sentry.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/api/billing/portal")({
           const { url } = await openBillingPortalFor(userId);
           return json({ url });
         } catch (err) {
+          reportServerError(err, { route: "/api/billing/portal" });
           const message = err instanceof Error ? err.message : "Não deu pra abrir o portal.";
           return json({ error: message }, 502);
         }

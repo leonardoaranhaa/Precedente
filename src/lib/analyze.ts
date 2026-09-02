@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { CircuitOpenError, withCircuitBreaker } from "./circuit-breaker";
 import { displayTicker, normalizeTicker } from "./market/labels";
 import { analyzeSeries } from "./market/precedent";
 import type { AnalysisPayload, Timeframe, VisionReading } from "./market/types";
@@ -69,24 +70,30 @@ async function readChart(
 
   let response;
   try {
-    response = await client.messages.parse({
-      model: "claude-opus-5",
-      max_tokens: 16000,
-      output_config: {
-        effort: "low",
-        format: zodOutputFormat(VisionSchema),
-      },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data } },
-            { type: "text", text: VISION_PROMPT },
+    response = await withCircuitBreaker(
+      "Leitura visual",
+      { failureThreshold: 5, cooldownMs: 30_000 },
+      () =>
+        client.messages.parse({
+          model: "claude-opus-5",
+          max_tokens: 16000,
+          output_config: {
+            effort: "low",
+            format: zodOutputFormat(VisionSchema),
+          },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mediaType, data } },
+                { type: "text", text: VISION_PROMPT },
+              ],
+            },
           ],
-        },
-      ],
-    });
+        }),
+    );
   } catch (err) {
+    if (err instanceof CircuitOpenError) throw err;
     if (err instanceof Anthropic.AuthenticationError) {
       throw new Error("Chave da leitura visual inválida.");
     }
