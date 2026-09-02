@@ -1,12 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { assertSyncPayload, isSyncKind, type SyncKind } from "@/lib/sync-limits";
 
-export type SyncKind = "watch" | "history";
+export type { SyncKind };
 
 /** Lê o blob sincronizado do usuário (ou null se nunca sincronizou esse tipo). */
 export const getSyncData = createServerFn({ method: "GET" })
-  .validator((kind: SyncKind) => kind)
+  .validator((kind: unknown): SyncKind => {
+    if (!isSyncKind(kind)) throw new Error("Tipo de sincronização inválido.");
+    return kind;
+  })
   .middleware([authMiddleware])
   .handler(async ({ context, data: kind }) => {
     const sql = await getSql();
@@ -19,7 +23,10 @@ export const getSyncData = createServerFn({ method: "GET" })
 
 /** Substitui o blob sincronizado do usuário por inteiro (mesmo padrão do localStorage). */
 export const setSyncData = createServerFn({ method: "POST" })
-  .validator((input: { kind: SyncKind; data: unknown }) => input)
+  .validator((input: { kind: unknown; data: unknown }) => ({
+    kind: assertSyncPayload(input?.kind, input?.data),
+    data: input?.data,
+  }))
   .middleware([authMiddleware])
   .handler(async ({ context, data: input }) => {
     const sql = await getSql();

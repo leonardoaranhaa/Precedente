@@ -38,6 +38,10 @@ export const Route = createFileRoute("/")({ component: Home });
 
 type View = "home" | "history" | "result" | "watch";
 
+// Espera de inatividade antes de sincronizar watch/history com o servidor —
+// absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
+const SYNC_DEBOUNCE_MS = 1500;
+
 function Home() {
   const [view, setView] = useState<View>("home");
   const [ticker, setTicker] = useState("BTC");
@@ -104,14 +108,23 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara na transição de login, não a cada mudança de watch/history
   }, [user?.id]);
 
+  // Debounced: watch/history mudam em rajada (ex.: "Reavaliar todos" atualiza
+  // item por item), e cada mutação reescreve o blob inteiro no Postgres — sem
+  // isso, uma rajada de N mudanças em poucos segundos vira N escritas.
   useEffect(() => {
     if (!user || syncedUserIdRef.current !== user.id) return;
-    void setSyncData({ data: { kind: "watch", data: watch } }).catch(() => {});
+    const id = window.setTimeout(() => {
+      void setSyncData({ data: { kind: "watch", data: watch } }).catch(() => {});
+    }, SYNC_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
   }, [user, watch]);
 
   useEffect(() => {
     if (!user || syncedUserIdRef.current !== user.id) return;
-    void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+    const id = window.setTimeout(() => {
+      void setSyncData({ data: { kind: "history", data: history } }).catch(() => {});
+    }, SYNC_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
   }, [user, history]);
 
   useEffect(() => {
