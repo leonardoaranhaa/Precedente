@@ -9,3 +9,6 @@ export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
 export const ANALYZE_ENDPOINT = `${API_BASE_URL}/api/analyze`;
+
+// Sem essa variável, o app roda igual — só sem reportar crash pro Sentry (ver src/sentry.ts).
+export const EXPO_PUBLIC_SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;

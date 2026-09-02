@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysis, validateAnalyzeInput } from "@/lib/analyze";
 import { RateLimitError } from "@/lib/rate-limit";
+import { reportServerError } from "@/lib/sentry.server";
 
 // Liberado para qualquer origem: o app mobile (Expo) chama este endpoint
 // diretamente de fora do navegador, sem cabeçalho Origin previsível.
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/api/analyze")({
           if (err instanceof RateLimitError) {
             return json({ error: err.message }, err.status);
           }
+          reportServerError(err, { route: "/api/analyze" });
           const message =
             err instanceof Error ? err.message : "Não foi possível concluir a análise.";
           return json({ error: message }, 502);
