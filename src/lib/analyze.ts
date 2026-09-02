@@ -6,6 +6,7 @@ import { displayTicker, normalizeTicker } from "./market/labels";
 import { analyzeSeries } from "./market/precedent";
 import type { AnalysisPayload, Timeframe, VisionReading } from "./market/types";
 import { TIMEFRAMES } from "./market/types";
+import { opus5CostUsd } from "./anthropic-cost";
 
 type AnalyzeInput = {
   ticker: string;
@@ -49,7 +50,9 @@ function splitDataUrl(dataUrl: string): { mediaType: SupportedMedia; data: strin
   return { mediaType: mediaType as SupportedMedia, data };
 }
 
-async function readChart(imageDataUrl: string): Promise<VisionReading> {
+async function readChart(
+  imageDataUrl: string,
+): Promise<{ reading: VisionReading; costUsd: number }> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error("Leitura visual indisponível neste ambiente.");
   }
@@ -106,14 +109,17 @@ async function readChart(imageDataUrl: string): Promise<VisionReading> {
   }
 
   return {
-    tendencia: parsed.tendencia,
-    padrao: parsed.padrao,
-    suporteResistencia: parsed.suporte_resistencia,
-    indicadoresVisiveis: parsed.indicadores_visiveis.map((x) => String(x)).slice(0, 8),
-    timeframeAparente: parsed.timeframe_aparente,
-    ativoAparente: parsed.ativo_aparente,
-    leitura: parsed.leitura.slice(0, 800),
-    confianca: parsed.confianca,
+    reading: {
+      tendencia: parsed.tendencia,
+      padrao: parsed.padrao,
+      suporteResistencia: parsed.suporte_resistencia,
+      indicadoresVisiveis: parsed.indicadores_visiveis.map((x) => String(x)).slice(0, 8),
+      timeframeAparente: parsed.timeframe_aparente,
+      ativoAparente: parsed.ativo_aparente,
+      leitura: parsed.leitura.slice(0, 800),
+      confianca: parsed.confianca,
+    },
+    costUsd: opus5CostUsd(response.usage),
   };
 }
 
@@ -144,6 +150,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
+  const startedAt = Date.now();
   const { fetchOHLCV } = await import("./market/exchange");
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
 
@@ -174,15 +181,20 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
 
   const visionPromise = data.imageDataUrl
     ? readChart(data.imageDataUrl)
-        .then((vision) => ({ vision, visionError: null as string | null }))
+        .then(({ reading, costUsd }) => ({
+          vision: reading,
+          visionError: null as string | null,
+          visionCostUsd: costUsd,
+        }))
         .catch((err: unknown) => ({
           vision: null,
           visionError:
             err instanceof Error
               ? err.message
               : "Não foi possível ler o print.",
+          visionCostUsd: 0,
         }))
-    : Promise.resolve({ vision: null, visionError: null });
+    : Promise.resolve({ vision: null, visionError: null, visionCostUsd: 0 });
 
   const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
 
@@ -192,6 +204,19 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
       onchain.openInterest != null ||
       onchain.liquidityUsd != null ||
       onchain.volume24hUsd != null);
+
+  const { logAnalysis } = await import("./analyze-log");
+  logAnalysis({
+    ticker: data.ticker,
+    timeframe: data.timeframe,
+    hasImage: data.imageDataUrl != null,
+    durationMs: Date.now() - startedAt,
+    matches: market.stats.precedent.matches,
+    sampleNote: market.stats.precedent.sampleNote,
+    relaxed: market.stats.precedent.relaxed.length > 0,
+    source: market.source,
+    visionCostUsd: visionPart.visionCostUsd,
+  });
 
   return {
     ticker: data.ticker,

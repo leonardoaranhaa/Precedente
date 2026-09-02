@@ -15,6 +15,7 @@ import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
+import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 
@@ -48,6 +49,11 @@ const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
   path: '/api/billing/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
+  id: '/api/ops/analysis',
+  path: '/api/ops/analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
   id: '/api/push/register',
   path: '/api/push/register',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/api/universe': typeof ApiUniverseRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/api/universe'
     | '/api/auth/$'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/api/universe'
     | '/api/auth/$'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/api/universe'
     | '/api/auth/$'
     | '/api/billing/webhook'
+    | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   ApiUniverseRoute: typeof ApiUniverseRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
+  ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ops/analysis': {
+      id: '/api/ops/analysis'
+      path: '/api/ops/analysis'
+      fullPath: '/api/ops/analysis'
+      preLoaderRoute: typeof ApiOpsAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/register': {
       id: '/api/push/register'
       path: '/api/push/register'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUniverseRoute: ApiUniverseRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
+  ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,
 }
