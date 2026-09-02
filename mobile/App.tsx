@@ -8,7 +8,7 @@ import {
   saveAlertRules,
   type AlertRules,
 } from "./src/alert-settings";
-import { getStoredUser, signIn, signOut, signUp, type AuthUser } from "./src/auth";
+import { getStoredUser, signIn, signOut, signUp, updateName, type AuthUser } from "./src/auth";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
@@ -442,6 +442,12 @@ function AppInner() {
     setUser(result.user);
   }
 
+  async function handleUpdateName(name: string) {
+    const result = await updateName(name);
+    if (result.ok) setUser((u) => (u ? { ...u, name } : u));
+    return result;
+  }
+
   async function handleSignOut() {
     await signOut();
     syncedUserIdRef.current = null;
@@ -534,6 +540,7 @@ function AppInner() {
             onSignOut={() => void handleSignOut()}
             onCheckout={startPremiumCheckout}
             onManage={openBillingPortal}
+            onUpdateName={handleUpdateName}
           />
         ) : (
           <HomeScreen
