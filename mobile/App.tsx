@@ -27,7 +27,10 @@ import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
+import { initSentry } from "./src/sentry";
 import { getSyncData, setSyncData } from "./src/sync";
+
+initSentry();
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
 import type { StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";

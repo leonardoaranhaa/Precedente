@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { scanAllSubscriptions } from "@/lib/push/scan";
 import { subscriptionCount } from "@/lib/push/store";
 import { dbSource } from "@/lib/db";
+import { reportServerError } from "@/lib/sentry.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/api/push/scan")({
           const report = await scanAllSubscriptions();
           return json({ ok: true, subscribers: await subscriptionCount(), ...report });
         } catch (err) {
+          reportServerError(err, { route: "/api/push/scan" });
           const message = err instanceof Error ? err.message : "Falha no scan.";
           return json({ error: message }, 500);
         }
