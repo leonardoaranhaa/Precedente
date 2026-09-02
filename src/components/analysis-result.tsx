@@ -395,7 +395,10 @@ export function AnalysisResult({
           ) : null}
 
           {analysis.thumb || vision || analysis.visionError ? (
-            <section className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]">
+            <section
+              data-testid="leitura-visual"
+              className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]"
+            >
               {analysis.thumb ? (
                 <img
                   src={analysis.thumb}
