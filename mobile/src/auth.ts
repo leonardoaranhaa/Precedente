@@ -21,24 +21,62 @@ export type AuthUser = { id: string; name: string; email: string };
 
 type AuthResult = { ok: true; user: AuthUser } | { ok: false; error: string };
 
+// Cache em memória — fonte de verdade pra sessão atual. SecureStore só
+// existe pra sobreviver a um restart do app; se falhar (aparelho sem
+// keystore utilizável, por exemplo), a sessão em curso continua funcionando
+// normalmente, só não sobrevive a fechar e reabrir o app.
+let memToken: string | null = null;
+let memUser: AuthUser | null = null;
+
 function authHeaders(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+async function safeGet(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+async function safeSet(key: string, value: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch {
+    /* melhor esforço — a sessão em memória já cobre o restante desta execução */
+  }
+}
+
+async function safeDelete(key: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 async function persist(token: string, user: AuthUser): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  memToken = token;
+  memUser = user;
+  await safeSet(TOKEN_KEY, token);
+  await safeSet(USER_KEY, JSON.stringify(user));
 }
 
 export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  if (memToken) return memToken;
+  const stored = await safeGet(TOKEN_KEY);
+  memToken = stored;
+  return stored;
 }
 
 export async function getStoredUser(): Promise<AuthUser | null> {
-  const raw = await SecureStore.getItemAsync(USER_KEY);
+  if (memUser) return memUser;
+  const raw = await safeGet(USER_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as AuthUser;
+    memUser = JSON.parse(raw) as AuthUser;
+    return memUser;
   } catch {
     return null;
   }
@@ -86,8 +124,10 @@ export async function signOut(): Promise<void> {
       body: "{}",
     }).catch(() => {});
   }
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(USER_KEY);
+  memToken = null;
+  memUser = null;
+  await safeDelete(TOKEN_KEY);
+  await safeDelete(USER_KEY);
 }
 
 /** Header pronto pra chamadas autenticadas — `{}` quando não há sessão. */
