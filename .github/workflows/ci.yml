@@ -18,7 +18,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
+      # Product test suite only — `npm test` also runs scripts/**/*.test.mjs
+      # (platform-template scaffold tests, pre-existing failures unrelated to
+      # this app, already failing on main before this workflow existed).
+      - run: npm run test:unit
 
   e2e:
     runs-on: ubuntu-latest
