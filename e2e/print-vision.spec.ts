@@ -3,13 +3,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/**
- * PNG 8×8 cinza mínimo — válido para createImageBitmap / compress.ts e
- * para o payload data:image/png;base64 no /api/analyze.
- * Não depende de fixture binária no repo.
- */
+/** PNG 1×1 transparente — válido para createImageBitmap e data URL. */
 const TINY_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAALElEQVR42mP8z8BQz0BFwMhAAYACKAAK4AAoAArAACgACkABKgAK4AAoAAoAAG8vAzX2l6hTAAAAAElFTkSuQmCC";
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 const TINY_PNG = Buffer.from(TINY_PNG_BASE64, "base64");
 
@@ -112,10 +108,7 @@ test.describe("Print / leitura visual", () => {
       expect(text).not.toMatch(COACHING_RE);
     }
 
-    // Guardrail de produto no rodapé do resultado.
-    await expect(
-      page.getByText(/nunca ordem de compra ou venda/i),
-    ).toBeVisible();
+    await expect(page.getByText(/nunca ordem de compra ou venda/i)).toBeVisible();
   });
 
   test("POST /api/analyze com print: OHLC obrigatório; visão best-effort", async ({
@@ -129,14 +122,14 @@ test.describe("Print / leitura visual", () => {
       imageDataUrl: tinyDataUrl(),
     });
 
-    expect(res.status(), await res.text()).toBeLessThan(500);
-    // Rate limit ou rede raramente → 429/502; no CI saudável esperamos 200.
-    if (res.status() === 429) {
+    const status = res.status();
+    if (status === 429) {
       test.skip(true, "Rate limit atingido neste IP — reexecute o job.");
     }
 
-    expect(res.ok()).toBeTruthy();
     const body = await res.json();
+    expect(status, JSON.stringify(body)).toBeLessThan(500);
+    expect(res.ok(), JSON.stringify(body)).toBeTruthy();
 
     expect(body.ticker).toMatch(/BTC/);
     expect(body.timeframe).toBe("4h");
@@ -146,7 +139,6 @@ test.describe("Print / leitura visual", () => {
     expect(typeof body.candleCount).toBe("number");
     expect(body.candleCount).toBeGreaterThan(50);
 
-    // Visão: ou objeto estruturado, ou null + visionError legível (sem key / falha modelo).
     if (body.vision) {
       expect(typeof body.vision.leitura).toBe("string");
       expect(body.vision.leitura.length).toBeGreaterThan(0);
@@ -167,16 +159,13 @@ test.describe("Print / leitura visual", () => {
       timeframe: "1h",
       imageDataUrl: "data:text/plain;base64,aGVsbG8=",
     });
-    // validateAnalyzeInput só aceita data:image/* — plain text vira imageDataUrl null
-    // e a análise OHLC segue (200). Payload sem prefixo image também não quebra.
-    // Garante que não estoura 5xx.
+    // validateAnalyzeInput só aceita data:image/* — plain text vira null e OHLC segue.
     expect(res.status()).toBeLessThan(500);
   });
 
   test("POST /api/analyze rejeita print acima do limite de tamanho", async ({
     request,
   }) => {
-    // validateAnalyzeInput: > 1_800_000 chars no data URL → erro 400.
     const huge = `data:image/jpeg;base64,${"A".repeat(1_800_001)}`;
     const res = await analyzeWithPrint(request, {
       ticker: "BTC",
@@ -210,7 +199,6 @@ test.describe("Print / leitura visual", () => {
 
 test.describe("Print — contrato de prevenção", () => {
   test("prompt de visão no código-fonte proíbe recomendação de compra/venda", async () => {
-    // Garante que o contrato do VISION_PROMPT não regressa (sem precisar de API key).
     const here = dirname(fileURLToPath(import.meta.url));
     const analyzeSrc = readFileSync(join(here, "../src/lib/analyze.ts"), "utf8");
     expect(analyzeSrc).toMatch(/Nunca recomende comprar, vender, entrar ou sair/);
