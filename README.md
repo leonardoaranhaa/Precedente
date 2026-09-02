@@ -142,9 +142,9 @@ celular físico — use o IP da sua máquina na rede local. Mais detalhes em
 | `STRIPE_SECRET_KEY` | web | Não (ver **Assinatura premium**) | Sem ela, checkout/portal voltam "Pagamento indisponível" — erro limpo, não quebra o app. |
 | `STRIPE_WEBHOOK_SECRET` | web | Junto com `STRIPE_SECRET_KEY` | Verifica a assinatura dos eventos do Stripe em `/api/billing/webhook`. |
 | `STRIPE_PREMIUM_PRICE_ID` | web | Junto com `STRIPE_SECRET_KEY` | Price id do plano premium (criado no Stripe Dashboard). |
-| `OPS_SECRET` | web | Não | Abre `GET /api/ops/analysis?days=N` (agregação de `analysis_log`: total de análises, quantas leituras de print e quanto custaram nos últimos N dias). Sem ela, o endpoint fica **fechado por padrão**. Header `x-ops-secret` ou `Authorization: Bearer`. |
+| `OPS_SECRET` | web | Não | Abre `GET /api/ops/analysis?days=N` (agregação de `analysis_log`: total de análises, quantas leituras de print, quanto custaram nos últimos N dias, e o estado dos circuit breakers de Binance/leitura visual). Sem ela, o endpoint fica **fechado por padrão**. Header `x-ops-secret` ou `Authorization: Bearer`. |
 | `SENTRY_DSN` | web (servidor) | Não | Sem ela, erro inesperado no backend só cai no log da Railway, como sempre. Com ela, também vai pro Sentry (`src/lib/sentry.server.ts`). |
-| `VITE_SENTRY_DSN` | web (navegador) | Não | Mesma coisa, lado cliente (`src/lib/sentry.client.ts`) — pode ser o mesmo DSN do servidor. |
+| `VITE_SENTRY_DSN` | web (navegador) | Não | Mesma coisa, lado cliente (`src/lib/sentry-client.ts`) — pode ser o mesmo DSN do servidor. |
 | `EXPO_PUBLIC_SENTRY_DSN` | mobile | Não | Mesma coisa no app mobile (`mobile/src/sentry.ts`) — captura crash e exceção não tratada. |
 
 ## Conta e sincronização
