@@ -134,9 +134,13 @@ export async function fetchExternalIntel(rawTicker: string): Promise<ExternalInt
     throw new Error("Inteligência externa indisponível neste ambiente.");
   }
 
+  // Até MAX_SEARCHES buscas sequenciais reais (cada uma com raciocínio do
+  // modelo entre elas) — no teste de campo, uma única chamada com 4 buscas
+  // levou ~60-90s. 45s cortava a resposta no meio; achado real, registrado
+  // no PR, não só um número arbitrário.
   const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
   const client = new Anthropic({
-    timeout: 45_000,
+    timeout: 120_000,
     ...(workspaceId ? { defaultHeaders: { "anthropic-workspace-id": workspaceId } } : {}),
   });
 
