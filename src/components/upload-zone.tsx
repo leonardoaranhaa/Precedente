@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { fileToDataUrl } from "@/lib/compress";
+import { PLAN_LIMITS } from "@/lib/billing/plan-limits";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -53,7 +54,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
   }, [disabled, ingest]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="upload-zone">
       <input
         ref={inputRef}
         id={inputId}
@@ -61,6 +62,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
         accept="image/*"
         className="sr-only"
         disabled={disabled}
+        data-testid="upload-zone-input"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void ingest(file);
@@ -72,6 +74,7 @@ export function UploadZone({ value, onChange, disabled }: Props) {
           <img
             src={value}
             alt="Print do gráfico"
+            data-testid="upload-zone-preview"
             className="chart-print max-h-56 w-full rounded-lg object-contain"
           />
           <button
@@ -113,6 +116,11 @@ export function UploadZone({ value, onChange, disabled }: Props) {
             </span>
             <span className="block text-xs text-muted">
               Toque, solte o arquivo ou cole com Ctrl+V. Opcional — a estatística usa o OHLC real.
+            </span>
+            <span className="block text-[11px] leading-relaxed text-subtle">
+              Leitura visual: até {PLAN_LIMITS.free.visionPerDay}/dia no plano gratuito (com
+              conta); Premium amplia para {PLAN_LIMITS.premium.visionPerDay}/dia. Nunca é ordem
+              de compra ou venda.
             </span>
           </span>
         </label>
