@@ -15,7 +15,7 @@ export async function loadHistory(): Promise<StoredAnalysis[]> {
   }
 }
 
-async function saveHistory(items: StoredAnalysis[]): Promise<void> {
+export async function saveHistory(items: StoredAnalysis[]): Promise<void> {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(items.slice(0, MAX)));
   } catch {
