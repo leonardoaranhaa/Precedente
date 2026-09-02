@@ -1,4 +1,7 @@
+import { withCircuitBreaker } from "../circuit-breaker";
 import type { Candle, Timeframe } from "./types";
+
+const BREAKER_OPTS = { failureThreshold: 5, cooldownMs: 30_000 };
 
 const BASES = [
   "https://data-api.binance.vision",
@@ -69,7 +72,7 @@ async function fetchPage(
   return raw.map(parseKline);
 }
 
-export async function fetchOHLCV(
+async function fetchOHLCVUnguarded(
   symbol: string,
   interval: Timeframe,
 ): Promise<{ candles: Candle[]; source: string }> {
@@ -103,4 +106,23 @@ export async function fetchOHLCV(
   }
 
   throw lastError ?? new Error("Não foi possível ler a Binance agora.");
+}
+
+/**
+ * Um símbolo inexistente (`"não encontrado"`) é erro de pedido, não a
+ * Binance fora do ar — não deve contar pro circuito abrir.
+ */
+function isServiceFailure(err: unknown): boolean {
+  return !(err instanceof Error && err.message.includes("não encontrado"));
+}
+
+export function fetchOHLCV(
+  symbol: string,
+  interval: Timeframe,
+): Promise<{ candles: Candle[]; source: string }> {
+  return withCircuitBreaker(
+    "Binance",
+    { ...BREAKER_OPTS, isFailure: isServiceFailure },
+    () => fetchOHLCVUnguarded(symbol, interval),
+  );
 }

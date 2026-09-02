@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
+import { getAllBreakerStates } from "@/lib/circuit-breaker";
 
 /**
  * Agregação mínima sobre analysis_log — responde "quantas análises (e leituras
@@ -66,6 +67,7 @@ export const Route = createFileRoute("/api/ops/analysis")({
           visionCount: Number(summary?.vision_count ?? 0),
           visionCostUsd: Number(summary?.vision_cost_usd ?? 0),
           topTickers: topTickers.map((r) => ({ ticker: r.ticker, count: Number(r.count) })),
+          circuits: getAllBreakerStates(),
         });
       },
     },
