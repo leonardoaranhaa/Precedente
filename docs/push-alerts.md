@@ -88,6 +88,21 @@ Resposta esperada: `ok: true`, contagens de `analyzed` / `alerts` / `sentOk`.
 No serviço cron: Deployments → último run → logs de `[push-scan-cron]`.
 Se o status ficar **Active** sem sair, o próximo schedule é **pulado** (exigência do Railway).
 
+### Alerta de falha
+
+`/api/push/scan` sempre responde `200 { ok: true, ... }` quando o scan como um
+todo roda — mas isso não significa que nada falhou dentro dele (ex.: dados de
+mercado fora do ar pra um par, ou envio Expo falhando pra um token). Duas
+camadas cobrem isso, independentes:
+
+- **Servidor** — se `report.errors` não estiver vazio, o servidor manda pro
+  Sentry (`reportServerMessage`, nível `warning`, ou `error` se **todos** os
+  pares falharam) antes de responder 200. É o sinal principal — só existe se
+  `SENTRY_DSN` estiver setado no serviço `web`.
+- **Cron** — `scripts/push-scan-cron.mjs` também sai com código `1` quando
+  `body.errors` não está vazio (antes só saía `1` em HTTP não-200), então o
+  Railway marca o run do serviço cron como falho mesmo sem Sentry configurado.
+
 ### Expressões úteis (UTC)
 
 | Cron | Significado |
