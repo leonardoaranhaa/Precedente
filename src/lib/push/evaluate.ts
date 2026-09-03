@@ -12,6 +12,34 @@ function formatPrice(n: number): string {
   return n.toLocaleString("pt-BR", { maximumFractionDigits: n < 1 ? 6 : 2 });
 }
 
+function formatUsdCompact(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+function formatFundingPct(n: number): string {
+  const pct = n * 100;
+  const sign = pct >= 0 ? "+" : "";
+  return `${sign}${pct.toFixed(4).replace(".", ",")}%`;
+}
+
+/**
+ * Contexto anexado nos alertas de zona (preço/RSI) — funding, liquidez e o
+ * primeiro traço do fingerprint, o retrato do par no momento do gatilho.
+ * Não é leitura nem sinal, só o que já estava na tela quando a zona bateu.
+ */
+function zoneContext(payload: AnalysisPayload): string {
+  const parts: string[] = [];
+  const oc = payload.onchain;
+  if (oc?.fundingRate != null) parts.push(`funding ${formatFundingPct(oc.fundingRate)}`);
+  if (oc?.liquidityUsd != null) parts.push(`liquidez ${formatUsdCompact(oc.liquidityUsd)}`);
+  const fpFirst = payload.precedent.fingerprintLabel.split(" · ")[0];
+  if (fpFirst) parts.push(fpFirst);
+  return parts.join(" · ");
+}
+
 /**
  * Gera eventos de alerta a partir de uma análise — só prevenção/contexto.
  * Nunca usa linguagem de compra/venda. `watch` carrega a configuração de zona
@@ -92,11 +120,12 @@ export function evaluateAlerts(
           : zone.min != null
             ? `acima de ${formatPrice(zone.min)}`
             : `abaixo de ${formatPrice(zone.max!)}`;
+      const ctx = zoneContext(payload);
       events.push({
         ...base,
         kind: "price_zone",
         title: `${payload.displayTicker} · na zona de preço`,
-        body: `Preço em ${formatPrice(price)}, dentro da faixa configurada (${range}).`,
+        body: `Preço em ${formatPrice(price)}, dentro da faixa configurada (${range}).${ctx ? ` ${ctx}.` : ""}`,
       });
     }
   }
@@ -107,13 +136,14 @@ export function evaluateAlerts(
     const below = rsiZone.below != null && rsi <= rsiZone.below;
     const above = rsiZone.above != null && rsi >= rsiZone.above;
     if (below || above) {
+      const ctx = zoneContext(payload);
       events.push({
         ...base,
         kind: "rsi_zone",
         title: `${payload.displayTicker} · RSI em zona`,
         body: `RSI em ${rsi.toFixed(0)}, ${below ? "abaixo" : "acima"} do limite configurado (${
           below ? rsiZone.below : rsiZone.above
-        }).`,
+        }).${ctx ? ` ${ctx}.` : ""}`,
       });
     }
   }
