@@ -157,6 +157,29 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
+  // Gates Premium na leitura de print — só com BILLING_GATES_ENABLED.
+  if (data.imageDataUrl) {
+    const { billingGatesEnabled } = await import("./billing/plan-limits");
+    if (billingGatesEnabled()) {
+      const { getSessionUser } = await import("./auth/verify.server");
+      const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
+      const { getVisionCountToday, incrementVisionCount } = await import("./billing/vision-quota");
+      const session = await getSessionUser();
+      if (!session?.id) {
+        const { PremiumRequiredError } = await import("./billing/plan-limits");
+        throw new PremiumRequiredError(
+          "vision",
+          "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
+        );
+      }
+      await assertPremiumFeatureForUser(session.id, "vision", {
+        visionCountToday: getVisionCountToday(session.id),
+      });
+      // Reserva a cota antes da chamada cara (falha de modelo ainda consome cota IP via rate limit).
+      incrementVisionCount(session.id);
+    }
+  }
+
   const startedAt = Date.now();
   const { fetchOHLCV } = await import("./market/exchange");
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
