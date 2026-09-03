@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSyncDataFor, setSyncDataFor } from "@/lib/sync";
 import { assertSyncPayload, InvalidSyncPayloadError, isSyncKind } from "@/lib/sync-limits";
 import { requireUserId, UnauthorizedError } from "@/lib/auth/verify.server";
+import { PremiumQuotaError, PremiumRequiredError } from "@/lib/billing/plan-limits";
 
 /**
  * REST wrapper (mesma lógica de src/lib/sync.ts) pra quem não fala o
@@ -71,7 +72,17 @@ export const Route = createFileRoute("/api/sync")({
           throw err;
         }
 
-        await setSyncDataFor(userId, kind, input.data);
+        try {
+          await setSyncDataFor(userId, kind, input.data);
+        } catch (err) {
+          if (err instanceof PremiumRequiredError || err instanceof PremiumQuotaError) {
+            return json(
+              { error: err.message, code: err.code, feature: err.feature },
+              err.status,
+            );
+          }
+          throw err;
+        }
         return json({ ok: true });
       },
     },

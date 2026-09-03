@@ -4,6 +4,13 @@ import { removeSubscription, subscriptionCount, upsertSubscription } from "@/lib
 import { TIMEFRAMES, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker } from "@/lib/market/labels";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import {
+  assertPremiumFeatureForUser,
+  PremiumQuotaError,
+  PremiumRequiredError,
+  watchesHaveEnabledZones,
+} from "@/lib/billing/assert-premium.server";
+import { getSessionUser } from "@/lib/auth/verify.server";
 
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
@@ -15,7 +22,7 @@ const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 function json(body: unknown, status = 200): Response {
@@ -81,11 +88,36 @@ export const Route = createFileRoute("/api/push/register")({
         if (token && !EXPO_TOKEN_RE.test(token)) {
           return json({ error: "Token de push em formato inválido." }, 400);
         }
+
+        const watches = parseWatches(raw.watches);
+
+        // Gates Premium (no-op se BILLING_GATES_ENABLED não estiver ligado).
+        try {
+          const session = await getSessionUser();
+          const userId = session?.id ?? null;
+          await assertPremiumFeatureForUser(userId, "watch_slot", {
+            watchCount: watches.length,
+          });
+          await assertPremiumFeatureForUser(userId, "zones", {
+            hasEnabledZones: watchesHaveEnabledZones(watches),
+          });
+        } catch (err) {
+          if (err instanceof PremiumRequiredError || err instanceof PremiumQuotaError) {
+            return json(
+              { error: err.message, code: err.code, feature: err.feature },
+              err.status,
+            );
+          }
+          // getSessionUser / hasPremium falhou por outro motivo — não derruba registro
+          // se gates estão off; se gates on e DB quebrou, propaga.
+          throw err;
+        }
+
         try {
           const sub = await upsertSubscription({
             token,
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
-            watches: parseWatches(raw.watches),
+            watches,
             rules: parseRules(raw.rules) ?? DEFAULT_ALERT_RULES,
           });
           return json({
