@@ -13,6 +13,13 @@ import type { AlertRules } from "../alert-settings";
 import { colors, radius } from "../theme";
 
 const THRESHOLDS = [3, 5, 8, 12] as const;
+const FUNDING_THRESHOLDS = [
+  { label: "0,03%", value: 0.0003 },
+  { label: "0,05%", value: 0.0005 },
+  { label: "0,10%", value: 0.001 },
+  { label: "0,20%", value: 0.002 },
+] as const;
+const DIGEST_HOURS = [0, 6, 9, 12, 15, 18, 21] as const;
 
 export function AlertsScreen({
   rules,
@@ -47,7 +54,7 @@ export function AlertsScreen({
       </View>
       <Text style={styles.subtitle}>
         Notificações de prevenção para pares na Watch. Nunca ordem de compra ou venda — só
-        contexto de amostra, caminho e extremos.
+        contexto de amostra, caminho, funding e extremos.
       </Text>
 
       <View style={styles.card}>
@@ -96,6 +103,13 @@ export function AlertsScreen({
           onChange={(v) => toggle("sampleWeak", v)}
         />
         <RuleRow
+          title="Regime de amostra"
+          hint="Avisa só na transição ok ↔ small ↔ tiny (piora ou recuperação)."
+          value={rules.sampleRegime}
+          disabled={!rules.enabled}
+          onChange={(v) => toggle("sampleRegime", v)}
+        />
+        <RuleRow
           title="Drawdown do caminho"
           hint={`|DD mediano H10| ≥ ${rules.drawdownThresholdPct}%`}
           value={rules.drawdownPath}
@@ -110,10 +124,7 @@ export function AlertsScreen({
               key={n}
               disabled={!rules.enabled}
               onPress={() => toggle("drawdownThresholdPct", n)}
-              style={[
-                styles.chip,
-                rules.drawdownThresholdPct === n && styles.chipOn,
-              ]}
+              style={[styles.chip, rules.drawdownThresholdPct === n && styles.chipOn]}
             >
               <Text
                 style={[
@@ -134,6 +145,80 @@ export function AlertsScreen({
           disabled={!rules.enabled}
           onChange={(v) => toggle("extreme20", v)}
         />
+        <RuleRow
+          title="Funding elevado"
+          hint="Avisa quando |funding| passa do limiar (só contexto)."
+          value={rules.fundingExtreme}
+          disabled={!rules.enabled}
+          onChange={(v) => toggle("fundingExtreme", v)}
+        />
+
+        <Text style={[styles.rowHint, { marginTop: 4 }]}>Limiar de funding</Text>
+        <View style={styles.chipRow}>
+          {FUNDING_THRESHOLDS.map((opt) => (
+            <Pressable
+              key={opt.value}
+              disabled={!rules.enabled}
+              onPress={() => toggle("fundingThreshold", opt.value)}
+              style={[
+                styles.chip,
+                rules.fundingThreshold === opt.value && styles.chipOn,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  rules.fundingThreshold === opt.value && { color: colors.fg },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={[styles.card, !rules.enabled && { opacity: 0.45 }]}>
+        <Text style={styles.section}>Digest diário</Text>
+        <Text style={styles.rowHint}>
+          Resumo factual da Watch no horário escolhido (UTC). Opcionalmente inclui maiores
+          movimentações 24h por volume — sem leitura de trade.
+        </Text>
+        <RuleRow
+          title="Enviar digest diário"
+          hint="Estado de prevenção dos pares observados."
+          value={rules.digestEnabled}
+          disabled={!rules.enabled}
+          onChange={(v) => toggle("digestEnabled", v)}
+        />
+        <RuleRow
+          title="Incluir movers 24h"
+          hint="Top volume e oscilação na Binance spot USDT."
+          value={rules.includeMovers}
+          disabled={!rules.enabled || !rules.digestEnabled}
+          onChange={(v) => toggle("includeMovers", v)}
+        />
+
+        <Text style={[styles.rowHint, { marginTop: 4 }]}>Hora UTC</Text>
+        <View style={styles.chipRow}>
+          {DIGEST_HOURS.map((h) => (
+            <Pressable
+              key={h}
+              disabled={!rules.enabled || !rules.digestEnabled}
+              onPress={() => toggle("digestHourUtc", h)}
+              style={[styles.chip, rules.digestHourUtc === h && styles.chipOn]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  rules.digestHourUtc === h && { color: colors.fg },
+                ]}
+              >
+                {String(h).padStart(2, "0")}h
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -229,7 +314,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 14, color: colors.fg, fontWeight: "500" },
   rowHint: { fontSize: 12, color: colors.subtle, marginTop: 2, lineHeight: 16 },
   meta: { fontSize: 11, color: colors.subtle },
-  chipRow: { flexDirection: "row", gap: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
