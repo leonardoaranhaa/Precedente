@@ -62,12 +62,6 @@ export type HorizonOutcome = {
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
-  /**
-   * Distribuição incondicional deste mesmo horizonte, sem filtro de
-   * fingerprint (todo candle a partir do 50) — o que "52% subiu" precisa pra
-   * significar algo: 52% comparado a uma base incondicional de 51% não diz
-   * quase nada; comparado a 30% diz muito.
-   */
   baseline: {
     upPct: number;
     medianPct: number;
@@ -103,7 +97,6 @@ export type ChartPoint = {
   sma50: number | null;
 };
 
-/** Caixa aproximada do padrão no print, em frações 0..1 da imagem (origem no canto superior esquerdo). */
 export type PatternRegion = {
   x: number;
   y: number;
@@ -120,7 +113,6 @@ export type VisionReading = {
   ativoAparente: string | null;
   leitura: string;
   confianca: "alta" | "media" | "baixa";
-  /** null quando não há padrão citado, ou o modelo não está confiante na localização. */
   patternRegion: PatternRegion | null;
 };
 
@@ -162,6 +154,21 @@ export type OnchainContext = {
   sources: string[];
 };
 
+/** Re-export shape — full definition lives in news/types to avoid cycles in tests. */
+export type NewsContextPayload = {
+  windowHours: number;
+  items: Array<{
+    id: string;
+    title: string;
+    link: string;
+    source: string;
+    publishedAt: number | null;
+    coins: string[];
+    categories: string[];
+  }>;
+  flags: Record<string, boolean>;
+};
+
 export type AnalysisPayload = {
   ticker: string;
   displayTicker: string;
@@ -175,6 +182,8 @@ export type AnalysisPayload = {
   visionError: string | null;
   source: string;
   onchain: OnchainContext | null;
+  /** Manchetes recentes do ativo — contexto, não estatística de caminho. */
+  newsContext: NewsContextPayload | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {
