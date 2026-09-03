@@ -47,6 +47,22 @@ ou `Authorization: Bearer <secret>`.
 
 Sem a variável, o scan fica aberto (apenas para dev).
 
+### Capacidade de `/api/push/register`
+
+Testado localmente (build de produção, fallback PGLite) contra carga leve:
+
+- Rate limit (20 req / 5 min por IP) dispara exatamente no request 21 (`429`
+  com `retryAfterSec`) — confirmado com 25 requests sequenciais.
+- 60 registros concorrentes de dispositivos distintos (20 em paralelo): todos
+  `200`, contagem final de subscribers bate exatamente (sem escrita perdida
+  no upsert por token).
+- Payloads malformados (JSON inválido, corpo vazio, token fora do formato
+  Expo) seguem retornando `400` sem derrubar o processo; `watches` acima do
+  limite é truncado em 24 itens, não rejeitado.
+
+Não valida capacidade da Neon real em produção — só confirma que a rota e o
+rate limiter não têm um teto óbvio bem abaixo do tráfego esperado.
+
 ## Persistência
 
 Tabela `push_subscriptions` (migration `migrations/0001_push_subscriptions.sql`):
