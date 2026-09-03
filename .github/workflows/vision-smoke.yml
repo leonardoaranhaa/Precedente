@@ -1,0 +1,38 @@
+name: Vision smoke (nightly)
+
+# Roda com ANTHROPIC_API_KEY de verdade, ao contrário do CI normal de PR
+# (ci.yml roda sem a chave — print-vision.spec.ts tolera visão indisponível
+# de propósito). Isto pega regressão silenciosa no pipeline de leitura de
+# print que só aparece contra a API real: prompt mudou, formato de resposta
+# mudou, chave expirou, modelo mudou.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  vision-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+
+      - name: Verifica que ANTHROPIC_API_KEY está configurada
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY não configurada em Settings > Secrets > Actions — sem ela este smoke test não testa nada de verdade."
+            exit 1
+          fi
+
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/vision-smoke.spec.ts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
