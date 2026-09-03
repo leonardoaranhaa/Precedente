@@ -26,6 +26,7 @@ import { AccountScreen } from "./src/screens/AccountScreen";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
+import { NewsScreen } from "./src/screens/NewsScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { initSentry } from "./src/sentry";
@@ -52,8 +53,9 @@ import {
   type WatchItem,
 } from "./src/watchlist";
 import { ZoneModal } from "./src/components/ZoneModal";
+import { NewsPreferencesModal } from "./src/components/NewsPreferencesModal";
 
-type Screen = "home" | "history" | "result" | "watch" | "alerts" | "account";
+type Screen = "home" | "history" | "result" | "watch" | "alerts" | "news" | "account";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -89,6 +91,8 @@ function AppInner() {
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
   const [zoneItem, setZoneItem] = useState<WatchItem | null>(null);
+  const [newsPrefsOpen, setNewsPrefsOpen] = useState(false);
+  const [newsRefreshKey, setNewsRefreshKey] = useState(0);
 
   const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -489,6 +493,7 @@ function AppInner() {
           <Tab active={view === "home"} onPress={() => setView("home")} label="Analisar" />
           <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
           <Tab active={view === "alerts"} onPress={() => setView("alerts")} label="Alertas" />
+          <Tab active={view === "news"} onPress={() => setView("news")} label="Notíc." />
           <Tab active={view === "history"} onPress={() => setView("history")} label="Hist." />
           <Tab active={view === "account"} onPress={() => setView("account")} label="Conta" />
         </View>
@@ -536,6 +541,12 @@ function AppInner() {
             onChange={(next) => void handleAlertRulesChange(next)}
             onRequestPermission={() => void handleRequestPermission()}
             onScanNow={() => void handleScanNow()}
+          />
+        ) : view === "news" ? (
+          <NewsScreen
+            signedIn={Boolean(user)}
+            refreshKey={newsRefreshKey}
+            onOpenPreferences={() => setNewsPrefsOpen(true)}
           />
         ) : view === "history" ? (
           <HistoryScreen
@@ -589,6 +600,13 @@ function AppInner() {
             void syncPush(alertRules, next, pushToken);
           });
         }}
+      />
+
+      <NewsPreferencesModal
+        visible={newsPrefsOpen}
+        signedIn={Boolean(user)}
+        onClose={() => setNewsPrefsOpen(false)}
+        onSaved={() => setNewsRefreshKey((k) => k + 1)}
       />
     </SafeAreaView>
   );

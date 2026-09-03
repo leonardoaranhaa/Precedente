@@ -8,6 +8,7 @@ import { AnalysisResult } from "@/components/analysis-result";
 import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
+import { NewsPanel } from "@/components/news-panel";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
 import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
@@ -39,7 +40,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-type View = "home" | "history" | "result" | "watch";
+type View = "home" | "history" | "result" | "watch" | "news";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -398,6 +399,9 @@ function Home() {
               <Tab active={view === "watch"} onClick={() => setView("watch")} className="xl:hidden">
                 Watch
               </Tab>
+              <Tab active={view === "news"} onClick={() => setView("news")}>
+                Notícias
+              </Tab>
               <Tab active={view === "history"} onClick={() => setView("history")}>
                 Histórico
               </Tab>
@@ -515,6 +519,8 @@ function Home() {
                   <WatchComparator items={watch} onSelect={openFromWatch} className="lg:col-span-2" />
                 ) : null}
               </div>
+            ) : view === "news" ? (
+              <NewsPanel className="mt-6" />
             ) : view === "history" ? (
               <div className="mt-6">
                 <h1 className="font-display text-3xl tracking-tight">Histórico</h1>
