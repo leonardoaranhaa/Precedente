@@ -1,19 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { getAllBreakerStates } from "@/lib/circuit-breaker";
+import { getAdminUser } from "@/lib/admin/require-admin.server";
 
 /**
  * Agregação mínima sobre analysis_log — responde "quantas análises (e leituras
  * de print) rodaram nos últimos N dias e quanto isso custou" sem abrir código.
- * Mesmo padrão de auth por segredo compartilhado do /api/push/scan.
+ * Duas portas: segredo compartilhado (mesmo padrão do /api/push/scan, pra
+ * script/curl externo) OU uma sessão logada com role admin (pra aba "Saúde"
+ * do painel /admin, sem precisar guardar o segredo no navegador).
  */
-function authorized(request: Request): boolean {
+async function authorized(request: Request): Promise<boolean> {
   const secret = process.env.OPS_SECRET;
-  if (!secret) return false; // sem segredo configurado, endpoint fica fechado
-  const header =
-    request.headers.get("x-ops-secret") ??
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  return header === secret;
+  if (secret) {
+    const header =
+      request.headers.get("x-ops-secret") ??
+      request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (header === secret) return true;
+  }
+  const admin = await getAdminUser();
+  return admin !== null;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -27,7 +33,7 @@ export const Route = createFileRoute("/api/ops/analysis")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!authorized(request)) {
+        if (!(await authorized(request))) {
           return json({ error: "Não autorizado." }, 401);
         }
 

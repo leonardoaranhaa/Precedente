@@ -10,7 +10,7 @@ import { assertAnalyzeQuota } from "./analyze-rate-limit-logic";
  * itself lives in `analyze-rate-limit-logic.ts` (framework-free, unit tested);
  * this file only wires it to the real incoming request.
  */
-export function assertAnalyzeRateLimit(hasImage: boolean): void {
+export async function assertAnalyzeRateLimit(hasImage: boolean): Promise<void> {
   const request = getRequest();
   if (!request) return; // no request context (tests) — nothing to throttle
 
@@ -26,6 +26,13 @@ export function assertAnalyzeRateLimit(hasImage: boolean): void {
       request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     if (header === cronSecret) return;
   }
+
+  // Staff (superadmin/developer) precisa poder martelar Analisar durante
+  // teste sem esbarrar no limite pensado pra tráfego anônimo por IP.
+  const { getSessionUser } = await import("./auth/verify.server");
+  const { isStaff } = await import("./admin/roles");
+  const session = await getSessionUser().catch(() => null);
+  if (isStaff(session?.email)) return;
 
   assertAnalyzeQuota(hasImage, clientIp(request));
 }

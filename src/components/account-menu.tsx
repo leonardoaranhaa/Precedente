@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Sparkles, User } from "lucide-react";
+import { LogOut, ShieldCheck, Sparkles, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -15,12 +15,17 @@ export function AccountMenu() {
   const [active, setActive] = useState(false);
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<"superadmin" | "developer" | null>(null);
 
   useEffect(() => {
     if (!user) return;
     getMyEntitlement()
       .then((r) => setActive(r.active))
       .catch(() => setActive(false));
+    fetch("/api/admin/whoami")
+      .then((r) => r.json())
+      .then((body: { role?: "superadmin" | "developer" | null }) => setAdminRole(body.role ?? null))
+      .catch(() => setAdminRole(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa recarregar quando o id muda, não a cada nova identidade do objeto user
   }, [user?.id]);
 
@@ -110,6 +115,16 @@ export function AccountMenu() {
           </div>
         ) : null}
 
+        {adminRole ? (
+          <Link
+            to="/admin"
+            className="mt-3 flex w-full items-center gap-1.5 rounded-md bg-bg px-2.5 py-2 text-xs font-medium text-muted hover:text-fg"
+          >
+            <ShieldCheck className="size-3.5" />
+            Painel admin
+          </Link>
+        ) : null}
+
         <button
           type="button"
           disabled={signingOut}
@@ -117,7 +132,10 @@ export function AccountMenu() {
             setSigningOut(true);
             void signOut().catch(() => setSigningOut(false));
           }}
-          className="mt-3 flex w-full items-center gap-1.5 rounded-md bg-bg px-2.5 py-2 text-xs font-medium text-muted hover:text-fg disabled:cursor-wait"
+          className={cn(
+            "flex w-full items-center gap-1.5 rounded-md bg-bg px-2.5 py-2 text-xs font-medium text-muted hover:text-fg disabled:cursor-wait",
+            adminRole ? "mt-1.5" : "mt-3",
+          )}
         >
           <LogOut className="size-3.5" />
           {signingOut ? "Saindo…" : "Sair"}
