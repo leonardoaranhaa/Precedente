@@ -55,10 +55,15 @@ function parseRules(raw: unknown): Partial<AlertRules> | undefined {
   const r = raw as Record<string, unknown>;
   const out: Partial<AlertRules> = {};
   if (typeof r.sampleWeak === "boolean") out.sampleWeak = r.sampleWeak;
+  if (typeof r.sampleRegime === "boolean") out.sampleRegime = r.sampleRegime;
   if (typeof r.drawdownPath === "boolean") out.drawdownPath = r.drawdownPath;
   if (typeof r.extreme20 === "boolean") out.extreme20 = r.extreme20;
   if (typeof r.drawdownThresholdPct === "number" && Number.isFinite(r.drawdownThresholdPct)) {
     out.drawdownThresholdPct = Math.min(50, Math.max(1, r.drawdownThresholdPct));
+  }
+  if (typeof r.fundingExtreme === "boolean") out.fundingExtreme = r.fundingExtreme;
+  if (typeof r.fundingThreshold === "number" && Number.isFinite(r.fundingThreshold)) {
+    out.fundingThreshold = Math.min(0.05, Math.max(0.00005, r.fundingThreshold));
   }
   return out;
 }
