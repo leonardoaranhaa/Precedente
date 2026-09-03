@@ -10,6 +10,23 @@ Notificações de **prevenção de perdas** para pares na Watch:
 
 Sem linguagem de compra/venda.
 
+## "Auto" na Watch ≠ push
+
+A Watch (web e mobile) tem um seletor **Auto** (desligado / 5 / 15 / 30 min)
+que reavalia os pares pinados sozinho. É fácil confundir com este sistema de
+push, mas são dois mecanismos independentes:
+
+| | Auto (seletor da Watch) | Push (este doc) |
+|---|---|---|
+| Onde roda | No navegador/app, só com a tela aberta | No servidor (cron Railway), roda sempre |
+| Precisa do app aberto? | Sim — fecha a aba/app, para | Não — é o ponto do push |
+| Web consegue? | Sim | **Não** — web não tem registro de push (token Expo é só mobile); a Watch no web só **exibe** (ícone de sino) uma zona configurada no app, nunca edita |
+| O que faz | Só atualiza os números da tabela (Δ, amostra, DD) na tela | Manda notificação push de verdade pro celular |
+
+Ou seja: ligar "Auto 30min" no web **não** cria nem substitui um alerta push —
+é só a tabela se atualizando sozinha enquanto a aba estiver aberta. Só o
+app mobile registra push de verdade (aba **Alertas**).
+
 ## API
 
 | Método | Rota | Uso |
