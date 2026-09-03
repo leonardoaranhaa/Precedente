@@ -212,6 +212,11 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
 
   const onchainPromise = fetchOnchainContext(data.ticker).catch(() => null);
 
+  // Contexto de notícias em paralelo — falha silenciosa (null), nunca bloqueia análise.
+  const newsPromise = import("./news/context-for-ticker")
+    .then(({ buildNewsContextForTicker }) => buildNewsContextForTicker(data.ticker))
+    .catch(() => null);
+
   let market: Awaited<ReturnType<typeof fetchOHLCV>> & {
     stats: ReturnType<typeof analyzeSeries>;
   };
@@ -252,7 +257,11 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
         }))
     : Promise.resolve({ vision: null, visionError: null, visionCostUsd: 0 });
 
-  const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
+  const [visionPart, onchain, newsContext] = await Promise.all([
+    visionPromise,
+    onchainPromise,
+    newsPromise,
+  ]);
 
   const { logAnalysis } = await import("./analyze-log");
   logAnalysis({
@@ -283,6 +292,8 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     // ela mesma nunca lança). Um contexto "vazio" (todas as fontes falharam)
     // segue passando adiante — a UI degrada com legenda em vez de sumir.
     onchain,
+    // Manchetes recentes do ativo — contexto narrativo, não previsão.
+    newsContext,
   };
 }
 
