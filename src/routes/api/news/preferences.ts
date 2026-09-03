@@ -2,12 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getNewsPreferences, setNewsPreferences } from "@/lib/news/store";
 import { requireUserId, UnauthorizedError } from "@/lib/auth/verify.server";
 import { reportServerError } from "@/lib/sentry.server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * PROTÓTIPO — sem link em nenhuma tela ainda. Preferências de notícia por
  * usuário: quais moedas e categorias ele quer ver. Sem custo de LLM (ao
  * contrário do agente de busca externa) — não precisa de gate de premium.
  */
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 5 * 60 * 1000;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -33,6 +37,10 @@ export const Route = createFileRoute("/api/news/preferences")({
           if (err instanceof UnauthorizedError) return json({ error: "Não autorizado." }, 401);
           throw err;
         }
+        const limit = checkRateLimit(`news-prefs:${userId}`, RATE_LIMIT, RATE_WINDOW_MS);
+        if (!limit.allowed) {
+          return json({ error: "Muitas requisições. Tente de novo em instantes." }, 429);
+        }
         const prefs = await getNewsPreferences(userId);
         return json(prefs);
       },
@@ -43,6 +51,10 @@ export const Route = createFileRoute("/api/news/preferences")({
         } catch (err) {
           if (err instanceof UnauthorizedError) return json({ error: "Não autorizado." }, 401);
           throw err;
+        }
+        const limit = checkRateLimit(`news-prefs:${userId}`, RATE_LIMIT, RATE_WINDOW_MS);
+        if (!limit.allowed) {
+          return json({ error: "Muitas requisições. Tente de novo em instantes." }, 429);
         }
 
         let body: unknown;

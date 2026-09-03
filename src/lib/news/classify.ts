@@ -18,19 +18,37 @@ const COIN_ALIASES: Record<string, string[]> = {
   DOGE: ["dogecoin", "doge"],
   BNB: ["binance coin", "bnb"],
   AVAX: ["avalanche", "avax"],
-  LINK: ["chainlink", "link"],
-  DOT: ["polkadot", "dot"],
+  LINK: ["chainlink"],
+  DOT: ["polkadot"],
   LTC: ["litecoin", "ltc"],
   TRX: ["tron", "trx"],
   SHIB: ["shiba inu", "shib"],
   UNI: ["uniswap", "uni"],
-  ATOM: ["cosmos", "atom"],
-  NEAR: ["near protocol", "near"],
+  ATOM: ["cosmos"],
+  NEAR: ["near protocol"],
   APT: ["aptos", "apt"],
-  ARB: ["arbitrum", "arb"],
-  OP: ["optimism", "op"],
+  ARB: ["arbitrum"],
+  OP: ["optimism"],
   ZEC: ["zcash", "zec"],
 };
+
+/**
+ * Tickers cuja forma "nua" em minúsculas colide com palavra comum do inglês
+ * ("near", "dot", "link", "arb", "atom", "op") — tirados de COIN_ALIASES
+ * acima (achado de revisão: "Bitcoin price near key resistance level"
+ * marcava NEAR; "Fed's dot plot" marcava DOT). Pra esses, só conta a menção
+ * do ticker quando aparece em MAIÚSCULAS isolado, ou com "$" na frente em
+ * qualquer caixa — como manchete real escreve ticker ("LINK surges 12%",
+ * "$ARB rallies"), nunca em minúsculas soltas.
+ */
+const AMBIGUOUS_TICKERS = new Set(["LINK", "DOT", "ATOM", "NEAR", "ARB", "OP"]);
+
+function ambiguousTickerMatch(text: string, ticker: string): boolean {
+  const escaped = ticker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const caps = new RegExp(`(?:^|[^A-Za-z0-9])${escaped}(?:$|[^A-Za-z0-9])`);
+  if (caps.test(text)) return true;
+  return new RegExp(`\\$${escaped}\\b`, "i").test(text);
+}
 
 /**
  * As fontes configuradas (`sources.ts`) publicam em inglês — por isso cada
@@ -161,7 +179,13 @@ function wordBoundaryMatch(haystack: string, needle: string): boolean {
 export function detectCoins(text: string): string[] {
   const found: string[] = [];
   for (const [ticker, aliases] of Object.entries(COIN_ALIASES)) {
-    if (aliases.some((a) => wordBoundaryMatch(text, a))) found.push(ticker);
+    if (aliases.some((a) => wordBoundaryMatch(text, a))) {
+      found.push(ticker);
+      continue;
+    }
+    if (AMBIGUOUS_TICKERS.has(ticker) && ambiguousTickerMatch(text, ticker)) {
+      found.push(ticker);
+    }
   }
   return found;
 }

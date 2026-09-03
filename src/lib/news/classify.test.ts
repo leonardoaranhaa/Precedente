@@ -21,6 +21,25 @@ test("detectCoins retorna vazio quando nenhuma moeda conhecida aparece", () => {
   assert.deepEqual(detectCoins("Generic market commentary with no specific asset"), []);
 });
 
+// Achado de revisão: tickers cuja forma nua colide com palavra comum do
+// inglês ("near", "dot", "link", "arb", "atom", "op") geravam falso
+// positivo em manchetes sem nenhuma relação com a moeda.
+test("detectCoins não confunde palavra comum do inglês com ticker ambíguo", () => {
+  assert.deepEqual(detectCoins("Bitcoin price near key resistance level"), ["BTC"]);
+  assert.deepEqual(detectCoins("Fed's dot plot signals rate cuts"), []);
+  assert.deepEqual(detectCoins("Traders spot an arb opportunity between exchanges"), []);
+  assert.deepEqual(detectCoins("The op-ed argues for clearer crypto rules"), []);
+  assert.deepEqual(detectCoins("Click the link below to read more"), []);
+  assert.deepEqual(detectCoins("Cosmic rays reach a new peak, say scientists"), []);
+});
+
+test("detectCoins ainda reconhece o ticker ambíguo em maiúsculas ou com $", () => {
+  assert.deepEqual(detectCoins("LINK surges 12% after partnership news"), ["LINK"]);
+  assert.deepEqual(detectCoins("$ARB rallies as Arbitrum usage grows"), ["ARB"]);
+  assert.deepEqual(detectCoins("DOT holders vote on next parachain auction"), ["DOT"]);
+  assert.deepEqual(detectCoins("NEAR price target raised by analysts"), ["NEAR"]);
+});
+
 test("detectCategories reconhece regulação, segurança e institucional", () => {
   assert.deepEqual(detectCategories("SEC proposes new crypto rule"), ["regulatory"]);
   assert.deepEqual(detectCategories("Exchange hacked, funds drained"), ["security"]);
