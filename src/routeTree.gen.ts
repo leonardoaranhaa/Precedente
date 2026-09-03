@@ -23,6 +23,8 @@ import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/che
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
 import { Route as ApiBillingStatusRouteImport } from './routes/api/billing/status'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
+import { Route as ApiNewsFeedRouteImport } from './routes/api/news/feed'
+import { Route as ApiNewsPreferencesRouteImport } from './routes/api/news/preferences'
 import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
@@ -98,6 +100,16 @@ const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
   path: '/api/billing/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNewsFeedRoute = ApiNewsFeedRouteImport.update({
+  id: '/api/news/feed',
+  path: '/api/news/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNewsPreferencesRoute = ApiNewsPreferencesRouteImport.update({
+  id: '/api/news/preferences',
+  path: '/api/news/preferences',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
   id: '/api/ops/analysis',
   path: '/api/ops/analysis',
@@ -129,6 +141,8 @@ export interface FileRoutesByFullPath {
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
@@ -148,6 +162,8 @@ export interface FileRoutesByTo {
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
@@ -168,6 +184,8 @@ export interface FileRoutesById {
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
@@ -189,6 +207,8 @@ export interface FileRouteTypes {
     | '/api/billing/portal'
     | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/news/feed'
+    | '/api/news/preferences'
     | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
@@ -208,6 +228,8 @@ export interface FileRouteTypes {
     | '/api/billing/portal'
     | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/news/feed'
+    | '/api/news/preferences'
     | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
@@ -227,6 +249,8 @@ export interface FileRouteTypes {
     | '/api/billing/portal'
     | '/api/billing/status'
     | '/api/billing/webhook'
+    | '/api/news/feed'
+    | '/api/news/preferences'
     | '/api/ops/analysis'
     | '/api/push/register'
     | '/api/push/scan'
@@ -247,6 +271,8 @@ export interface RootRouteChildren {
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiBillingStatusRoute: typeof ApiBillingStatusRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
+  ApiNewsFeedRoute: typeof ApiNewsFeedRoute
+  ApiNewsPreferencesRoute: typeof ApiNewsPreferencesRoute
   ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
@@ -352,6 +378,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/news/feed': {
+      id: '/api/news/feed'
+      path: '/api/news/feed'
+      fullPath: '/api/news/feed'
+      preLoaderRoute: typeof ApiNewsFeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/news/preferences': {
+      id: '/api/news/preferences'
+      path: '/api/news/preferences'
+      fullPath: '/api/news/preferences'
+      preLoaderRoute: typeof ApiNewsPreferencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ops/analysis': {
       id: '/api/ops/analysis'
       path: '/api/ops/analysis'
@@ -391,6 +431,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiBillingStatusRoute: ApiBillingStatusRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
+  ApiNewsFeedRoute: ApiNewsFeedRoute,
+  ApiNewsPreferencesRoute: ApiNewsPreferencesRoute,
   ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,

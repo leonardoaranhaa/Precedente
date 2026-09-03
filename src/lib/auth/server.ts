@@ -97,11 +97,18 @@ const explicitBaseURL = env("BETTER_AUTH_URL");
 const previewAllowedHosts: string[] = [...PREVIEW_ALLOWED_HOSTS];
 // Local `npm run dev` (port 8080 contract). Browsers may send Origin as any of
 // these for the same server — trusting only `localhost` rejects `127.0.0.1` and
-// breaks email/password with "Invalid origin".
+// breaks email/password with "Invalid origin". Also trusts the mobile app's
+// `expo start --web` origin (port 19006, the Expo CLI default) — that's a
+// SEPARATE origin from the API it calls (still :8080), so without this,
+// sign-up/sign-in from the mobile client running in a browser fails the same
+// way. Real native builds (iOS/Android) don't send a browser `Origin` header
+// at all, so they're unaffected either way.
 const LOCAL_DEV_ORIGINS: string[] = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://[::1]:8080",
+  "http://localhost:19006",
+  "http://127.0.0.1:19006",
 ];
 const baseURL = explicitBaseURL ?? {
   // Include loopback hosts so dynamic baseURL resolves for local email/password
