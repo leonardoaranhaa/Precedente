@@ -11,15 +11,25 @@ function pickHorizon(horizons: HorizonOutcome[], bars = 10): HorizonOutcome | nu
   return horizons.find((h) => h.bars === bars) ?? horizons[Math.min(1, horizons.length - 1)] ?? null;
 }
 
-function flowLabel(up: number, down: number, flat: number): string {
+/**
+ * Amostra fraca (`weak`) troca o enquadramento de "maioria" (fala de
+ * tendência, soa preditivo) por "nos poucos casos vistos" (fala do que foi
+ * observado, sem generalizar) — mesma estatística, tom que não passa mais
+ * confiança do que a amostra sustenta.
+ */
+function flowLabel(up: number, down: number, flat: number, weak: boolean): string {
   const u = Math.round(up);
   const d = Math.round(down);
   const f = Math.round(flat);
   if (u >= d && u >= f) {
-    return `na maioria das vezes o preço fechou mais alto no fim do horizonte (${u}% subiu, ${d}% caiu, ${f}% ficou de lado)`;
+    return weak
+      ? `nos poucos casos parecidos vistos, o preço fechou mais alto no fim do horizonte (${u}% subiu, ${d}% caiu, ${f}% ficou de lado)`
+      : `na maioria das vezes o preço fechou mais alto no fim do horizonte (${u}% subiu, ${d}% caiu, ${f}% ficou de lado)`;
   }
   if (d >= u && d >= f) {
-    return `na maioria das vezes o preço fechou mais baixo no fim do horizonte (${d}% caiu, ${u}% subiu, ${f}% ficou de lado)`;
+    return weak
+      ? `nos poucos casos parecidos vistos, o preço fechou mais baixo no fim do horizonte (${d}% caiu, ${u}% subiu, ${f}% ficou de lado)`
+      : `na maioria das vezes o preço fechou mais baixo no fim do horizonte (${d}% caiu, ${u}% subiu, ${f}% ficou de lado)`;
   }
   return `o desfecho ficou dividido — ${u}% subiu, ${d}% caiu, ${f}% ficou de lado`;
 }
@@ -122,9 +132,11 @@ export function narrateScenario(analysis: StoredAnalysis): ScenarioNarrative {
         : ""),
   );
 
+  const weakSample = precedent.sampleNote !== "ok";
+
   if (h10) {
     paragraphs.push(
-      `Olhando o horizonte de ${h10.bars} barras (${h10.label.split(" · ")[1] ?? h10.label}): ${flowLabel(h10.upPct, h10.downPct, h10.flatPct)}. ` +
+      `Olhando o horizonte de ${h10.bars} barras (${h10.label.split(" · ")[1] ?? h10.label}): ${flowLabel(h10.upPct, h10.downPct, h10.flatPct, weakSample)}. ` +
         `A mediana do retorno até o fim foi ${formatPct(h10.medianPct)}; a faixa entre o pior e o melhor décimo ficou de ${formatPct(h10.p10)} a ${formatPct(h10.p90)}. ` +
         `Isso não diz o que “os players farão agora” — só resume o desfecho histórico quando o setup se parecia com este.`,
     );

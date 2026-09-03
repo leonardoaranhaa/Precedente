@@ -18,6 +18,7 @@ import { ScenarioPanel } from "@/components/scenario-panel";
 import { SplitBar } from "@/components/split-bar";
 import { baselineDeltaLabel } from "@/lib/market/baseline-copy";
 import {
+  barsToHuman,
   formatInt,
   formatPct,
   formatPrice,
@@ -272,7 +273,7 @@ export function AnalysisResult({
             <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
           </section>
 
-          {onchain ? <OnchainPanel onchain={onchain} /> : null}
+          <OnchainPanel onchain={onchain} />
 
           <ScenarioPanel analysis={analysis} />
 
@@ -308,6 +309,7 @@ export function AnalysisResult({
                 <HorizonCard
                   key={h.bars}
                   horizon={h}
+                  timeframe={analysis.timeframe}
                   active={i === horizonIdx}
                   onClick={() => setHorizonIdx(i)}
                 />
@@ -482,10 +484,12 @@ function HorizonChip({
 
 function HorizonCard({
   horizon,
+  timeframe,
   active,
   onClick,
 }: {
   horizon: HorizonOutcome;
+  timeframe: Timeframe;
   active: boolean;
   onClick: () => void;
 }) {
@@ -498,7 +502,9 @@ function HorizonCard({
         active && "ring-1 ring-border",
       )}
     >
-      <p className="text-xs text-muted">{horizon.bars} barras · n={horizon.samples}</p>
+      <p className="text-xs text-muted">
+        {horizon.bars} barras (≈{barsToHuman(timeframe, horizon.bars)}) · n={horizon.samples}
+      </p>
       <p className="mt-2 font-mono text-xs tabular-nums">
         <span className="text-up">↑ {Math.round(horizon.upPct)}%</span>
         <span className="mx-1 text-subtle">·</span>

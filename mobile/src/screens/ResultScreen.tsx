@@ -19,6 +19,7 @@ import { SplitBar } from "../components/SplitBar";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import {
+  barsToHuman,
   fingerprintLabel,
   formatInt,
   formatPct,
@@ -187,7 +188,7 @@ export function ResultScreen({
 
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
 
-      {onchain ? <OnchainCard onchain={onchain} /> : null}
+      <OnchainCard onchain={onchain ?? null} />
 
       <ScenarioCard analysis={analysis} />
 
@@ -221,7 +222,7 @@ export function ResultScreen({
               style={[styles.hCard, i === horizonIdx && styles.hCardOn]}
             >
               <Text style={styles.muted}>
-                {h.bars}b · n={h.samples}
+                {h.bars}b (≈{barsToHuman(analysis.timeframe, h.bars)}) · n={h.samples}
               </Text>
               <Text style={styles.hSplit}>
                 <Text style={{ color: colors.up }}>↑{Math.round(h.upPct)}</Text>
