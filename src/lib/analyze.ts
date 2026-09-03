@@ -239,13 +239,6 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
 
   const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
 
-  const hasOnchain =
-    onchain &&
-    (onchain.fundingRate != null ||
-      onchain.openInterest != null ||
-      onchain.liquidityUsd != null ||
-      onchain.volume24hUsd != null);
-
   const { logAnalysis } = await import("./analyze-log");
   logAnalysis({
     ticker: data.ticker,
@@ -271,7 +264,10 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     vision: visionPart.vision,
     visionError: visionPart.visionError,
     source: market.source,
-    onchain: hasOnchain ? onchain : null,
+    // `onchain` só vira null se fetchOnchainContext lançar (nunca deveria —
+    // ela mesma nunca lança). Um contexto "vazio" (todas as fontes falharam)
+    // segue passando adiante — a UI degrada com legenda em vez de sumir.
+    onchain,
   };
 }
 
