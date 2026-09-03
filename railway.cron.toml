@@ -23,3 +23,8 @@ buildCommand = "echo skip-build"
 startCommand = "node scripts/push-scan-cron.mjs"
 cronSchedule = "*/30 * * * *"
 restartPolicyType = "NEVER"
+
+# --- Digest de notícias (serviço extra ou mesmo worker em outro horário) ---
+# Start Command: node scripts/news-digest-cron.mjs
+# Cron Schedule: 0 * * * *   (a cada hora UTC — o scan só envia na hora configurada pelo usuário)
+# Variables: mesmas do push (PUSH_CRON_SECRET, PUBLIC_APP_URL)

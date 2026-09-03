@@ -57,6 +57,7 @@ function payload(overrides: { price?: number; rsi?: number } = {}): AnalysisPayl
     visionError: null,
     source: "Binance",
     onchain: null,
+    newsContext: null,
   };
 }
 
