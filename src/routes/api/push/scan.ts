@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { scanAllSubscriptions } from "@/lib/push/scan";
 import { subscriptionCount } from "@/lib/push/store";
 import { dbSource } from "@/lib/db";
-import { reportServerError } from "@/lib/sentry.server";
+import { reportServerError, reportServerMessage } from "@/lib/sentry.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +42,17 @@ export const Route = createFileRoute("/api/push/scan")({
         }
         try {
           const report = await scanAllSubscriptions();
+          if (report.errors.length > 0) {
+            // Retorna 200 (o scan como um todo rodou) mas isso não pode ficar
+            // invisível: sem reportar, um par saindo do ar (dados de mercado,
+            // Expo) some silenciosamente dentro de um "ok: true".
+            const allFailed = report.analyzed > 0 && report.errors.length >= report.analyzed;
+            reportServerMessage(
+              `push scan: ${report.errors.length} erro(s) — ${report.errors.slice(0, 5).join(" | ")}`,
+              allFailed ? "error" : "warning",
+              { route: "/api/push/scan", allFailed: String(allFailed) },
+            );
+          }
           return json({ ok: true, subscribers: await subscriptionCount(), ...report });
         } catch (err) {
           reportServerError(err, { route: "/api/push/scan" });

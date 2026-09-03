@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
 import { formatAgo, formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
@@ -46,6 +46,29 @@ const TAB_LABEL: Record<WatchTab, string> = {
   focus: "foco",
   fragile: "frágeis",
 };
+
+/**
+ * Zona vem só do app mobile (via sync de conta) — é lá que o push é
+ * entregue, o web não tem registro de push. Aqui é só leitura: mostra o
+ * que está configurado, nunca deixa editar (editar aqui prometeria um
+ * alerta que o navegador não consegue disparar).
+ */
+function zoneSummary(item: WatchItem): string | null {
+  const parts: string[] = [];
+  const pz = item.priceZone;
+  if (pz?.enabled && (pz.min != null || pz.max != null)) {
+    if (pz.min != null && pz.max != null) parts.push(`preço ${pz.min}–${pz.max}`);
+    else if (pz.min != null) parts.push(`preço ≥ ${pz.min}`);
+    else parts.push(`preço ≤ ${pz.max}`);
+  }
+  const rz = item.rsiZone;
+  if (rz?.enabled && (rz.below != null || rz.above != null)) {
+    if (rz.below != null) parts.push(`RSI ≤ ${rz.below}`);
+    if (rz.above != null) parts.push(`RSI ≥ ${rz.above}`);
+  }
+  if (parts.length === 0) return null;
+  return `Zona de alerta ativa (configurada no app): ${parts.join(" · ")}`;
+}
 
 function signal(item: WatchItem): { glyph: string; tone: "up" | "warn" | "muted"; title: string } {
   if (item.near20High || item.near20Low) {
@@ -177,7 +200,7 @@ export function WatchPanel({
               title={
                 m === 0
                   ? "Desliga atualização automática"
-                  : `Reavalia a watch a cada ${m} min (não é preço ao vivo)`
+                  : `Reavalia a watch a cada ${m} min nesta aba aberta — não é preço ao vivo e não envia push (isso é outro sistema, veja o sino na Watch)`
               }
             >
               {watchRefreshLabel(m)}
@@ -300,6 +323,7 @@ export function WatchPanel({
             const active = activeId === item.id;
             const up = item.changePct >= 0;
             const sig = signal(item);
+            const zone = zoneSummary(item);
             const rowBusy = refreshingId === item.id || refreshingAll;
             return (
               <li
@@ -324,6 +348,11 @@ export function WatchPanel({
                     <span className="shrink-0 text-xs font-semibold text-fg">
                       {item.displayTicker.split("/")[0] ?? item.displayTicker}
                     </span>
+                    {zone ? (
+                      <span title={zone} className="shrink-0">
+                        <Bell className="size-2.5 text-accent" aria-label="Zona de alerta ativa" />
+                      </span>
+                    ) : null}
                     <span
                       className="min-w-0 truncate text-[10px] text-subtle"
                       title={`Última avaliação: ${new Date(item.updatedAt).toLocaleString("pt-BR")}`}

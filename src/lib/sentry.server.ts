@@ -26,3 +26,18 @@ export function reportServerError(err: unknown, context?: Record<string, string>
   if (!process.env.SENTRY_DSN) return;
   Sentry.captureException(err, context ? { tags: context } : undefined);
 }
+
+/**
+ * Reporta uma condição anormal sem exception associada (ex.: um cron que
+ * "terminou ok" mas com falhas parciais dentro do resultado — sem isto,
+ * fica em 200 OK e ninguém percebe).
+ */
+export function reportServerMessage(
+  message: string,
+  level: "warning" | "error",
+  context?: Record<string, string>,
+): void {
+  ensureInit();
+  if (!process.env.SENTRY_DSN) return;
+  Sentry.captureMessage(message, { level, tags: context });
+}

@@ -75,13 +75,23 @@ if (!res.ok) {
   process.exit(1);
 }
 
-console.log(`[push-scan-cron] ok (${ms}ms)`, {
+const summary = {
   subscribers: body.subscribers,
   analyzed: body.analyzed,
   alerts: body.alerts,
   sentOk: body.sentOk,
   sentFailed: body.sentFailed,
   errors: body.errors?.length ? body.errors : undefined,
-});
+};
 
+// O endpoint responde 200 mesmo com falhas parciais dentro do scan (o
+// Sentry já é avisado do lado do servidor) — mas o próprio cron também sai
+// com código de erro, pra Railway marcar o run como falho mesmo se
+// SENTRY_DSN não estiver setado nesse ambiente.
+if (body.errors?.length) {
+  console.error(`[push-scan-cron] concluiu com erros (${ms}ms)`, summary);
+  process.exit(1);
+}
+
+console.log(`[push-scan-cron] ok (${ms}ms)`, summary);
 process.exit(0);

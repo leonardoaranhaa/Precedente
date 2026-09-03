@@ -10,6 +10,23 @@ Notificações de **prevenção de perdas** para pares na Watch:
 
 Sem linguagem de compra/venda.
 
+## "Auto" na Watch ≠ push
+
+A Watch (web e mobile) tem um seletor **Auto** (desligado / 5 / 15 / 30 min)
+que reavalia os pares pinados sozinho. É fácil confundir com este sistema de
+push, mas são dois mecanismos independentes:
+
+| | Auto (seletor da Watch) | Push (este doc) |
+|---|---|---|
+| Onde roda | No navegador/app, só com a tela aberta | No servidor (cron Railway), roda sempre |
+| Precisa do app aberto? | Sim — fecha a aba/app, para | Não — é o ponto do push |
+| Web consegue? | Sim | **Não** — web não tem registro de push (token Expo é só mobile); a Watch no web só **exibe** (ícone de sino) uma zona configurada no app, nunca edita |
+| O que faz | Só atualiza os números da tabela (Δ, amostra, DD) na tela | Manda notificação push de verdade pro celular |
+
+Ou seja: ligar "Auto 30min" no web **não** cria nem substitui um alerta push —
+é só a tabela se atualizando sozinha enquanto a aba estiver aberta. Só o
+app mobile registra push de verdade (aba **Alertas**).
+
 ## API
 
 | Método | Rota | Uso |
@@ -29,6 +46,22 @@ X-Cron-Secret: <secret>
 ou `Authorization: Bearer <secret>`.
 
 Sem a variável, o scan fica aberto (apenas para dev).
+
+### Capacidade de `/api/push/register`
+
+Testado localmente (build de produção, fallback PGLite) contra carga leve:
+
+- Rate limit (20 req / 5 min por IP) dispara exatamente no request 21 (`429`
+  com `retryAfterSec`) — confirmado com 25 requests sequenciais.
+- 60 registros concorrentes de dispositivos distintos (20 em paralelo): todos
+  `200`, contagem final de subscribers bate exatamente (sem escrita perdida
+  no upsert por token).
+- Payloads malformados (JSON inválido, corpo vazio, token fora do formato
+  Expo) seguem retornando `400` sem derrubar o processo; `watches` acima do
+  limite é truncado em 24 itens, não rejeitado.
+
+Não valida capacidade da Neon real em produção — só confirma que a rota e o
+rate limiter não têm um teto óbvio bem abaixo do tráfego esperado.
 
 ## Persistência
 
@@ -87,6 +120,21 @@ Resposta esperada: `ok: true`, contagens de `analyzed` / `alerts` / `sentOk`.
 
 No serviço cron: Deployments → último run → logs de `[push-scan-cron]`.
 Se o status ficar **Active** sem sair, o próximo schedule é **pulado** (exigência do Railway).
+
+### Alerta de falha
+
+`/api/push/scan` sempre responde `200 { ok: true, ... }` quando o scan como um
+todo roda — mas isso não significa que nada falhou dentro dele (ex.: dados de
+mercado fora do ar pra um par, ou envio Expo falhando pra um token). Duas
+camadas cobrem isso, independentes:
+
+- **Servidor** — se `report.errors` não estiver vazio, o servidor manda pro
+  Sentry (`reportServerMessage`, nível `warning`, ou `error` se **todos** os
+  pares falharam) antes de responder 200. É o sinal principal — só existe se
+  `SENTRY_DSN` estiver setado no serviço `web`.
+- **Cron** — `scripts/push-scan-cron.mjs` também sai com código `1` quando
+  `body.errors` não está vazio (antes só saía `1` em HTTP não-200), então o
+  Railway marca o run do serviço cron como falho mesmo sem Sentry configurado.
 
 ### Expressões úteis (UTC)
 
