@@ -9,8 +9,6 @@ import { hapticForPushKind } from "./haptics";
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
-    // Vibra na hora que o push chega em primeiro plano — zona de alerta usa
-    // um padrão mais notável que os avisos informativos (amostra/drawdown/extremo).
     hapticForPushKind(notification.request.content.data?.kind);
     return {
       shouldShowAlert: true,
@@ -29,7 +27,7 @@ export async function ensureAndroidChannel(): Promise<void> {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 150, 250],
     lightColor: "#c4a574",
-    description: "Amostra fraca, drawdown do caminho e extremos de 20 barras.",
+    description: "Amostra, regime, drawdown, extremos e funding.",
   });
 }
 
@@ -37,7 +35,6 @@ export async function registerForPushAsync(): Promise<string | null> {
   await ensureAndroidChannel();
 
   if (!Device.isDevice) {
-    // Simulador: token Expo pode falhar; seguimos sem push remoto.
     return null;
   }
 
@@ -100,10 +97,16 @@ export async function syncPushSubscription(input: {
         })),
         rules: {
           sampleWeak: input.rules.sampleWeak,
+          sampleRegime: input.rules.sampleRegime,
           drawdownPath: input.rules.drawdownPath,
           drawdownThresholdPct: input.rules.drawdownThresholdPct,
           extreme20: input.rules.extreme20,
+          fundingExtreme: input.rules.fundingExtreme,
+          fundingThreshold: input.rules.fundingThreshold,
         },
+        digestEnabled: input.rules.digestEnabled,
+        digestHourUtc: input.rules.digestHourUtc,
+        includeMovers: input.rules.includeMovers,
       }),
     });
     if (!res.ok) {
@@ -116,7 +119,6 @@ export async function syncPushSubscription(input: {
   }
 }
 
-/** Dispara scan no backend (opcional; útil após abrir o app). */
 export async function requestPushScan(cronSecret?: string): Promise<void> {
   try {
     await fetch(`${API_BASE_URL}/api/push/scan`, {
