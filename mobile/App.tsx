@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { analyze, fetchTopTraded } from "./src/api";
 import {
@@ -60,9 +61,11 @@ const SYNC_DEBOUNCE_MS = 1500;
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppInner />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppInner />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

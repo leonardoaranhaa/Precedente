@@ -28,6 +28,11 @@ export function hapticRefreshDone(): void {
   void safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
 }
 
+/** Crosshair do gráfico mudou de vela — tique bem leve, guia o dedo sem distrair. */
+export function hapticCrosshairTick(): void {
+  void safe(() => Haptics.selectionAsync());
+}
+
 const ZONE_KINDS = new Set(["price_zone", "rsi_zone"]);
 
 /** Escolhe o haptic certo a partir do `kind` que vem no payload do push (ver src/lib/push/expo-send.ts). */

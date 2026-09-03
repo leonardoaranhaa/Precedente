@@ -196,7 +196,12 @@ export function ResultScreen({
           <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
           <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
         </View>
-        <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
+        <OhlcChart
+          data={analysis.chart}
+          matches={precedent.chartMatches}
+          displayTicker={analysis.displayTicker}
+          timeframe={analysis.timeframe}
+        />
       </View>
 
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />

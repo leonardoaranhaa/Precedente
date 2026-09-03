@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, G, Line, Path, Rect } from "react-native-svg";
-import type { ChartPoint } from "../types";
+import { Maximize2 } from "lucide-react-native";
+import type { ChartPoint, Timeframe } from "../types";
 import { colors } from "../theme";
-import { formatPrice } from "../format";
+import { formatPrice, timeframeLabel } from "../format";
+import { OhlcChartModal } from "./OhlcChartModal";
 
 type Match = { t: number; score: number };
 
@@ -29,10 +31,25 @@ function linePath(
   return d.trim();
 }
 
-/** Espelha web/src/components/ohlc-chart.tsx — mesmos marcadores de match. */
-export function OhlcChart({ data, matches }: { data: ChartPoint[]; matches?: Match[] }) {
+/**
+ * Espelha web/src/components/ohlc-chart.tsx — mesmos marcadores de match.
+ * Toque abre o gráfico ampliado (pinch-zoom, pan, crosshair) em modal fullscreen.
+ */
+export function OhlcChart({
+  data,
+  matches,
+  displayTicker,
+  timeframe,
+}: {
+  data: ChartPoint[];
+  matches?: Match[];
+  displayTicker?: string;
+  timeframe?: Timeframe;
+}) {
   const [width, setWidth] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const canExpand = data.length > 0 && Boolean(displayTicker) && Boolean(timeframe);
 
   if (data.length === 0) {
     return (
@@ -75,7 +92,13 @@ export function OhlcChart({ data, matches }: { data: ChartPoint[]; matches?: Mat
 
   return (
     <View>
-      <View onLayout={onLayout} style={{ height: HEIGHT }}>
+      <Pressable
+        onPress={() => canExpand && setExpanded(true)}
+        onLayout={onLayout}
+        style={{ height: HEIGHT }}
+        accessibilityRole={canExpand ? "button" : undefined}
+        accessibilityLabel={canExpand ? "Ampliar gráfico" : undefined}
+      >
         {width > 0 ? (
           <Svg width={width} height={HEIGHT}>
             <Path d={sma50} fill="none" stroke={colors.subtle} strokeWidth={1.2} />
@@ -114,7 +137,22 @@ export function OhlcChart({ data, matches }: { data: ChartPoint[]; matches?: Mat
             })}
           </Svg>
         ) : null}
-      </View>
+        {canExpand ? (
+          <View style={styles.expandBadge} pointerEvents="none">
+            <Maximize2 size={12} color={colors.muted} />
+          </View>
+        ) : null}
+      </Pressable>
+      {canExpand ? (
+        <OhlcChartModal
+          visible={expanded}
+          onClose={() => setExpanded(false)}
+          data={data}
+          matches={matches}
+          displayTicker={displayTicker!}
+          timeframeLabel={timeframeLabel(timeframe!)}
+        />
+      ) : null}
       <View style={styles.legendRow}>
         <View style={styles.legendGroup}>
           <View style={[styles.dot, { backgroundColor: colors.accent }]} />
@@ -149,6 +187,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: { fontSize: 13, color: colors.muted },
+  expandBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.85,
+  },
   legendRow: {
     marginTop: 8,
     flexDirection: "row",
