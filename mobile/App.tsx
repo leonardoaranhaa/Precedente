@@ -28,6 +28,7 @@ import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { initSentry } from "./src/sentry";
+import { hapticRefreshDone } from "./src/haptics";
 import { getSyncData, setSyncData } from "./src/sync";
 
 initSentry();
@@ -366,6 +367,9 @@ function AppInner() {
           : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
+    // Confirmação tátil só quando algo de fato terminou bem — numa falha total
+    // não é "sucesso" pra vibrar, seria feedback enganoso.
+    if (failed.length < list.length) hapticRefreshDone();
   }
 
   refreshAllFnRef.current = () => {
