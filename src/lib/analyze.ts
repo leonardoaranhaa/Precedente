@@ -145,7 +145,6 @@ async function readChart(
   };
 }
 
-
 export function validateAnalyzeInput(input: unknown): AnalyzeInput {
   if (!input || typeof input !== "object") {
     throw new Error("Pedido inválido.");
@@ -173,19 +172,6 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
-  // Gates Premium na leitura de print — só com BILLING_GATES_ENABLED.
-  // billingGatesEnabled/PremiumRequiredError vêm de plan-limits.ts (módulo
-  // puro, sem DB) por import ESTÁTICO de propósito: esse mesmo módulo já é
-  // importado estaticamente noutros pontos (rotas, componentes). Importá-lo
-  // dinamicamente aqui quebra o build de produção — analyze.ts é alcançável
-  // do bundle do cliente via routes/index.tsx, e o Rolldown gera um chunk
-  // corrompido pro módulo quando ele é importado estático+dinâmico ao mesmo
-  // tempo cruzando a fronteira cliente/servidor (achado via bisect: runtime
-  // real quebrava com "SyntaxError: Export 'ssr_exports' is not defined",
-  // invisível a tsc/lint/testes e até a `vite build`, que só verifica que
-  // compila — só aparece rodando o binário compilado de verdade).
-  // assert-premium.server.ts/vision-quota.ts continuam dinâmicos — são
-  // server-only de verdade (DB / estado em memória do processo).
   if (data.imageDataUrl) {
     if (billingGatesEnabled()) {
       const { getSessionUser } = await import("./auth/verify.server");
@@ -201,7 +187,6 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
       await assertPremiumFeatureForUser(session.id, "vision", {
         visionCountToday: getVisionCountToday(session.id),
       });
-      // Reserva a cota antes da chamada cara (falha de modelo ainda consome cota IP via rate limit).
       incrementVisionCount(session.id);
     }
   }
@@ -211,6 +196,10 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
 
   const onchainPromise = fetchOnchainContext(data.ticker).catch(() => null);
+  // Feed de notícias em paralelo — falha soft; nunca bloqueia OHLC/precedente.
+  const newsPromise = import("./news/aggregate")
+    .then(({ fetchNewsFeed }) => fetchNewsFeed())
+    .catch(() => []);
 
   let market: Awaited<ReturnType<typeof fetchOHLCV>> & {
     stats: ReturnType<typeof analyzeSeries>;
@@ -252,7 +241,15 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
         }))
     : Promise.resolve({ vision: null, visionError: null, visionCostUsd: 0 });
 
-  const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
+  const [visionPart, onchain, newsItems] = await Promise.all([
+    visionPromise,
+    onchainPromise,
+    newsPromise,
+  ]);
+
+  const { buildNewsContext } = await import("./news/context-for-ticker");
+  const newsBuilt = buildNewsContext(newsItems, data.ticker);
+  const newsContext = newsBuilt.items.length > 0 ? newsBuilt : null;
 
   const { logAnalysis } = await import("./analyze-log");
   logAnalysis({
@@ -279,10 +276,8 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     vision: visionPart.vision,
     visionError: visionPart.visionError,
     source: market.source,
-    // `onchain` só vira null se fetchOnchainContext lançar (nunca deveria —
-    // ela mesma nunca lança). Um contexto "vazio" (todas as fontes falharam)
-    // segue passando adiante — a UI degrada com legenda em vez de sumir.
     onchain,
+    newsContext,
   };
 }
 
