@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { analyze, fetchTopTraded } from "./src/api";
 import {
@@ -29,6 +30,7 @@ import { NewsScreen } from "./src/screens/NewsScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { initSentry } from "./src/sentry";
+import { hapticRefreshDone } from "./src/haptics";
 import { getSyncData, setSyncData } from "./src/sync";
 
 initSentry();
@@ -61,9 +63,11 @@ const SYNC_DEBOUNCE_MS = 1500;
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppInner />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppInner />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -370,6 +374,9 @@ function AppInner() {
           : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
+    // Confirmação tátil só quando algo de fato terminou bem — numa falha total
+    // não é "sucesso" pra vibrar, seria feedback enganoso.
+    if (failed.length < list.length) hapticRefreshDone();
   }
 
   refreshAllFnRef.current = () => {

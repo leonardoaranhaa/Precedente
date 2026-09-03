@@ -12,6 +12,7 @@ import * as ImagePicker from "expo-image-picker";
 import { X, ImagePlus } from "lucide-react-native";
 import { Button } from "../components/Button";
 import { Pipeline, type PipelineStep } from "../components/Pipeline";
+import { RiskLogPanel } from "../components/RiskLogPanel";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type Timeframe } from "../types";
@@ -76,6 +77,8 @@ export function HomeScreen({
         O print descreve o que se vê. A estatística vem do OHLC real: RSI, médias, e o que o
         preço fez depois das vezes anteriores.
       </Text>
+
+      <RiskLogPanel />
 
       {busy ? (
         <Pipeline step={step} hasImage={Boolean(image)} />

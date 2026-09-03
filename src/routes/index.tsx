@@ -10,8 +10,10 @@ import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { NewsPanel } from "@/components/news-panel";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { WatchComparator } from "@/components/watch-comparator";
 import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
@@ -513,6 +515,9 @@ function Home() {
                     <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
                   </ul>
                 </div>
+                {watch.length >= 2 ? (
+                  <WatchComparator items={watch} onSelect={openFromWatch} className="lg:col-span-2" />
+                ) : null}
               </div>
             ) : view === "news" ? (
               <NewsPanel className="mt-6" />
@@ -549,6 +554,8 @@ function Home() {
                       exposição.
                     </p>
                   </div>
+
+                  <RiskLogPanel />
 
                   {busy ? (
                     <Pipeline step={step} hasImage={Boolean(image)} />

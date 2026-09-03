@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   ArrowLeft,
@@ -29,6 +29,9 @@ import {
 } from "../format";
 import { sampleTitle } from "../sample-copy";
 import { baselineDeltaLabel } from "../baseline-copy";
+import { DEFAULT_ALERT_RULES, loadAlertRules } from "../alert-settings";
+import { recordRiskEvents } from "../risk-log";
+import { useLivePrice } from "../use-live-price";
 import type { HorizonOutcome, StoredAnalysis, Timeframe } from "../types";
 
 export function ResultScreen({
@@ -52,7 +55,32 @@ export function ResultScreen({
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
+  const [drawdownThresholdPct, setDrawdownThresholdPct] = useState(
+    DEFAULT_ALERT_RULES.drawdownThresholdPct,
+  );
+
+  useEffect(() => {
+    let alive = true;
+    void loadAlertRules().then((rules) => {
+      if (alive) setDrawdownThresholdPct(rules.drawdownThresholdPct);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const h10 = precedent.horizons.find((h) => h.bars === 10) ?? precedent.horizons[1];
+    void recordRiskEvents(analysis.id, {
+      sampleWeak: precedent.sampleNote !== "ok",
+      drawdownHigh: h10 != null && Math.abs(h10.medianDrawdownPct) >= drawdownThresholdPct,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis.id, drawdownThresholdPct]);
+
   const horizon = precedent.horizons[horizonIdx] ?? precedent.horizons[0]!;
+  const livePrice = useLivePrice(analysis.ticker, !reanalyzing);
+  const headerPrice = livePrice ?? snapshot.last.c;
   const up = snapshot.changePct >= 0;
   const fp = precedent.fingerprint;
 
@@ -74,7 +102,10 @@ export function ResultScreen({
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={styles.price}>{formatPrice(snapshot.last.c)}</Text>
+          <View style={styles.priceRow}>
+            {livePrice != null ? <View style={styles.liveDot} /> : null}
+            <Text style={styles.price}>{formatPrice(headerPrice)}</Text>
+          </View>
           <Text style={[styles.change, { color: up ? colors.up : colors.down }]}>
             {formatPct(snapshot.changePct)} vela
           </Text>
@@ -183,7 +214,12 @@ export function ResultScreen({
           <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
           <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
         </View>
-        <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
+        <OhlcChart
+          data={analysis.chart}
+          matches={precedent.chartMatches}
+          displayTicker={analysis.displayTicker}
+          timeframe={analysis.timeframe}
+        />
       </View>
 
       <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
@@ -435,6 +471,8 @@ const styles = StyleSheet.create({
     color: colors.fg,
     marginTop: 2,
   },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.up },
   price: { fontSize: 16, color: colors.fg, fontVariant: ["tabular-nums"] },
   change: { fontSize: 11, fontVariant: ["tabular-nums"], marginTop: 2 },
   watchBtn: {

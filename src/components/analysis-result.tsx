@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Eye,
   Loader2,
+  Maximize2,
   Star,
   TrendingDown,
   TrendingUp,
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { OhlcChart } from "@/components/ohlc-chart";
 import { OnchainPanel } from "@/components/onchain-panel";
 import { PathChart } from "@/components/path-chart";
+import { PrintReadingModal } from "@/components/print-reading-modal";
 import { RiskRail } from "@/components/risk-rail";
 import { SampleBanner } from "@/components/sample-banner";
 import { ScenarioPanel } from "@/components/scenario-panel";
@@ -32,6 +34,8 @@ import {
   type StoredAnalysis,
   type Timeframe,
 } from "@/lib/market/types";
+import { DEFAULT_ALERT_RULES } from "@/lib/push/types";
+import { recordRiskEvents } from "@/lib/risk-log";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -58,6 +62,16 @@ export function AnalysisResult({
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
+  const [printOpen, setPrintOpen] = useState(false);
+
+  useEffect(() => {
+    const h10 = precedent.horizons.find((h) => h.bars === 10) ?? precedent.horizons[1];
+    recordRiskEvents(analysis.id, {
+      sampleWeak: precedent.sampleNote !== "ok",
+      drawdownHigh: h10 != null && Math.abs(h10.medianDrawdownPct) >= DEFAULT_ALERT_RULES.drawdownThresholdPct,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis.id]);
   const horizon = precedent.horizons[horizonIdx] ?? precedent.horizons[0]!;
   const up = snapshot.changePct >= 0;
   const sampleVariant =
@@ -403,12 +417,22 @@ export function AnalysisResult({
               data-testid="vision-section"
             >
               {analysis.thumb ? (
-                <img
-                  src={analysis.thumb}
-                  alt="Print enviado"
-                  className="chart-print h-36 w-full object-cover object-top"
-                  data-testid="vision-thumb"
-                />
+                <button
+                  type="button"
+                  onClick={() => setPrintOpen(true)}
+                  className="group relative block w-full"
+                  title="Ampliar print"
+                >
+                  <img
+                    src={analysis.thumb}
+                    alt="Print enviado"
+                    className="chart-print h-36 w-full object-cover object-top"
+                    data-testid="vision-thumb"
+                  />
+                  <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-bg/80 text-fg opacity-0 shadow-[var(--shadow-border)] transition group-hover:opacity-100">
+                    <Maximize2 className="size-3.5" />
+                  </span>
+                </button>
               ) : null}
               <div className="space-y-3 p-4">
                 <div className="flex items-center gap-2 text-xs tracking-wide text-muted uppercase">
@@ -448,6 +472,16 @@ export function AnalysisResult({
         O passado não garante o próximo movimento. O que você faz com os números é só seu.
         Use <span className="text-fg">Ler o cenário</span> para o texto corrido.
       </p>
+
+      {analysis.thumb ? (
+        <PrintReadingModal
+          open={printOpen}
+          onOpenChange={setPrintOpen}
+          thumb={analysis.thumb}
+          padrao={vision?.padrao ?? null}
+          region={vision?.patternRegion ?? null}
+        />
+      ) : null}
     </article>
   );
 }

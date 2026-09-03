@@ -15,6 +15,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiPriceRouteImport } from './routes/api/price'
+import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
 import { Route as ApiAssistantExternalIntelRouteImport } from './routes/api/assistant/external-intel'
@@ -57,6 +59,16 @@ const TermosRoute = TermosRouteImport.update({
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPriceRoute = ApiPriceRouteImport.update({
+  id: '/api/price',
+  path: '/api/price',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSparklineRoute = ApiSparklineRouteImport.update({
+  id: '/api/sparkline',
+  path: '/api/sparkline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSyncRoute = ApiSyncRouteImport.update({
@@ -133,6 +145,8 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/price': typeof ApiPriceRoute
+  '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
@@ -154,6 +168,8 @@ export interface FileRoutesByTo {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/price': typeof ApiPriceRoute
+  '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
@@ -176,6 +192,8 @@ export interface FileRoutesById {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/price': typeof ApiPriceRoute
+  '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
@@ -199,6 +217,8 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/price'
+    | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
     | '/api/assistant/external-intel'
@@ -220,6 +240,8 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/price'
+    | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
     | '/api/assistant/external-intel'
@@ -241,6 +263,8 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/price'
+    | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
     | '/api/assistant/external-intel'
@@ -263,6 +287,8 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiPriceRoute: typeof ApiPriceRoute
+  ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
   ApiAssistantExternalIntelRoute: typeof ApiAssistantExternalIntelRoute
@@ -320,6 +346,20 @@ declare module '@tanstack/react-router' {
       path: '/api/analyze'
       fullPath: '/api/analyze'
       preLoaderRoute: typeof ApiAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/price': {
+      id: '/api/price'
+      path: '/api/price'
+      fullPath: '/api/price'
+      preLoaderRoute: typeof ApiPriceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sparkline': {
+      id: '/api/sparkline'
+      path: '/api/sparkline'
+      fullPath: '/api/sparkline'
+      preLoaderRoute: typeof ApiSparklineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sync': {
@@ -423,6 +463,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiPriceRoute: ApiPriceRoute,
+  ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,
   ApiUniverseRoute: ApiUniverseRoute,
   ApiAssistantExternalIntelRoute: ApiAssistantExternalIntelRoute,

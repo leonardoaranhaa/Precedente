@@ -5,15 +5,21 @@ import * as Notifications from "expo-notifications";
 import { API_BASE_URL } from "./config";
 import type { AlertRules } from "./alert-settings";
 import type { WatchItem } from "./watchlist";
+import { hapticForPushKind } from "./haptics";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    // Vibra na hora que o push chega em primeiro plano — zona de alerta usa
+    // um padrão mais notável que os avisos informativos (amostra/drawdown/extremo).
+    hapticForPushKind(notification.request.content.data?.kind);
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 export async function ensureAndroidChannel(): Promise<void> {
