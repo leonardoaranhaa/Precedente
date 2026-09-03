@@ -92,17 +92,17 @@ test.describe("leitura de print (visão) + qualidade do produto", () => {
 
     await expect(page.getByTestId("upload-zone")).toBeVisible();
 
-    await page.getByTestId("upload-zone-input").setInputFiles({
+    await page.getByTestId("print-file-input").setInputFiles({
       name: "chart-fixture.png",
       mimeType: "image/png",
       buffer: TINY_PNG_BUFFER,
     });
 
-    await expect(page.getByTestId("upload-zone-preview")).toBeVisible({
+    await expect(page.getByTestId("print-preview")).toBeVisible({
       timeout: 10_000,
     });
 
-    await page.getByPlaceholder("BTC, ETHUSDT…").fill("BTC");
+    await page.getByRole("textbox", { name: "Par" }).fill("BTC");
     await page.locator("form").getByRole("button", { name: "Analisar", exact: true }).click();
 
     // Motor real — o print não pode derrubar a análise estatística.
@@ -111,10 +111,10 @@ test.describe("leitura de print (visão) + qualidade do produto", () => {
     });
 
     // Seção de leitura visual (sucesso ou mensagem de indisponibilidade).
-    await expect(page.getByTestId("leitura-visual")).toBeVisible({
+    await expect(page.getByTestId("vision-section")).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByTestId("leitura-visual")).toContainText(/Leitura visual/i);
+    await expect(page.getByTestId("vision-section")).toContainText(/Leitura visual/i);
   });
 
   test("UI: copy do upload menciona cota e não vende sinal", async ({ page }) => {

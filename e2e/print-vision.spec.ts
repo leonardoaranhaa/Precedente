@@ -76,7 +76,7 @@ test.describe("Print / leitura visual", () => {
     });
     await expect(page.getByTestId("print-preview")).toBeVisible();
 
-    await page.getByPlaceholder(/BTC, ETHUSDT/i).fill("BTC");
+    await page.getByRole("textbox", { name: "Par" }).fill("BTC");
     await page.locator("form").getByRole("button", { name: "Analisar", exact: true }).click();
 
     // Pipeline deve mencionar leitura visual quando há print.
@@ -90,7 +90,9 @@ test.describe("Print / leitura visual", () => {
     // Com ou sem ANTHROPIC_API_KEY: a seção de visão aparece (leitura OU erro gracioso).
     const vision = page.getByTestId("vision-section");
     await expect(vision).toBeVisible();
-    await expect(vision.getByText(/Leitura visual/i)).toBeVisible();
+    // O cabeçalho ("Leitura visual") e uma eventual vision-error também
+    // contêm o texto — usa .first() pra checar só o cabeçalho da seção.
+    await expect(vision.getByText(/Leitura visual/i).first()).toBeVisible();
 
     const reading = page.getByTestId("vision-reading");
     const visionError = page.getByTestId("vision-error");

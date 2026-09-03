@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { fileToDataUrl } from "@/lib/compress";
+import { PLAN_LIMITS } from "@/lib/billing/plan-limits";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -119,6 +120,11 @@ export function UploadZone({ value, onChange, disabled }: Props) {
             </span>
             <span className="block text-xs text-muted">
               Toque, solte o arquivo ou cole com Ctrl+V. Opcional — a estatística usa o OHLC real.
+            </span>
+            <span className="block text-[11px] leading-relaxed text-subtle">
+              Leitura visual: até {PLAN_LIMITS.free.visionPerDay}/dia no plano gratuito (com
+              conta); Premium amplia para {PLAN_LIMITS.premium.visionPerDay}/dia. Nunca é ordem
+              de compra ou venda.
             </span>
           </span>
         </label>
