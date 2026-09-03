@@ -58,6 +58,18 @@ export type PushSubscription = {
   updatedAt: number;
   /** key = `${ticker}:${tf}:${kind}` → last sent ms */
   lastSent: Record<string, number>;
+  /** Digest diário da watch (+ movers opcional). */
+  digestEnabled: boolean;
+  digestHourUtc: number;
+  includeMovers: boolean;
+  lastDigestAt: number | null;
+};
+
+export const DEFAULT_DIGEST = {
+  digestEnabled: false,
+  digestHourUtc: 12,
+  includeMovers: true,
+  lastDigestAt: null as number | null,
 };
 
 export type AlertEvent = {
