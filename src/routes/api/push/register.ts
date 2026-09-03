@@ -15,8 +15,6 @@ import { getSessionUser } from "@/lib/auth/verify.server";
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 
-// Tokens reais do Expo Push seguem um destes formatos; qualquer outra coisa
-// nunca vai entregar notificação — não vale a pena guardar linha na tabela.
 const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 
 const CORS_HEADERS = {
@@ -45,8 +43,6 @@ function parseWatches(raw: unknown): WatchTarget[] {
       ticker,
       timeframe,
       displayTicker: typeof r.displayTicker === "string" ? r.displayTicker : undefined,
-      // Validação/limpeza de verdade acontece em store.ts (sanitizeWatchTarget) —
-      // aqui só repassa o que veio, sem confiar no formato.
       priceZone: r.priceZone as WatchTarget["priceZone"],
       rsiZone: r.rsiZone as WatchTarget["rsiZone"],
     });
@@ -91,7 +87,6 @@ export const Route = createFileRoute("/api/push/register")({
 
         const watches = parseWatches(raw.watches);
 
-        // Gates Premium (no-op se BILLING_GATES_ENABLED não estiver ligado).
         try {
           const session = await getSessionUser();
           const userId = session?.id ?? null;
@@ -108,8 +103,6 @@ export const Route = createFileRoute("/api/push/register")({
               err.status,
             );
           }
-          // getSessionUser / hasPremium falhou por outro motivo — não derruba registro
-          // se gates estão off; se gates on e DB quebrou, propaga.
           throw err;
         }
 
@@ -119,11 +112,17 @@ export const Route = createFileRoute("/api/push/register")({
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
             watches,
             rules: parseRules(raw.rules) ?? DEFAULT_ALERT_RULES,
+            digestEnabled: typeof raw.digestEnabled === "boolean" ? raw.digestEnabled : undefined,
+            digestHourUtc: typeof raw.digestHourUtc === "number" ? raw.digestHourUtc : undefined,
+            includeMovers: typeof raw.includeMovers === "boolean" ? raw.includeMovers : undefined,
           });
           return json({
             ok: true,
             watches: sub.watches.length,
             rules: sub.rules,
+            digestEnabled: sub.digestEnabled,
+            digestHourUtc: sub.digestHourUtc,
+            includeMovers: sub.includeMovers,
             subscribers: await subscriptionCount(),
           });
         } catch (err) {
