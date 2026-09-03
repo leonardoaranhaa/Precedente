@@ -1,10 +1,10 @@
 import { runAnalysis } from "@/lib/analyze";
 import type { AnalysisPayload, Timeframe } from "@/lib/market/types";
 import { mapWithConcurrency } from "@/lib/concurrency";
-import { alertCooldownKey, evaluateAlerts, shouldScan } from "./evaluate";
+import { alertCooldownKey, evaluateAlerts, regimeStatePatch, shouldScan } from "./evaluate";
 import { sendExpoAlerts } from "./expo-send";
 import { pairKey, uniqueWatchPairs } from "./scan-logic";
-import { listSubscriptions, markSent } from "./store";
+import { listSubscriptions, markSent, markRegimeState } from "./store";
 
 export type ScanReport = {
   subscriptions: number;
@@ -19,15 +19,6 @@ const SCAN_CONCURRENCY = 4;
 
 type PairResult = { ok: true; payload: AnalysisPayload } | { ok: false; error: string };
 
-/**
- * Percorre todas as subscriptions, reanalisa watches (sem vision) e dispara push.
- * Pensado para cron (Railway) ou chamada manual autenticada.
- *
- * Muitas subscriptions costumam observar o mesmo par popular — em vez de
- * reanalisar cada (ticker,timeframe) uma vez por subscription que o observa,
- * analisa cada par único uma única vez (com paralelismo limitado) e avalia as
- * regras de todas as subscriptions contra o mesmo resultado compartilhado.
- */
 export async function scanAllSubscriptions(): Promise<ScanReport> {
   const report: ScanReport = {
     subscriptions: 0,
@@ -41,7 +32,9 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
   const subs = (await listSubscriptions()).filter(shouldScan);
   report.subscriptions = subs.length;
 
-  const pairs = uniqueWatchPairs(subs.map((s) => ({ watches: s.watches as { ticker: string; timeframe: Timeframe }[] })));
+  const pairs = uniqueWatchPairs(
+    subs.map((s) => ({ watches: s.watches as { ticker: string; timeframe: Timeframe }[] })),
+  );
   report.analyzed = pairs.length;
 
   const pairResults = await mapWithConcurrency(pairs, SCAN_CONCURRENCY, async (pair) => {
@@ -65,11 +58,23 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
 
   for (const sub of subs) {
     const eventsForToken = [];
+    const regimePatches: { key: string; code: number }[] = [];
+
     for (const w of sub.watches) {
       const result = resultByPair.get(pairKey(w.ticker, w.timeframe));
-      if (!result?.ok) continue; // erro já reportado uma vez, por par
+      if (!result?.ok) continue;
       const events = evaluateAlerts(result.payload, w, sub.rules, sub.lastSent);
       eventsForToken.push(...events);
+      const patch = regimeStatePatch(
+        result.payload.ticker,
+        result.payload.timeframe,
+        result.payload.precedent.sampleNote,
+      );
+      regimePatches.push(patch);
+    }
+
+    if (regimePatches.length > 0) {
+      await markRegimeState(sub.token, regimePatches);
     }
 
     if (eventsForToken.length === 0) continue;
@@ -80,10 +85,7 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
       report.sentOk += result.ok;
       report.sentFailed += result.failed;
       if (result.ok > 0) {
-        await markSent(
-          sub.token,
-          eventsForToken.map(alertCooldownKey),
-        );
+        await markSent(sub.token, eventsForToken.map(alertCooldownKey));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "falha push";
