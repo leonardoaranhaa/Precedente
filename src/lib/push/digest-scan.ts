@@ -16,7 +16,7 @@ import {
 import {
   listDigestSubscriptions,
   markDigestSent,
-} from "./store";
+} from "./digest-helpers";
 import type { AlertEvent, PushSubscription } from "./types";
 import { pairKey } from "./scan-logic";
 
@@ -64,7 +64,10 @@ export async function scanWatchDigests(nowMs = Date.now()): Promise<DigestScanRe
   report.due = due.length;
   if (due.length === 0) return report;
 
-  const pairMap = new Map<string, { ticker: string; timeframe: PushSubscription["watches"][0]["timeframe"] }>();
+  const pairMap = new Map<
+    string,
+    { ticker: string; timeframe: PushSubscription["watches"][0]["timeframe"] }
+  >();
   for (const s of due) {
     for (const w of s.watches) {
       pairMap.set(pairKey(w.ticker, w.timeframe), { ticker: w.ticker, timeframe: w.timeframe });
@@ -94,8 +97,7 @@ export async function scanWatchDigests(nowMs = Date.now()): Promise<DigestScanRe
   }
 
   let movers: Awaited<ReturnType<typeof fetchMovers24h>> | null = null;
-  const anyMovers = due.some((s) => s.includeMovers);
-  if (anyMovers) {
+  if (due.some((s) => s.includeMovers)) {
     try {
       movers = await fetchMovers24h({ top: 5 });
     } catch (err) {
