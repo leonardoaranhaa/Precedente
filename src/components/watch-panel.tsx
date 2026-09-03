@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Grid3x3, List, Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
 import { formatAgo, formatPct, timeframeLabel } from "@/lib/market/labels";
 import {
   applyQuickFilter,
@@ -24,6 +24,7 @@ import {
 import { watchRefreshLabel } from "@/lib/watch-refresh";
 import type { WatchItem } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
+import { WatchHeatmap } from "@/components/watch-heatmap";
 
 type Props = {
   items: WatchItem[];
@@ -74,6 +75,7 @@ export function WatchPanel({
 }: Props) {
   const richView = Boolean(onRefreshAll);
 
+  const [layout, setLayout] = useState<"list" | "map">("list");
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
   const [tfFilter, setTfFilter] = useState<WatchTfFilter>(WATCH_TF_FILTER_ALL);
@@ -141,6 +143,32 @@ export function WatchPanel({
             {visible.length}
             {visible.length !== items.length ? `/${items.length}` : ""}
           </span>
+          {richView ? (
+            <div className="flex gap-0.5 rounded-sm bg-bg p-0.5">
+              <button
+                type="button"
+                onClick={() => setLayout("list")}
+                title="Ver em lista"
+                className={cn(
+                  "flex items-center rounded-sm p-0.5",
+                  layout === "list" ? "bg-surface text-fg shadow-[var(--shadow-border)]" : "text-subtle hover:text-fg",
+                )}
+              >
+                <List className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayout("map")}
+                title="Ver como mapa de calor"
+                className={cn(
+                  "flex items-center rounded-sm p-0.5",
+                  layout === "map" ? "bg-surface text-fg shadow-[var(--shadow-border)]" : "text-subtle hover:text-fg",
+                )}
+              >
+                <Grid3x3 className="size-3" />
+              </button>
+            </div>
+          ) : null}
           {onRefreshAll ? (
             <button
               type="button"
@@ -253,6 +281,16 @@ export function WatchPanel({
         <p className="border-b border-border bg-down/10 px-2 py-1.5 text-[11px] text-down">{error}</p>
       ) : null}
 
+      {layout === "map" ? (
+        visible.length === 0 ? (
+          <p className="px-2 py-5 text-center text-[11px] text-muted">Nada nesse filtro agora.</p>
+        ) : (
+          <div className="max-h-[min(65vh,460px)] overflow-y-auto p-1.5">
+            <WatchHeatmap items={visible} activeId={activeId} onSelect={onSelect} compact />
+          </div>
+        )
+      ) : (
+        <>
       <div className="grid grid-cols-[1fr_2rem_3rem_0.9rem_3rem_2.5rem] items-center gap-x-1.5 border-b border-border px-2 py-1 text-[9px] tracking-wide text-subtle uppercase">
         <span>par</span>
         <span className="text-right">rsi</span>
@@ -392,6 +430,8 @@ export function WatchPanel({
             );
           })}
         </ul>
+      )}
+        </>
       )}
     </div>
   );
