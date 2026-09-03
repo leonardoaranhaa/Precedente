@@ -6,13 +6,7 @@
 #    - Root Directory: (raiz do repo)
 #    - Custom Start Command: node scripts/push-scan-cron.mjs
 #    - Cron Schedule: */30 * * * *
-# 3. Variables (compartilhe com o serviço web ou copie):
-#    - PUSH_CRON_SECRET=<mesmo do web>
-#    - PUBLIC_APP_URL=https://<seu-servico-web>.up.railway.app
-#      (ou SCAN_URL=https://.../api/push/scan)
-#
-# O serviço web continua 24/7 SEM cronSchedule.
-# Este arquivo documenta o deploy do worker; no dashboard você cola o startCommand.
+# 3. Variables: PUSH_CRON_SECRET, PUBLIC_APP_URL
 
 [build]
 builder = "NIXPACKS"
@@ -26,14 +20,19 @@ restartPolicyType = "NEVER"
 # --- Digest de notícias ---
 # Start Command: node scripts/news-digest-cron.mjs
 # Cron Schedule: 0 * * * *
-# Variables: PUSH_CRON_SECRET, PUBLIC_APP_URL
 
 # --- Digest diário da watch + movers 24h ---
 # Start Command: node scripts/watch-digest-cron.mjs
 # Cron Schedule: 0 * * * *
-# Variables: PUSH_CRON_SECRET, PUBLIC_APP_URL
 
 # --- Health RSS ---
 # Start Command: node scripts/rss-health-cron.mjs
 # Cron Schedule: 0 */6 * * *
-# Variables: PUBLIC_APP_URL (ou HEALTH_URL)
+
+# --- Funding digest (08h e 20h UTC) ---
+# Start Command: node scripts/funding-digest-cron.mjs
+# Cron Schedule: 0 8,20 * * *
+
+# --- Zone revalidation (pares com zona ligada) ---
+# Start Command: node scripts/zone-scan-cron.mjs
+# Cron Schedule: */15 * * * *

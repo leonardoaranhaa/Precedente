@@ -4,7 +4,7 @@ import { mapWithConcurrency } from "@/lib/concurrency";
 import { alertCooldownKey, evaluateAlerts, regimeStatePatch, shouldScan } from "./evaluate";
 import { sendExpoAlerts } from "./expo-send";
 import { pairKey, uniqueWatchPairs } from "./scan-logic";
-import { listSubscriptions, markSent, markRegimeState } from "./store";
+import { listSubscriptions, markSent, markRegimeState, removeSubscription } from "./store";
 
 export type ScanReport = {
   subscriptions: number;
@@ -84,6 +84,11 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
       const result = await sendExpoAlerts(sub.token, eventsForToken);
       report.sentOk += result.ok;
       report.sentFailed += result.failed;
+      if (result.invalidToken) {
+        await removeSubscription(sub.token);
+        report.errors.push(`token…${sub.token.slice(-8)} — DeviceNotRegistered (podado)`);
+        continue;
+      }
       if (result.ok > 0) {
         await markSent(sub.token, eventsForToken.map(alertCooldownKey));
       }
