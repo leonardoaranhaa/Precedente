@@ -1,5 +1,13 @@
 import type { AnalysisPayload } from "@/lib/market/types";
 import type { AlertEvent, AlertRules, PushSubscription, WatchTarget } from "./types";
+import {
+  detectRegimeTransition,
+  regimeBody,
+  regimeStateKey,
+  regimeTitle,
+  sampleNoteCode,
+  type SampleNote,
+} from "./sample-regime.ts";
 
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h por par+tipo
 
@@ -25,11 +33,6 @@ function formatFundingPct(n: number): string {
   return `${sign}${pct.toFixed(4).replace(".", ",")}%`;
 }
 
-/**
- * Contexto anexado nos alertas de zona (preço/RSI) — funding, liquidez e o
- * primeiro traço do fingerprint, o retrato do par no momento do gatilho.
- * Não é leitura nem sinal, só o que já estava na tela quando a zona bateu.
- */
 function zoneContext(payload: AnalysisPayload): string {
   const parts: string[] = [];
   const oc = payload.onchain;
@@ -40,12 +43,6 @@ function zoneContext(payload: AnalysisPayload): string {
   return parts.join(" · ");
 }
 
-/**
- * Gera eventos de alerta a partir de uma análise — só prevenção/contexto.
- * Nunca usa linguagem de compra/venda. `watch` carrega a configuração de zona
- * específica deste par (preço/RSI) — diferente das outras regras, que são
- * globais pra toda a watchlist da subscription.
- */
 export function evaluateAlerts(
   payload: AnalysisPayload,
   watch: Pick<WatchTarget, "priceZone" | "rsiZone">,
@@ -54,8 +51,6 @@ export function evaluateAlerts(
   now = Date.now(),
 ): AlertEvent[] {
   const events: AlertEvent[] = [];
-  // Calculado uma vez — usado pelos dois alertas de zona (preço/RSI) quando
-  // disparam; string barata de montar, não vale a pena recomputar por zona.
   const ctx = zoneContext(payload);
   const base = {
     ticker: payload.ticker,
@@ -80,6 +75,33 @@ export function evaluateAlerts(
           ? `Só ${payload.precedent.matches} precedentes neste TF. Trate a distribuição do caminho como ilustração.`
           : `Amostra pequena (n=${payload.precedent.matches}). Interprete horizontes e drawdown com cautela.`,
     });
+  }
+
+  if (rules.sampleRegime) {
+    const note = payload.precedent.sampleNote as SampleNote;
+    const prevCode = lastSent[regimeStateKey(payload.ticker, payload.timeframe)];
+    const transition = detectRegimeTransition(prevCode, note);
+    if (transition && !cool("sample_regime")) {
+      events.push({
+        ...base,
+        kind: "sample_regime",
+        title: regimeTitle(payload.displayTicker, transition),
+        body: regimeBody(transition, payload.precedent.matches),
+      });
+    }
+  }
+
+  if (rules.fundingExtreme && payload.onchain?.fundingRate != null) {
+    const fr = payload.onchain.fundingRate;
+    const thr = rules.fundingThreshold > 0 ? rules.fundingThreshold : 0.0005;
+    if (Math.abs(fr) >= thr && !cool("funding_extreme")) {
+      events.push({
+        ...base,
+        kind: "funding_extreme",
+        title: `${payload.displayTicker} · funding elevado`,
+        body: `Funding em ${formatFundingPct(fr)} (|f| ≥ ${formatFundingPct(thr)}). Só contexto de posicionamento — não é ordem de exposição.`,
+      });
+    }
   }
 
   const h = horizon10(payload);
@@ -154,6 +176,14 @@ export function evaluateAlerts(
 
 export function alertCooldownKey(ev: AlertEvent): string {
   return `${ev.ticker}:${ev.timeframe}:${ev.kind}`;
+}
+
+export function regimeStatePatch(
+  ticker: string,
+  timeframe: string,
+  sampleNote: SampleNote,
+): { key: string; code: number } {
+  return { key: regimeStateKey(ticker, timeframe), code: sampleNoteCode(sampleNote) };
 }
 
 export function shouldScan(sub: PushSubscription): boolean {
