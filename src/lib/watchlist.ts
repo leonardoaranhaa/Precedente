@@ -1,4 +1,7 @@
 import type { StoredAnalysis, Timeframe } from "./market/types";
+import type { PriceZone, RsiZone } from "./push/types";
+
+export type { PriceZone, RsiZone };
 
 const KEY = "precedente.watch.v1";
 const MAX = 24;
@@ -21,6 +24,14 @@ export type WatchItem = {
   near20High: boolean;
   near20Low: boolean;
   fingerprintLabel: string;
+  /**
+   * Zona de preço/RSI — hoje só configurável no app mobile (é lá que o push
+   * é entregue; o web não tem registro de push). Chega aqui via sync de
+   * conta; o web só EXIBE, nunca edita — mostrar um editor aqui prometeria
+   * um alerta que o navegador não consegue entregar.
+   */
+  priceZone?: PriceZone;
+  rsiZone?: RsiZone;
 };
 
 function pickHorizonDrawdown(a: StoredAnalysis): number {
@@ -75,6 +86,11 @@ export function upsertWatch(
   analysis: StoredAnalysis,
 ): WatchItem[] {
   const next = analysisToWatchItem(analysis);
+  const previous = current.find((w) => w.id === next.id);
+  // Reanalisar não pode apagar uma zona configurada no mobile e trazida
+  // por sync — sem isso, a 1ª reanálise no web zera o alerta do usuário.
+  if (previous?.priceZone) next.priceZone = previous.priceZone;
+  if (previous?.rsiZone) next.rsiZone = previous.rsiZone;
   const items = [next, ...current.filter((w) => w.id !== next.id)].slice(0, MAX);
   saveWatchlist(items);
   return items;
