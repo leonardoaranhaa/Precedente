@@ -18,6 +18,9 @@ export function NewsPreferencesModal({ trigger, onSaved }: Props) {
   const { user } = useCurrentUserState();
   const [coins, setCoins] = useState<string[]>([]);
   const [categories, setCategories] = useState<NewsCategory[]>([]);
+  const [digestEnabled, setDigestEnabled] = useState(false);
+  const [digestHourUtc, setDigestHourUtc] = useState(12);
+  const [digestTokens, setDigestTokens] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +35,11 @@ export function NewsPreferencesModal({ trigger, onSaved }: Props) {
         if (cancelled || !prefs) return;
         setCoins(prefs.coins);
         setCategories(prefs.categories);
+        setDigestEnabled(Boolean(prefs.digestEnabled));
+        setDigestHourUtc(
+          typeof prefs.digestHourUtc === "number" ? prefs.digestHourUtc : 12,
+        );
+        setDigestTokens(Array.isArray(prefs.digestTokens) ? prefs.digestTokens : []);
       })
       .catch(() => {
         if (!cancelled) setError("Não foi possível carregar suas preferências.");
@@ -62,7 +70,13 @@ export function NewsPreferencesModal({ trigger, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const saved = await saveMyNewsPreferences({ coins, categories });
+      const saved = await saveMyNewsPreferences({
+        coins,
+        categories,
+        digestEnabled,
+        digestHourUtc,
+        digestTokens,
+      });
       onSaved?.(saved);
       setOpen(false);
     } catch (err) {
@@ -113,6 +127,48 @@ export function NewsPreferencesModal({ trigger, onSaved }: Props) {
                   </ToggleChip>
                 ))}
               </div>
+            </div>
+
+            <div className="rounded-lg bg-bg p-3 shadow-[var(--shadow-border)]">
+              <label className="flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-[var(--accent)]"
+                  checked={digestEnabled}
+                  onChange={(e) => setDigestEnabled(e.target.checked)}
+                />
+                <span>
+                  <span className="text-sm font-medium text-fg">Digest diário automático</span>
+                  <span className="mt-0.5 block text-[11px] text-subtle">
+                    Como uma automação agendada: envia manchetes filtradas por push no horário
+                    escolhido (UTC). Só contexto factual — sem sinal de trade.
+                  </span>
+                </span>
+              </label>
+              {digestEnabled ? (
+                <div className="mt-3 flex items-center gap-2 pl-6">
+                  <label className="text-xs text-muted" htmlFor="digest-hour">
+                    Hora (UTC)
+                  </label>
+                  <select
+                    id="digest-hour"
+                    className="h-8 rounded-md bg-surface px-2 text-xs text-fg shadow-[var(--shadow-border)]"
+                    value={digestHourUtc}
+                    onChange={(e) => setDigestHourUtc(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[11px] text-subtle">
+                    {digestTokens.length > 0
+                      ? `${digestTokens.length} dispositivo(s) com push`
+                      : "Ative notificações no app pra receber o digest"}
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {error ? <p className="text-xs text-down">{error}</p> : null}
