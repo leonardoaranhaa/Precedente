@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Eye,
@@ -32,6 +32,8 @@ import {
   type StoredAnalysis,
   type Timeframe,
 } from "@/lib/market/types";
+import { DEFAULT_ALERT_RULES } from "@/lib/push/types";
+import { recordRiskEvents } from "@/lib/risk-log";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -58,6 +60,15 @@ export function AnalysisResult({
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
+
+  useEffect(() => {
+    const h10 = precedent.horizons.find((h) => h.bars === 10) ?? precedent.horizons[1];
+    recordRiskEvents(analysis.id, {
+      sampleWeak: precedent.sampleNote !== "ok",
+      drawdownHigh: h10 != null && Math.abs(h10.medianDrawdownPct) >= DEFAULT_ALERT_RULES.drawdownThresholdPct,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis.id]);
   const horizon = precedent.horizons[horizonIdx] ?? precedent.horizons[0]!;
   const up = snapshot.changePct >= 0;
   const sampleVariant =

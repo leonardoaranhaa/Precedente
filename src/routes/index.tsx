@@ -9,6 +9,7 @@ import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { WatchPanel } from "@/components/watch-panel";
@@ -543,6 +544,8 @@ function Home() {
                       exposição.
                     </p>
                   </div>
+
+                  <RiskLogPanel />
 
                   {busy ? (
                     <Pipeline step={step} hasImage={Boolean(image)} />
