@@ -31,6 +31,7 @@ import { sampleTitle } from "../sample-copy";
 import { baselineDeltaLabel } from "../baseline-copy";
 import { DEFAULT_ALERT_RULES } from "../alert-settings";
 import { recordRiskEvents } from "../risk-log";
+import { useLivePrice } from "../use-live-price";
 import type { HorizonOutcome, StoredAnalysis, Timeframe } from "../types";
 
 export function ResultScreen({
@@ -66,6 +67,8 @@ export function ResultScreen({
   }, [analysis.id]);
 
   const horizon = precedent.horizons[horizonIdx] ?? precedent.horizons[0]!;
+  const livePrice = useLivePrice(analysis.ticker, !reanalyzing);
+  const headerPrice = livePrice ?? snapshot.last.c;
   const up = snapshot.changePct >= 0;
   const fp = precedent.fingerprint;
 
@@ -87,7 +90,10 @@ export function ResultScreen({
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={styles.price}>{formatPrice(snapshot.last.c)}</Text>
+          <View style={styles.priceRow}>
+            {livePrice != null ? <View style={styles.liveDot} /> : null}
+            <Text style={styles.price}>{formatPrice(headerPrice)}</Text>
+          </View>
           <Text style={[styles.change, { color: up ? colors.up : colors.down }]}>
             {formatPct(snapshot.changePct)} vela
           </Text>
@@ -453,6 +459,8 @@ const styles = StyleSheet.create({
     color: colors.fg,
     marginTop: 2,
   },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.up },
   price: { fontSize: 16, color: colors.fg, fontVariant: ["tabular-nums"] },
   change: { fontSize: 11, fontVariant: ["tabular-nums"], marginTop: 2 },
   watchBtn: {
