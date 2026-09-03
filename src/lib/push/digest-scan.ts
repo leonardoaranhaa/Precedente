@@ -17,6 +17,7 @@ import {
   listDigestSubscriptions,
   markDigestSent,
 } from "./digest-helpers";
+import { removeSubscription } from "./store";
 import type { AlertEvent, PushSubscription } from "./types";
 import { pairKey } from "./scan-logic";
 
@@ -139,6 +140,10 @@ export async function scanWatchDigests(nowMs = Date.now()): Promise<DigestScanRe
       const result = await sendExpoAlerts(sub.token, [event]);
       report.sentOk += result.ok;
       report.sentFailed += result.failed;
+      if (result.invalidToken) {
+        await removeSubscription(sub.token);
+        continue;
+      }
       await markDigestSent(sub.token, nowMs);
     } catch (err) {
       report.errors.push(
