@@ -71,6 +71,8 @@ export function OhlcChartModal({
   const countShared = useSharedValue(totalBars);
   const pinchBaseCount = useSharedValue(totalBars);
   const pinchBaseStart = useSharedValue(0);
+  const pinchFocalBar = useSharedValue(0);
+  const pinchFocalFrac = useSharedValue(0.5);
   const panBaseStart = useSharedValue(0);
   const crosshairActive = useSharedValue(false);
   const crosshairX = useSharedValue(-1);
@@ -104,16 +106,21 @@ export function OhlcChartModal({
   }
 
   const pinch = Gesture.Pinch()
-    .onStart(() => {
+    .onStart((e) => {
       pinchBaseCount.value = countShared.value;
       pinchBaseStart.value = startShared.value;
+      // Barra sob os dedos, e onde ela cai na janela (fração 0..1) — fica
+      // fixa ali durante o gesto, então o zoom ancora no ponto do pinch em
+      // vez de sempre puxar pro meio da janela atual.
+      const frac = Math.max(0, Math.min(1, e.focalX / chartW));
+      pinchFocalFrac.value = frac;
+      pinchFocalBar.value = pinchBaseStart.value + frac * pinchBaseCount.value;
     })
     .onUpdate((e) => {
       "worklet";
       const rawCount = pinchBaseCount.value / Math.max(0.1, e.scale);
       const clamped = Math.max(MIN_VISIBLE, Math.min(totalBars, Math.round(rawCount)));
-      const center = pinchBaseStart.value + pinchBaseCount.value / 2;
-      let newStart = Math.round(center - clamped / 2);
+      let newStart = Math.round(pinchFocalBar.value - pinchFocalFrac.value * clamped);
       newStart = Math.max(0, Math.min(totalBars - clamped, newStart));
       if (clamped !== countShared.value || newStart !== startShared.value) {
         countShared.value = clamped;

@@ -29,7 +29,7 @@ import {
 } from "../format";
 import { sampleTitle } from "../sample-copy";
 import { baselineDeltaLabel } from "../baseline-copy";
-import { DEFAULT_ALERT_RULES } from "../alert-settings";
+import { DEFAULT_ALERT_RULES, loadAlertRules } from "../alert-settings";
 import { recordRiskEvents } from "../risk-log";
 import { useLivePrice } from "../use-live-price";
 import type { HorizonOutcome, StoredAnalysis, Timeframe } from "../types";
@@ -55,16 +55,28 @@ export function ResultScreen({
   const [horizonIdx, setHorizonIdx] = useState(
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
+  const [drawdownThresholdPct, setDrawdownThresholdPct] = useState(
+    DEFAULT_ALERT_RULES.drawdownThresholdPct,
+  );
+
+  useEffect(() => {
+    let alive = true;
+    void loadAlertRules().then((rules) => {
+      if (alive) setDrawdownThresholdPct(rules.drawdownThresholdPct);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const h10 = precedent.horizons.find((h) => h.bars === 10) ?? precedent.horizons[1];
     void recordRiskEvents(analysis.id, {
       sampleWeak: precedent.sampleNote !== "ok",
-      drawdownHigh:
-        h10 != null && Math.abs(h10.medianDrawdownPct) >= DEFAULT_ALERT_RULES.drawdownThresholdPct,
+      drawdownHigh: h10 != null && Math.abs(h10.medianDrawdownPct) >= drawdownThresholdPct,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis.id]);
+  }, [analysis.id, drawdownThresholdPct]);
 
   const horizon = precedent.horizons[horizonIdx] ?? precedent.horizons[0]!;
   const livePrice = useLivePrice(analysis.ticker, !reanalyzing);

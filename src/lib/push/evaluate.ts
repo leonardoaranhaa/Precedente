@@ -54,6 +54,9 @@ export function evaluateAlerts(
   now = Date.now(),
 ): AlertEvent[] {
   const events: AlertEvent[] = [];
+  // Calculado uma vez — usado pelos dois alertas de zona (preço/RSI) quando
+  // disparam; string barata de montar, não vale a pena recomputar por zona.
+  const ctx = zoneContext(payload);
   const base = {
     ticker: payload.ticker,
     timeframe: payload.timeframe,
@@ -120,7 +123,6 @@ export function evaluateAlerts(
           : zone.min != null
             ? `acima de ${formatPrice(zone.min)}`
             : `abaixo de ${formatPrice(zone.max!)}`;
-      const ctx = zoneContext(payload);
       events.push({
         ...base,
         kind: "price_zone",
@@ -136,7 +138,6 @@ export function evaluateAlerts(
     const below = rsiZone.below != null && rsi <= rsiZone.below;
     const above = rsiZone.above != null && rsi >= rsiZone.above;
     if (below || above) {
-      const ctx = zoneContext(payload);
       events.push({
         ...base,
         kind: "rsi_zone",

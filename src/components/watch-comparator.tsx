@@ -17,6 +17,7 @@ function useSparkline(item: WatchItem): SparklineState {
   const [state, setState] = useState<SparklineState>({ status: "loading" });
 
   useEffect(() => {
+    let alive = true;
     setState({ status: "loading" });
     const controller = new AbortController();
     fetch(
@@ -25,14 +26,20 @@ function useSparkline(item: WatchItem): SparklineState {
     )
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("sparkline"))))
       .then((body: { closes?: number[] }) => {
+        if (!alive) return;
         if (Array.isArray(body.closes) && body.closes.length > 1) {
           setState({ status: "ok", closes: body.closes });
         } else {
           setState({ status: "error" });
         }
       })
-      .catch(() => setState({ status: "error" }));
-    return () => controller.abort();
+      .catch(() => {
+        if (alive) setState({ status: "error" });
+      });
+    return () => {
+      alive = false;
+      controller.abort();
+    };
   }, [item.ticker, item.timeframe]);
 
   return state;
