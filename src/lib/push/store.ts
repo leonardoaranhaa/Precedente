@@ -90,10 +90,17 @@ function rowToSub(row: Row): PushSubscription {
     rules: {
       ...DEFAULT_ALERT_RULES,
       ...(typeof rulesRaw.sampleWeak === "boolean" ? { sampleWeak: rulesRaw.sampleWeak } : {}),
+      ...(typeof rulesRaw.sampleRegime === "boolean" ? { sampleRegime: rulesRaw.sampleRegime } : {}),
       ...(typeof rulesRaw.drawdownPath === "boolean" ? { drawdownPath: rulesRaw.drawdownPath } : {}),
       ...(typeof rulesRaw.extreme20 === "boolean" ? { extreme20: rulesRaw.extreme20 } : {}),
       ...(typeof rulesRaw.drawdownThresholdPct === "number"
         ? { drawdownThresholdPct: rulesRaw.drawdownThresholdPct }
+        : {}),
+      ...(typeof rulesRaw.fundingExtreme === "boolean"
+        ? { fundingExtreme: rulesRaw.fundingExtreme }
+        : {}),
+      ...(typeof rulesRaw.fundingThreshold === "number"
+        ? { fundingThreshold: rulesRaw.fundingThreshold }
         : {}),
     },
     updatedAt,
@@ -278,4 +285,28 @@ export async function subscriptionCount(): Promise<number> {
   });
   if (fromDb != null) return fromDb;
   return memory.size;
+}
+
+export async function markRegimeState(
+  token: string,
+  patches: { key: string; code: number }[],
+): Promise<void> {
+  if (patches.length === 0) return;
+  const sub = await getSubscription(token);
+  if (!sub) return;
+  for (const p of patches) {
+    sub.lastSent[p.key] = p.code;
+  }
+  sub.updatedAt = Date.now();
+  memory.set(token, sub);
+
+  await trySql(async (sql) => {
+    await sql.query(
+      `UPDATE push_subscriptions
+       SET last_sent = $2::jsonb, updated_at = now()
+       WHERE token = $1`,
+      [token, JSON.stringify(sub.lastSent)],
+    );
+    return true;
+  });
 }
