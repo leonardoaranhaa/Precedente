@@ -157,29 +157,6 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
-  // Gates Premium na leitura de print — só com BILLING_GATES_ENABLED.
-  if (data.imageDataUrl) {
-    const { billingGatesEnabled } = await import("./billing/plan-limits");
-    if (billingGatesEnabled()) {
-      const { getSessionUser } = await import("./auth/verify.server");
-      const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
-      const { getVisionCountToday, incrementVisionCount } = await import("./billing/vision-quota");
-      const session = await getSessionUser();
-      if (!session?.id) {
-        const { PremiumRequiredError } = await import("./billing/plan-limits");
-        throw new PremiumRequiredError(
-          "vision",
-          "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
-        );
-      }
-      await assertPremiumFeatureForUser(session.id, "vision", {
-        visionCountToday: getVisionCountToday(session.id),
-      });
-      // Reserva a cota antes da chamada cara (falha de modelo ainda consome cota IP via rate limit).
-      incrementVisionCount(session.id);
-    }
-  }
-
   const startedAt = Date.now();
   const { fetchOHLCV } = await import("./market/exchange");
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
@@ -228,6 +205,13 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
 
   const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
 
+  const hasOnchain =
+    onchain &&
+    (onchain.fundingRate != null ||
+      onchain.openInterest != null ||
+      onchain.liquidityUsd != null ||
+      onchain.volume24hUsd != null);
+
   const { logAnalysis } = await import("./analyze-log");
   logAnalysis({
     ticker: data.ticker,
@@ -253,10 +237,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     vision: visionPart.vision,
     visionError: visionPart.visionError,
     source: market.source,
-    // `onchain` só vira null se fetchOnchainContext lançar (nunca deveria —
-    // ela mesma nunca lança). Um contexto "vazio" (todas as fontes falharam)
-    // segue passando adiante — a UI degrada com legenda em vez de sumir.
-    onchain,
+    onchain: hasOnchain ? onchain : null,
   };
 }
 

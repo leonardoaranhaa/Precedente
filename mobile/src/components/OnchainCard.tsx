@@ -25,20 +25,15 @@ function formatAge(hours: number | null | undefined): string {
   return `~${Math.round(hours / 24)}d`;
 }
 
-/**
- * Sempre renderiza: quando uma fonte falha (geo-block, par sem DEX claro,
- * timeout), o card explica o que falta em vez de sumir sem legenda.
- */
-export function OnchainCard({ onchain }: { onchain: OnchainContext | null }) {
-  const hasDeriv =
-    onchain != null && (onchain.fundingRate != null || onchain.openInterest != null);
-  const hasDex =
-    onchain != null && (onchain.liquidityUsd != null || onchain.volume24hUsd != null);
+export function OnchainCard({ onchain }: { onchain: OnchainContext }) {
+  const hasDeriv = onchain.fundingRate != null || onchain.openInterest != null;
+  const hasDex = onchain.liquidityUsd != null || onchain.volume24hUsd != null;
+  if (!hasDeriv && !hasDex) return null;
 
-  const buys = onchain?.buys24h ?? 0;
-  const sells = onchain?.sells24h ?? 0;
-  const buys6 = onchain?.buys6h ?? null;
-  const sells6 = onchain?.sells6h ?? null;
+  const buys = onchain.buys24h ?? 0;
+  const sells = onchain.sells24h ?? 0;
+  const buys6 = onchain.buys6h;
+  const sells6 = onchain.sells6h;
 
   return (
     <View style={styles.card}>
@@ -47,90 +42,74 @@ export function OnchainCard({ onchain }: { onchain: OnchainContext | null }) {
           <Layers size={13} color={colors.muted} />
           <Text style={styles.eyebrow}>Contexto on-chain</Text>
         </View>
-        <Text style={styles.sources}>
-          {onchain?.sources?.length ? onchain.sources.join(" · ") : "indisponível agora"}
-        </Text>
+        <Text style={styles.sources}>{onchain.sources.join(" · ") || "—"}</Text>
       </View>
 
-      <View style={styles.block}>
-        <Text style={styles.sub}>Derivativos perp</Text>
-        {hasDeriv && onchain ? (
-          <>
-            <Row label="Funding" value={formatFunding(onchain.fundingRate)} />
-            <Row
-              label="Open interest"
-              value={
-                onchain.openInterest != null
-                  ? formatInt(Math.round(onchain.openInterest))
-                  : "—"
-              }
-            />
-            <Text style={styles.hint}>
-              Funding extremo descreve pressão de alavancagem — não direção no spot.
-            </Text>
-          </>
-        ) : (
+      {hasDeriv ? (
+        <View style={styles.block}>
+          <Text style={styles.sub}>Derivativos perp</Text>
+          <Row label="Funding" value={formatFunding(onchain.fundingRate)} />
+          <Row
+            label="Open interest"
+            value={
+              onchain.openInterest != null
+                ? formatInt(Math.round(onchain.openInterest))
+                : "—"
+            }
+          />
           <Text style={styles.hint}>
-            Funding e open interest indisponíveis agora — Binance Futures não
-            respondeu nesta janela. Fingerprint e precedente não dependem disso.
+            Funding extremo descreve pressão de alavancagem — não direção no spot.
           </Text>
-        )}
-      </View>
+        </View>
+      ) : null}
 
-      <View style={[styles.block, styles.blockBorder]}>
-        <Text style={styles.sub}>
-          Liquidez DEX
-          {onchain?.chainId ? ` · ${onchain.chainId}` : ""}
-          {onchain?.dexId ? ` · ${onchain.dexId}` : ""}
-        </Text>
-        {hasDex && onchain ? (
-          <>
-            <Row label="Liquidez" value={formatUsd(onchain.liquidityUsd)} />
-            <Row label="Vol 24h" value={formatUsd(onchain.volume24hUsd)} />
-            {onchain.volume6hUsd != null ? (
-              <Row label="Vol 6h" value={formatUsd(onchain.volume6hUsd)} />
-            ) : null}
-            {onchain.volume1hUsd != null ? (
-              <Row label="Vol 1h" value={formatUsd(onchain.volume1hUsd)} />
-            ) : null}
-            {onchain.priceChange24hPct != null ? (
-              <Row label="Δ 24h" value={formatPct(onchain.priceChange24hPct)} />
-            ) : null}
-            {onchain.priceChange6hPct != null ? (
-              <Row label="Δ 6h" value={formatPct(onchain.priceChange6hPct)} />
-            ) : null}
-            {onchain.priceChange1hPct != null ? (
-              <Row label="Δ 1h" value={formatPct(onchain.priceChange1hPct)} />
-            ) : null}
-            {buys + sells > 0 ? (
-              <Row label="Txns 24h" value={`${formatInt(buys)}B / ${formatInt(sells)}S`} />
-            ) : null}
-            {buys6 != null && sells6 != null ? (
-              <Row label="Txns 6h" value={`${formatInt(buys6)}B / ${formatInt(sells6)}S`} />
-            ) : null}
-            {onchain.pairAgeHours != null ? (
-              <Row label="Idade do par" value={formatAge(onchain.pairAgeHours)} />
-            ) : null}
-            {onchain.pairUrl ? (
-              <Pressable
-                onPress={() => void Linking.openURL(onchain.pairUrl!)}
-                style={styles.link}
-              >
-                <Text style={styles.linkText}>Abrir no DexScreener</Text>
-                <ExternalLink size={12} color={colors.muted} />
-              </Pressable>
-            ) : null}
-            <Text style={styles.hint}>
-              Vol/txns curtos e par novo aumentam risco de escorregamento — fragilidade, não entrada.
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.hint}>
-            Liquidez indisponível — nenhum par correspondente encontrado na
-            DexScreener para este ativo agora.
+      {hasDex ? (
+        <View style={[styles.block, hasDeriv && styles.blockBorder]}>
+          <Text style={styles.sub}>
+            Liquidez DEX
+            {onchain.chainId ? ` · ${onchain.chainId}` : ""}
+            {onchain.dexId ? ` · ${onchain.dexId}` : ""}
           </Text>
-        )}
-      </View>
+          <Row label="Liquidez" value={formatUsd(onchain.liquidityUsd)} />
+          <Row label="Vol 24h" value={formatUsd(onchain.volume24hUsd)} />
+          {onchain.volume6hUsd != null ? (
+            <Row label="Vol 6h" value={formatUsd(onchain.volume6hUsd)} />
+          ) : null}
+          {onchain.volume1hUsd != null ? (
+            <Row label="Vol 1h" value={formatUsd(onchain.volume1hUsd)} />
+          ) : null}
+          {onchain.priceChange24hPct != null ? (
+            <Row label="Δ 24h" value={formatPct(onchain.priceChange24hPct)} />
+          ) : null}
+          {onchain.priceChange6hPct != null ? (
+            <Row label="Δ 6h" value={formatPct(onchain.priceChange6hPct)} />
+          ) : null}
+          {onchain.priceChange1hPct != null ? (
+            <Row label="Δ 1h" value={formatPct(onchain.priceChange1hPct)} />
+          ) : null}
+          {buys + sells > 0 ? (
+            <Row label="Txns 24h" value={`${formatInt(buys)}B / ${formatInt(sells)}S`} />
+          ) : null}
+          {buys6 != null && sells6 != null ? (
+            <Row label="Txns 6h" value={`${formatInt(buys6)}B / ${formatInt(sells6)}S`} />
+          ) : null}
+          {onchain.pairAgeHours != null ? (
+            <Row label="Idade do par" value={formatAge(onchain.pairAgeHours)} />
+          ) : null}
+          {onchain.pairUrl ? (
+            <Pressable
+              onPress={() => void Linking.openURL(onchain.pairUrl!)}
+              style={styles.link}
+            >
+              <Text style={styles.linkText}>Abrir no DexScreener</Text>
+              <ExternalLink size={12} color={colors.muted} />
+            </Pressable>
+          ) : null}
+          <Text style={styles.hint}>
+            Vol/txns curtos e par novo aumentam risco de escorregamento — fragilidade, não entrada.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

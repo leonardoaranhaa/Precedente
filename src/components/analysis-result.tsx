@@ -18,7 +18,6 @@ import { ScenarioPanel } from "@/components/scenario-panel";
 import { SplitBar } from "@/components/split-bar";
 import { baselineDeltaLabel } from "@/lib/market/baseline-copy";
 import {
-  barsToHuman,
   formatInt,
   formatPct,
   formatPrice,
@@ -75,7 +74,6 @@ export function AnalysisResult({
         "mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24",
         reanalyzing && "pointer-events-none opacity-70",
       )}
-      data-testid="analysis-result"
     >
       <header className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)] sm:p-5">
         <div className="flex flex-wrap items-start gap-3">
@@ -273,7 +271,7 @@ export function AnalysisResult({
             <OhlcChart data={analysis.chart} matches={precedent.chartMatches} />
           </section>
 
-          <OnchainPanel onchain={onchain} />
+          {onchain ? <OnchainPanel onchain={onchain} /> : null}
 
           <ScenarioPanel analysis={analysis} />
 
@@ -309,7 +307,6 @@ export function AnalysisResult({
                 <HorizonCard
                   key={h.bars}
                   horizon={h}
-                  timeframe={analysis.timeframe}
                   active={i === horizonIdx}
                   onClick={() => setHorizonIdx(i)}
                 />
@@ -398,16 +395,12 @@ export function AnalysisResult({
           ) : null}
 
           {analysis.thumb || vision || analysis.visionError ? (
-            <section
-              className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]"
-              data-testid="vision-section"
-            >
+            <section className="overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-border)]">
               {analysis.thumb ? (
                 <img
                   src={analysis.thumb}
                   alt="Print enviado"
                   className="chart-print h-36 w-full object-cover object-top"
-                  data-testid="vision-thumb"
                 />
               ) : null}
               <div className="space-y-3 p-4">
@@ -417,21 +410,19 @@ export function AnalysisResult({
                   <span className="text-subtle">apoio qualitativo</span>
                 </div>
                 {vision ? (
-                  <div data-testid="vision-reading">
+                  <>
                     <p className="text-sm leading-relaxed text-fg">{vision.leitura}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       <Badge variant="accent">tendência {vision.tendencia}</Badge>
                       {vision.padrao ? <Badge>{vision.padrao}</Badge> : null}
                       <Badge>confiança {vision.confianca}</Badge>
                     </div>
                     {vision.suporteResistencia ? (
-                      <p className="mt-2 text-xs text-muted">{vision.suporteResistencia}</p>
+                      <p className="text-xs text-muted">{vision.suporteResistencia}</p>
                     ) : null}
-                  </div>
+                  </>
                 ) : analysis.visionError ? (
-                  <p className="text-sm text-muted" data-testid="vision-error">
-                    {analysis.visionError}
-                  </p>
+                  <p className="text-sm text-muted">{analysis.visionError}</p>
                 ) : (
                   <p className="text-sm text-muted">Nenhum print nesta análise.</p>
                 )}
@@ -484,12 +475,10 @@ function HorizonChip({
 
 function HorizonCard({
   horizon,
-  timeframe,
   active,
   onClick,
 }: {
   horizon: HorizonOutcome;
-  timeframe: Timeframe;
   active: boolean;
   onClick: () => void;
 }) {
@@ -502,9 +491,7 @@ function HorizonCard({
         active && "ring-1 ring-border",
       )}
     >
-      <p className="text-xs text-muted">
-        {horizon.bars} barras (≈{barsToHuman(timeframe, horizon.bars)}) · n={horizon.samples}
-      </p>
+      <p className="text-xs text-muted">{horizon.bars} barras · n={horizon.samples}</p>
       <p className="mt-2 font-mono text-xs tabular-nums">
         <span className="text-up">↑ {Math.round(horizon.upPct)}%</span>
         <span className="mx-1 text-subtle">·</span>

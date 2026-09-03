@@ -1,22 +1,11 @@
-import { withCircuitBreaker } from "../circuit-breaker";
 import type { OnchainContext } from "./types";
 
-/**
- * Só existe UMA base real pra Futures — ao contrário do spot (que tem o
- * mirror documentado data-api.binance.vision), não existe um
- * "fapi.binance.vision" oficial: confirmado ao vivo (não resolve, 502 no
- * proxy) e pela documentação da Binance (developers.binance.com só lista
- * fapi.binance.com). Manter aqui como array deixa a porta aberta pra um
- * mirror real futuro sem mudar a lógica de novo.
- */
-const FAPI = ["https://fapi.binance.com"] as const;
+const FAPI = [
+  "https://fapi.binance.com",
+  "https://fapi.binance.vision",
+] as const;
 
 const DEX_SEARCH = "https://api.dexscreener.com/latest/dex/search";
-
-/** Timeout curto: derivativos são enriquecimento best-effort, não podem
- * segurar o resultado principal (OHLC/precedente) por vários segundos. */
-const DERIV_TIMEOUT_MS = 5_000;
-const DERIV_BREAKER_OPTS = { failureThreshold: 5, cooldownMs: 20_000 };
 
 function baseAsset(symbol: string): string {
   const s = symbol.toUpperCase();
@@ -39,18 +28,6 @@ async function fetchJson<T>(url: string, timeoutMs = 8_000): Promise<T | null> {
   }
 }
 
-/** Como fetchJson, mas lança em falha de rede/timeout/HTTP não-ok — usado
- * onde precisamos distinguir "serviço fora do ar" de "sem dado pra esse
- * símbolo" (200 ok, campo ausente). */
-async function fetchJsonOrThrow<T>(url: string, timeoutMs: number): Promise<T> {
-  const res = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as T;
-}
-
 type PremiumIndex = {
   symbol?: string;
   lastFundingRate?: string;
@@ -64,92 +41,39 @@ type OpenInterest = {
   openInterest?: string;
 };
 
-type DerivResult = {
+async function fetchDerivatives(symbol: string): Promise<{
   fundingRate: number | null;
   markPrice: number | null;
   openInterest: number | null;
   nextFundingTime: number | null;
   source: string | null;
-};
-
-/**
- * Tenta as duas bases (mesmo dado, hosts diferentes — mirror de geo).
- * Lança só quando NENHUMA base respondeu (rede/timeout/HTTP) — symbol sem
- * mercado de perp (200 ok, sem lastFundingRate) não é falha de serviço,
- * não deve contar pro circuito abrir nem tentar a base espelho à toa.
- */
-async function fetchDerivativesUnguarded(symbol: string): Promise<DerivResult> {
-  let lastError: Error | null = null;
+}> {
+  let fundingRate: number | null = null;
+  let markPrice: number | null = null;
+  let openInterest: number | null = null;
+  let nextFundingTime: number | null = null;
+  let source: string | null = null;
 
   for (const base of FAPI) {
-    let premium: PremiumIndex;
-    try {
-      premium = await fetchJsonOrThrow<PremiumIndex>(
-        `${base}/fapi/v1/premiumIndex?symbol=${encodeURIComponent(symbol)}`,
-        DERIV_TIMEOUT_MS,
-      );
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      continue;
-    }
-
-    if (premium?.lastFundingRate == null) {
-      // Base respondeu; símbolo sem perp listado — a base espelho tem o
-      // mesmo catálogo, não vale a pena tentar de novo.
-      return { fundingRate: null, markPrice: null, openInterest: null, nextFundingTime: null, source: null };
-    }
-
-    const fundingRate = Number(premium.lastFundingRate);
-    const markPrice = premium.markPrice != null ? Number(premium.markPrice) : null;
-    const nextFundingTime =
-      typeof premium.nextFundingTime === "number" ? premium.nextFundingTime : null;
-    let openInterest: number | null = null;
-    try {
-      const oi = await fetchJsonOrThrow<OpenInterest>(
+    const premium = await fetchJson<PremiumIndex>(
+      `${base}/fapi/v1/premiumIndex?symbol=${encodeURIComponent(symbol)}`,
+    );
+    if (premium?.lastFundingRate != null) {
+      fundingRate = Number(premium.lastFundingRate);
+      markPrice = premium.markPrice != null ? Number(premium.markPrice) : null;
+      nextFundingTime =
+        typeof premium.nextFundingTime === "number" ? premium.nextFundingTime : null;
+      source = "Binance Futures";
+      const oi = await fetchJson<OpenInterest>(
         `${base}/fapi/v1/openInterest?symbol=${encodeURIComponent(symbol)}`,
-        DERIV_TIMEOUT_MS,
       );
       if (oi?.openInterest != null) openInterest = Number(oi.openInterest);
-    } catch {
-      // OI é secundário — funding sozinho já é um dado útil.
+      break;
     }
-    return { fundingRate, markPrice, openInterest, nextFundingTime, source: "Binance Futures" };
   }
 
-  throw lastError ?? new Error("Binance Futures indisponível (ambas as bases).");
+  return { fundingRate, markPrice, openInterest, nextFundingTime, source };
 }
-
-async function fetchDerivatives(symbol: string): Promise<DerivResult> {
-  try {
-    return await withCircuitBreaker("Binance Futures", DERIV_BREAKER_OPTS, () =>
-      fetchDerivativesUnguarded(symbol),
-    );
-  } catch {
-    // Nunca lança pro chamador — fetchOnchainContext degrada com null.
-    return { fundingRate: null, markPrice: null, openInterest: null, nextFundingTime: null, source: null };
-  }
-}
-
-const DEX_TOKEN_PAIRS = "https://api.dexscreener.com/token-pairs/v1";
-
-/**
- * Contrato/mint canônico dos majors — endereço real do ativo, não um par
- * específico (pares migram/secam; o contrato do token não muda). Cada
- * entrada foi validada ao vivo contra a API da DexScreener (símbolo +
- * liquidez condizentes) antes de entrar aqui.
- *
- * Fica de fora: XRP, DOGE, ADA — sem contrato EVM/Solana/Sui confiável
- * pra âncora; seguem no fallback de busca abaixo, igual antes.
- */
-const CANONICAL_TOKENS: Record<string, { chainId: string; address: string }> = {
-  BTC: { chainId: "ethereum", address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599" }, // WBTC
-  ETH: { chainId: "ethereum", address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" }, // WETH
-  SOL: { chainId: "solana", address: "So11111111111111111111111111111111111111112" },
-  BNB: { chainId: "bsc", address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c" }, // WBNB
-  LINK: { chainId: "ethereum", address: "0x514910771AF9Ca656af840dff83E8264EcF986CA" },
-  AVAX: { chainId: "avalanche", address: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7" }, // WAVAX
-  SUI: { chainId: "sui", address: "0x2::sui::SUI" },
-};
 
 type DexPair = {
   chainId?: string;
@@ -225,51 +149,28 @@ async function fetchDexContext(symbol: string): Promise<{
   source: string | null;
 }> {
   const base = baseAsset(symbol);
+  const queries = [`${base}/USDT`, `${base}/USDC`, base];
   let best: DexPair | null = null;
+  let bestScore = -1;
 
-  const canonical = CANONICAL_TOKENS[base];
-  if (canonical) {
-    const pairs = await fetchJson<DexPair[]>(
-      `${DEX_TOKEN_PAIRS}/${canonical.chainId}/${encodeURIComponent(canonical.address)}`,
+  for (const q of queries) {
+    const data = await fetchJson<{ pairs?: DexPair[] }>(
+      `${DEX_SEARCH}?q=${encodeURIComponent(q)}`,
     );
-    if (Array.isArray(pairs) && pairs.length > 0) {
-      // Já ancorado no contrato certo — só falta o par mais líquido dele,
-      // sem precisar da heurística de nome usada na busca genérica.
-      let bestLiq = -1;
-      for (const p of pairs) {
-        const liq = p.liquidity?.usd ?? 0;
-        if (liq > bestLiq) {
-          bestLiq = liq;
-          best = p;
-        }
+    const pairs = data?.pairs ?? [];
+    for (const p of pairs) {
+      const s = scorePair(p, base);
+      if (s > bestScore) {
+        bestScore = s;
+        best = p;
       }
     }
-  }
-
-  if (!best) {
-    // Sem entrada canônica (altcoin) ou lookup canônico falhou — volta
-    // pra busca por nome, que já existia.
-    const queries = [`${base}/USDT`, `${base}/USDC`, base];
-    let bestScore = -1;
-    for (const q of queries) {
-      const data = await fetchJson<{ pairs?: DexPair[] }>(
-        `${DEX_SEARCH}?q=${encodeURIComponent(q)}`,
-      );
-      const pairs = data?.pairs ?? [];
-      for (const p of pairs) {
-        const s = scorePair(p, base);
-        if (s > bestScore) {
-          bestScore = s;
-          best = p;
-        }
-      }
-      if (
-        best &&
-        (best.baseToken?.symbol ?? "").toUpperCase() === base &&
-        (best.liquidity?.usd ?? 0) > 50_000
-      ) {
-        break;
-      }
+    if (
+      best &&
+      (best.baseToken?.symbol ?? "").toUpperCase() === base &&
+      (best.liquidity?.usd ?? 0) > 50_000
+    ) {
+      break;
     }
   }
 

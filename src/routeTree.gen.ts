@@ -17,7 +17,6 @@ import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
-import { Route as ApiAssistantExternalIntelRouteImport } from './routes/api/assistant/external-intel'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
@@ -67,12 +66,6 @@ const ApiUniverseRoute = ApiUniverseRouteImport.update({
   path: '/api/universe',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAssistantExternalIntelRoute =
-  ApiAssistantExternalIntelRouteImport.update({
-    id: '/api/assistant/external-intel',
-    path: '/api/assistant/external-intel',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -123,7 +116,6 @@ export interface FileRoutesByFullPath {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
-  '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -142,7 +134,6 @@ export interface FileRoutesByTo {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
-  '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -162,7 +153,6 @@ export interface FileRoutesById {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
-  '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/sync'
     | '/api/universe'
-    | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -202,7 +191,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/sync'
     | '/api/universe'
-    | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -221,7 +209,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/sync'
     | '/api/universe'
-    | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -241,7 +228,6 @@ export interface RootRouteChildren {
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiSyncRoute: typeof ApiSyncRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
-  ApiAssistantExternalIntelRoute: typeof ApiAssistantExternalIntelRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
@@ -308,13 +294,6 @@ declare module '@tanstack/react-router' {
       path: '/api/universe'
       fullPath: '/api/universe'
       preLoaderRoute: typeof ApiUniverseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/assistant/external-intel': {
-      id: '/api/assistant/external-intel'
-      path: '/api/assistant/external-intel'
-      fullPath: '/api/assistant/external-intel'
-      preLoaderRoute: typeof ApiAssistantExternalIntelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -385,7 +364,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiSyncRoute: ApiSyncRoute,
   ApiUniverseRoute: ApiUniverseRoute,
-  ApiAssistantExternalIntelRoute: ApiAssistantExternalIntelRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,

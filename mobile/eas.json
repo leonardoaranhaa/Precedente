@@ -7,8 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://439979db748b967d21ebbb61a4e39c44@o4512017632198656.ingest.us.sentry.io/4512019686490112"
+        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app"
       }
     },
     "preview": {
@@ -17,8 +16,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://439979db748b967d21ebbb61a4e39c44@o4512017632198656.ingest.us.sentry.io/4512019686490112"
+        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app"
       }
     },
     "production": {
@@ -26,8 +24,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://439979db748b967d21ebbb61a4e39c44@o4512017632198656.ingest.us.sentry.io/4512019686490112"
+        "EXPO_PUBLIC_API_BASE_URL": "https://web-production-ad1b65.up.railway.app"
       }
     }
   }

@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysis, validateAnalyzeInput } from "@/lib/analyze";
 import { RateLimitError } from "@/lib/rate-limit";
-import { PremiumQuotaError, PremiumRequiredError } from "@/lib/billing/plan-limits";
 import { reportServerError } from "@/lib/sentry.server";
 
 // Liberado para qualquer origem: o app mobile (Expo) chama este endpoint
@@ -9,7 +8,7 @@ import { reportServerError } from "@/lib/sentry.server";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type",
 };
 
 function json(body: unknown, status = 200): Response {
@@ -45,12 +44,6 @@ export const Route = createFileRoute("/api/analyze")({
         } catch (err) {
           if (err instanceof RateLimitError) {
             return json({ error: err.message }, err.status);
-          }
-          if (err instanceof PremiumRequiredError || err instanceof PremiumQuotaError) {
-            return json(
-              { error: err.message, code: err.code, feature: err.feature },
-              err.status,
-            );
           }
           reportServerError(err, { route: "/api/analyze" });
           const message =
