@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AvisoDeRiscoRouteImport } from './routes/aviso-de-risco'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
@@ -19,6 +20,10 @@ import { Route as ApiPriceRouteImport } from './routes/api/price'
 import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
 import { Route as ApiUniverseRouteImport } from './routes/api/universe'
+import { Route as ApiAdminFlagsRouteImport } from './routes/api/admin/flags'
+import { Route as ApiAdminGrantPremiumRouteImport } from './routes/api/admin/grant-premium'
+import { Route as ApiAdminUsersRouteImport } from './routes/api/admin/users'
+import { Route as ApiAdminWhoamiRouteImport } from './routes/api/admin/whoami'
 import { Route as ApiAssistantExternalIntelRouteImport } from './routes/api/assistant/external-intel'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
@@ -34,6 +39,11 @@ import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvisoDeRiscoRoute = AvisoDeRiscoRouteImport.update({
@@ -79,6 +89,26 @@ const ApiSyncRoute = ApiSyncRouteImport.update({
 const ApiUniverseRoute = ApiUniverseRouteImport.update({
   id: '/api/universe',
   path: '/api/universe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminFlagsRoute = ApiAdminFlagsRouteImport.update({
+  id: '/api/admin/flags',
+  path: '/api/admin/flags',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminGrantPremiumRoute = ApiAdminGrantPremiumRouteImport.update({
+  id: '/api/admin/grant-premium',
+  path: '/api/admin/grant-premium',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminUsersRoute = ApiAdminUsersRouteImport.update({
+  id: '/api/admin/users',
+  path: '/api/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminWhoamiRoute = ApiAdminWhoamiRouteImport.update({
+  id: '/api/admin/whoami',
+  path: '/api/admin/whoami',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistantExternalIntelRoute =
@@ -140,6 +170,7 @@ const ApiPushScanRoute = ApiPushScanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -149,6 +180,10 @@ export interface FileRoutesByFullPath {
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/admin/flags': typeof ApiAdminFlagsRoute
+  '/api/admin/grant-premium': typeof ApiAdminGrantPremiumRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/admin/whoami': typeof ApiAdminWhoamiRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -163,6 +198,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -172,6 +208,10 @@ export interface FileRoutesByTo {
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/admin/flags': typeof ApiAdminFlagsRoute
+  '/api/admin/grant-premium': typeof ApiAdminGrantPremiumRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/admin/whoami': typeof ApiAdminWhoamiRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -187,6 +227,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/aviso-de-risco': typeof AvisoDeRiscoRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -196,6 +237,10 @@ export interface FileRoutesById {
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
   '/api/universe': typeof ApiUniverseRoute
+  '/api/admin/flags': typeof ApiAdminFlagsRoute
+  '/api/admin/grant-premium': typeof ApiAdminGrantPremiumRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/admin/whoami': typeof ApiAdminWhoamiRoute
   '/api/assistant/external-intel': typeof ApiAssistantExternalIntelRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -212,6 +257,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/aviso-de-risco'
     | '/login'
     | '/privacidade'
@@ -221,6 +267,10 @@ export interface FileRouteTypes {
     | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
+    | '/api/admin/flags'
+    | '/api/admin/grant-premium'
+    | '/api/admin/users'
+    | '/api/admin/whoami'
     | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -235,6 +285,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/aviso-de-risco'
     | '/login'
     | '/privacidade'
@@ -244,6 +295,10 @@ export interface FileRouteTypes {
     | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
+    | '/api/admin/flags'
+    | '/api/admin/grant-premium'
+    | '/api/admin/users'
+    | '/api/admin/whoami'
     | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -258,6 +313,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/aviso-de-risco'
     | '/login'
     | '/privacidade'
@@ -267,6 +323,10 @@ export interface FileRouteTypes {
     | '/api/sparkline'
     | '/api/sync'
     | '/api/universe'
+    | '/api/admin/flags'
+    | '/api/admin/grant-premium'
+    | '/api/admin/users'
+    | '/api/admin/whoami'
     | '/api/assistant/external-intel'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -282,6 +342,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   AvisoDeRiscoRoute: typeof AvisoDeRiscoRoute
   LoginRoute: typeof LoginRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -291,6 +352,10 @@ export interface RootRouteChildren {
   ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
   ApiUniverseRoute: typeof ApiUniverseRoute
+  ApiAdminFlagsRoute: typeof ApiAdminFlagsRoute
+  ApiAdminGrantPremiumRoute: typeof ApiAdminGrantPremiumRoute
+  ApiAdminUsersRoute: typeof ApiAdminUsersRoute
+  ApiAdminWhoamiRoute: typeof ApiAdminWhoamiRoute
   ApiAssistantExternalIntelRoute: typeof ApiAssistantExternalIntelRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
@@ -311,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aviso-de-risco': {
@@ -374,6 +446,34 @@ declare module '@tanstack/react-router' {
       path: '/api/universe'
       fullPath: '/api/universe'
       preLoaderRoute: typeof ApiUniverseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/flags': {
+      id: '/api/admin/flags'
+      path: '/api/admin/flags'
+      fullPath: '/api/admin/flags'
+      preLoaderRoute: typeof ApiAdminFlagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/grant-premium': {
+      id: '/api/admin/grant-premium'
+      path: '/api/admin/grant-premium'
+      fullPath: '/api/admin/grant-premium'
+      preLoaderRoute: typeof ApiAdminGrantPremiumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/users': {
+      id: '/api/admin/users'
+      path: '/api/admin/users'
+      fullPath: '/api/admin/users'
+      preLoaderRoute: typeof ApiAdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/whoami': {
+      id: '/api/admin/whoami'
+      path: '/api/admin/whoami'
+      fullPath: '/api/admin/whoami'
+      preLoaderRoute: typeof ApiAdminWhoamiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assistant/external-intel': {
@@ -458,6 +558,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   AvisoDeRiscoRoute: AvisoDeRiscoRoute,
   LoginRoute: LoginRoute,
   PrivacidadeRoute: PrivacidadeRoute,
@@ -467,6 +568,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,
   ApiUniverseRoute: ApiUniverseRoute,
+  ApiAdminFlagsRoute: ApiAdminFlagsRoute,
+  ApiAdminGrantPremiumRoute: ApiAdminGrantPremiumRoute,
+  ApiAdminUsersRoute: ApiAdminUsersRoute,
+  ApiAdminWhoamiRoute: ApiAdminWhoamiRoute,
   ApiAssistantExternalIntelRoute: ApiAssistantExternalIntelRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,

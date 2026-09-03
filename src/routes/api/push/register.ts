@@ -97,9 +97,11 @@ export const Route = createFileRoute("/api/push/register")({
           const userId = session?.id ?? null;
           await assertPremiumFeatureForUser(userId, "watch_slot", {
             watchCount: watches.length,
+            email: session?.email,
           });
           await assertPremiumFeatureForUser(userId, "zones", {
             hasEnabledZones: watchesHaveEnabledZones(watches),
+            email: session?.email,
           });
         } catch (err) {
           if (err instanceof PremiumRequiredError || err instanceof PremiumQuotaError) {
