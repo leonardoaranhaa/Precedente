@@ -162,6 +162,22 @@ export type OnchainContext = {
   sources: string[];
 };
 
+/** Contexto de notícias (manchetes) anexado à análise — só factual. */
+export type NewsContextPayload = {
+  ticker: string;
+  coin: string;
+  items: {
+    title: string;
+    source: string;
+    link: string;
+    publishedAt: number | null;
+    coins: string[];
+    categories: string[];
+  }[];
+  fetchedAt: number;
+  disclaimer: string;
+};
+
 export type AnalysisPayload = {
   ticker: string;
   displayTicker: string;
@@ -175,6 +191,8 @@ export type AnalysisPayload = {
   visionError: string | null;
   source: string;
   onchain: OnchainContext | null;
+  /** Manchetes recentes do ativo — contexto, não sinal. */
+  newsContext: NewsContextPayload | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {
