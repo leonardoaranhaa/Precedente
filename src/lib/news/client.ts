@@ -1,6 +1,10 @@
 import type { NewsItem, NewsPreferences } from "./types";
 
-export type NewsFeedResponse = { items: NewsItem[]; total: number; matched: number };
+export type NewsFeedResponse = {
+  items: NewsItem[];
+  total: number;
+  matched: number;
+};
 
 function qs(prefs?: Partial<NewsPreferences>): string {
   if (!prefs) return "";
