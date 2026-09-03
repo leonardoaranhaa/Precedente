@@ -5,8 +5,11 @@
 Notificações de **prevenção de perdas** para pares na Watch:
 
 - amostra `small` / `tiny`
+- transição de **regime de amostra** (ok ↔ small ↔ tiny)
 - drawdown mediano do caminho (H10) acima do limiar
 - preço colado na máxima/mínima de 20 barras
+- **funding** acima do limiar configurado
+- **digest diário** da Watch (+ movers 24h opcional)
 
 Sem linguagem de compra/venda.
 
@@ -14,9 +17,10 @@ Sem linguagem de compra/venda.
 
 | Método | Rota | Uso |
 |--------|------|-----|
-| `POST` | `/api/push/register` | Registra token Expo + watches + regras |
+| `POST` | `/api/push/register` | Registra token Expo + watches + regras + digest |
 | `DELETE` | `/api/push/register` | Remove subscription |
 | `POST` | `/api/push/scan` | Reanalisa e envia push |
+| `POST` | `/api/push/digest-scan` | Digest diário (cron) |
 
 ### Auth do scan
 
@@ -30,94 +34,16 @@ ou `Authorization: Bearer <secret>`.
 
 Sem a variável, o scan fica aberto (apenas para dev).
 
-## Persistência
+## App mobile
 
-Tabela `push_subscriptions` (migration `migrations/0001_push_subscriptions.sql`):
+Aba **Alertas**: liga push, regras (amostra, regime, DD, extremo, funding) e digest
+(hora UTC + movers). O register envia `rules` + `digestEnabled` / `digestHourUtc` /
+`includeMovers`.
 
-- `token` PK
-- `watches`, `rules`, `last_sent` (JSONB)
-- `updated_at`
+## Cron no Railway
 
-Com `DATABASE_URL` (Neon), sobrevive a redeploys.
+Ver `railway.cron.toml` e scripts:
 
----
-
-## Cron no Railway (recomendado)
-
-Railway **não** agenda HTTP no serviço web 24/7. O padrão certo é um **segundo serviço** que sobe, roda o script e **sai**.
-
-### 1. Variáveis no serviço web (já existente)
-
-| Variável | Valor |
-|----------|--------|
-| `DATABASE_URL` | Postgres / Neon |
-| `PUSH_CRON_SECRET` | string longa aleatória |
-
-### 2. Novo serviço no mesmo projeto
-
-1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
-2. **Settings → Deploy**
-   - **Custom Start Command:** `node scripts/push-scan-cron.mjs`
-   - **Cron Schedule:** `*/30 * * * *` (a cada 30 min, UTC; mínimo Railway = 5 min)
-3. **Variables** deste serviço cron:
-
-| Variável | Valor |
-|----------|--------|
-| `PUSH_CRON_SECRET` | **igual** ao do web |
-| `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
-
-   Ou diretamente: `SCAN_URL=https://<web>.up.railway.app/api/push/scan`
-
-4. **Não** coloque Cron Schedule no serviço web principal (ele precisa ficar Active 24/7).
-
-Referência de config: `railway.cron.toml` (documentação; o start command e o cron você confirma no dashboard).
-
-### 3. Testar na mão
-
-```bash
-curl -sS -X POST "https://<web>.up.railway.app/api/push/scan" \
-  -H "Content-Type: application/json" \
-  -H "X-Cron-Secret: $PUSH_CRON_SECRET" \
-  -d '{}'
-```
-
-Resposta esperada: `ok: true`, contagens de `analyzed` / `alerts` / `sentOk`.
-
-### 4. Logs
-
-No serviço cron: Deployments → último run → logs de `[push-scan-cron]`.
-Se o status ficar **Active** sem sair, o próximo schedule é **pulado** (exigência do Railway).
-
-### Expressões úteis (UTC)
-
-| Cron | Significado |
-|------|-------------|
-| `*/30 * * * *` | A cada 30 min |
-| `*/15 * * * *` | A cada 15 min |
-| `0 * * * *` | Toda hora cheia |
-| `0 */2 * * *` | A cada 2 horas |
-
----
-
-## Alternativa: GitHub Actions
-
-Arquivo: `.github/workflows/push-scan.yml`
-
-Secrets do repo:
-
-- `RAILWAY_APP_URL` = `https://seu-app.up.railway.app`
-- `PUSH_CRON_SECRET` = mesmo do backend
-
-Roda a cada 30 min (UTC) ou manualmente em **Actions → Push alert scan → Run workflow**.
-
----
-
-## Mobile
-
-Aba **Alertas** → ativar push → regras → pares na Watch são sincronizados automaticamente.
-
-```bash
-cd mobile && npm install && npx expo start
-```
-
-Aparelho físico + permissão de notificação.
+- `push-scan-cron.mjs` — a cada 30 min
+- `watch-digest-cron.mjs` — a cada hora (só envia na hora do usuário)
+- `rss-health-cron.mjs` — health dos feeds (opcional)
