@@ -28,3 +28,8 @@ restartPolicyType = "NEVER"
 # Start Command: node scripts/news-digest-cron.mjs
 # Cron Schedule: 0 * * * *   (a cada hora UTC — o scan só envia na hora configurada pelo usuário)
 # Variables: mesmas do push (PUSH_CRON_SECRET, PUBLIC_APP_URL)
+
+# --- Digest diário da watch + movers 24h ---
+# Start Command: node scripts/watch-digest-cron.mjs
+# Cron Schedule: 0 * * * *   (hora UTC; envia só na hora do usuário)
+# Variables: PUSH_CRON_SECRET, PUBLIC_APP_URL
