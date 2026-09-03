@@ -103,6 +103,14 @@ export type ChartPoint = {
   sma50: number | null;
 };
 
+/** Caixa aproximada do padrão no print, em frações 0..1 da imagem (origem no canto superior esquerdo). */
+export type PatternRegion = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type VisionReading = {
   tendencia: "alta" | "baixa" | "lateral" | "indefinida";
   padrao: string | null;
@@ -112,6 +120,8 @@ export type VisionReading = {
   ativoAparente: string | null;
   leitura: string;
   confianca: "alta" | "media" | "baixa";
+  /** null quando não há padrão citado, ou o modelo não está confiante na localização. */
+  patternRegion: PatternRegion | null;
 };
 
 export type PrecedentResult = {

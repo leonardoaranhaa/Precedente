@@ -9,6 +9,7 @@ import type { AnalysisPayload, Timeframe, VisionReading } from "./market/types";
 import { TIMEFRAMES } from "./market/types";
 import { opus5CostUsd } from "./anthropic-cost";
 import { billingGatesEnabled, PremiumRequiredError } from "./billing/plan-limits";
+import { sanePatternRegion } from "./pattern-region";
 
 type AnalyzeInput = {
   ticker: string;
@@ -23,7 +24,18 @@ Regras:
 - Não invente preços, indicadores ou padrões que não estejam claramente no print.
 - Se o print estiver cortado, desfocado ou não for um gráfico, diga isso em "leitura" e use confiança "baixa".
 - Campos sem informação clara no print ficam null (ou lista vazia).
-- "leitura" tem 2 a 4 frases, factual, em português.`;
+- "leitura" tem 2 a 4 frases, factual, em português.
+- Se "padrao" não for null, preencha "regiao_padrao" com a caixa aproximada (em frações de 0 a 1
+  da largura/altura da imagem, origem no canto superior esquerdo) de ONDE nesse print o padrão
+  aparece. Só preencha se você conseguir apontar a região com razoável confiança visual — do
+  contrário deixe null. Nunca invente uma região só para preencher o campo.`;
+
+const PatternRegionSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(0).max(1),
+  height: z.number().min(0).max(1),
+});
 
 const VisionSchema = z.object({
   tendencia: z.enum(["alta", "baixa", "lateral", "indefinida"]),
@@ -34,6 +46,7 @@ const VisionSchema = z.object({
   ativo_aparente: z.string().nullable(),
   leitura: z.string(),
   confianca: z.enum(["alta", "media", "baixa"]),
+  regiao_padrao: PatternRegionSchema.nullable(),
 });
 
 const SUPPORTED_MEDIA = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -126,10 +139,12 @@ async function readChart(
       ativoAparente: parsed.ativo_aparente,
       leitura: parsed.leitura.slice(0, 800),
       confianca: parsed.confianca,
+      patternRegion: sanePatternRegion(parsed.regiao_padrao),
     },
     costUsd: opus5CostUsd(response.usage),
   };
 }
+
 
 export function validateAnalyzeInput(input: unknown): AnalyzeInput {
   if (!input || typeof input !== "object") {
