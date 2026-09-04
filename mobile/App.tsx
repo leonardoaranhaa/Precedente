@@ -20,6 +20,7 @@ import {
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
+import { DexFragilityModal } from "./src/components/DexFragilityModal";
 import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
@@ -90,6 +91,7 @@ function AppInner() {
   const [error, setError] = useState<string | null>(null);
   const [dexReading, setDexReading] = useState<DexReading | null>(null);
   const [dexBusy, setDexBusy] = useState(false);
+  const [dexModalOpen, setDexModalOpen] = useState(false);
   const [dexWatchlist, setDexWatchlist] = useState<DexWatchItem[]>([]);
   const dexWatchRef = useRef<DexWatchItem[]>([]);
   dexWatchRef.current = dexWatchlist;
@@ -282,15 +284,15 @@ function AppInner() {
     void syncPush(alertRules, watchRef.current, pushToken, next.map((w) => w.ticker));
   }
 
-  /** Reabre a leitura de um token pinado — volta pra Home, onde o card renderiza. */
+  /** Reabre a leitura de um token pinado, na hora, sem trocar de aba. */
   async function openDexFromList(ticker: string) {
-    setView("home");
     setDexBusy(true);
     try {
       const reading = await fetchDexReading(ticker);
       setDexReading(reading);
+      if (reading) setDexModalOpen(true);
     } catch {
-      // Se falhar, o card simplesmente não aparece — sem erro travando a tela.
+      // Sem leitura, sem modal — não trava a tela em erro.
     } finally {
       setDexBusy(false);
     }
@@ -299,6 +301,7 @@ function AppInner() {
   async function run() {
     setError(null);
     setDexReading(null);
+    setDexModalOpen(false);
     setBusy(true);
     setStep("ohlc");
     const t1 = setTimeout(() => setStep("stats"), 600);
@@ -679,8 +682,7 @@ function AppInner() {
             onSubmit={() => void run()}
             dexReading={dexReading}
             dexBusy={dexBusy}
-            dexPinned={dexPinned}
-            onToggleDexPin={() => void toggleDexPin()}
+            onOpenDexModal={() => setDexModalOpen(true)}
           />
         )}
 
@@ -706,6 +708,15 @@ function AppInner() {
         signedIn={Boolean(user)}
         onClose={() => setNewsPrefsOpen(false)}
         onSaved={() => setNewsRefreshKey((k) => k + 1)}
+      />
+
+      <DexFragilityModal
+        visible={dexModalOpen}
+        onClose={() => setDexModalOpen(false)}
+        pair={dexReading?.pair ?? null}
+        fragility={dexReading?.fragility ?? null}
+        pinned={dexPinned}
+        onTogglePin={() => void toggleDexPin()}
       />
     </SafeAreaView>
   );

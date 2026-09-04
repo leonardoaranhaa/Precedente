@@ -15,7 +15,7 @@ import { Pipeline, type PipelineStep } from "../components/Pipeline";
 import { RiskLogPanel } from "../components/RiskLogPanel";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
-import { DexFragilityCard } from "../components/DexFragilityCard";
+import { DexFragilitySummary } from "../components/DexFragilitySummary";
 import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type DexReading, type Timeframe } from "../types";
 import { normalizeTicker } from "../format";
 
@@ -31,8 +31,7 @@ type Props = {
   /** Leitura do DEX quando o token não tem histórico na Binance. */
   dexReading: DexReading | null;
   dexBusy: boolean;
-  dexPinned?: boolean;
-  onToggleDexPin?: () => void;
+  onOpenDexModal?: () => void;
   topTraded: string[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
@@ -49,8 +48,7 @@ export function HomeScreen({
   error,
   dexReading,
   dexBusy,
-  dexPinned,
-  onToggleDexPin,
+  onOpenDexModal,
   topTraded,
   onTicker,
   onTimeframe,
@@ -176,11 +174,10 @@ export function HomeScreen({
           ) : null}
           {dexReading ? (
             <View style={styles.dexWrap}>
-              <DexFragilityCard
+              <DexFragilitySummary
                 pair={dexReading.pair}
                 fragility={dexReading.fragility}
-                pinned={dexPinned}
-                onTogglePin={onToggleDexPin}
+                onPress={() => onOpenDexModal?.()}
               />
             </View>
           ) : null}
