@@ -31,6 +31,8 @@ type Props = {
   /** Leitura do DEX quando o token não tem histórico na Binance. */
   dexReading: DexReading | null;
   dexBusy: boolean;
+  dexPinned?: boolean;
+  onToggleDexPin?: () => void;
   topTraded: string[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
@@ -47,6 +49,8 @@ export function HomeScreen({
   error,
   dexReading,
   dexBusy,
+  dexPinned,
+  onToggleDexPin,
   topTraded,
   onTicker,
   onTimeframe,
@@ -175,6 +179,8 @@ export function HomeScreen({
               <DexFragilityCard
                 pair={dexReading.pair}
                 fragility={dexReading.fragility}
+                pinned={dexPinned}
+                onTogglePin={onToggleDexPin}
               />
             </View>
           ) : null}

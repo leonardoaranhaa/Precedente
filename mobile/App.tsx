@@ -10,6 +10,13 @@ import {
   type AlertRules,
 } from "./src/alert-settings";
 import { getStoredUser, signIn, signOut, signUp, updateName, type AuthUser } from "./src/auth";
+import {
+  dexItemFromReading,
+  loadDexWatchlist,
+  pinDexWatch,
+  unpinDexWatch,
+  type DexWatchItem,
+} from "./src/dex-watchlist";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
@@ -83,6 +90,9 @@ function AppInner() {
   const [error, setError] = useState<string | null>(null);
   const [dexReading, setDexReading] = useState<DexReading | null>(null);
   const [dexBusy, setDexBusy] = useState(false);
+  const [dexWatchlist, setDexWatchlist] = useState<DexWatchItem[]>([]);
+  const dexWatchRef = useRef<DexWatchItem[]>([]);
+  dexWatchRef.current = dexWatchlist;
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
@@ -115,9 +125,19 @@ function AppInner() {
   refreshingAllRef.current = refreshingAll;
 
   const syncPush = useCallback(
-    async (rules: AlertRules, watches: WatchItem[], token: string | null) => {
+    async (
+      rules: AlertRules,
+      watches: WatchItem[],
+      token: string | null,
+      dexWatch?: string[],
+    ) => {
       setPushSyncing(true);
-      const res = await syncPushSubscription({ token, watches, rules });
+      const res = await syncPushSubscription({
+        token,
+        watches,
+        rules,
+        dexWatches: dexWatch ?? dexWatchRef.current.map((w) => w.ticker),
+      });
       setPushSyncing(false);
       if (!res.ok) setPushStatus(res.error ?? "Falha ao sincronizar.");
       else if (rules.enabled && token) setPushStatus("Watch sincronizada.");
@@ -129,6 +149,10 @@ function AppInner() {
   useEffect(() => {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
+    loadDexWatchlist().then((items) => {
+      setDexWatchlist(items);
+      dexWatchRef.current = items;
+    });
     loadWatchRefreshMinutes().then(setAutoRefreshMin);
     getStoredUser().then(setUser);
     loadAlertRules().then(async (rules) => {
@@ -226,6 +250,47 @@ function AppInner() {
       setDexReading(await fetchDexReading(symbol));
     } catch {
       // Silencioso: é um extra sobre um erro que o usuário já viu.
+    } finally {
+      setDexBusy(false);
+    }
+  }
+
+  const dexTicker = dexReading ? dexReading.pair.tokenSymbol : null;
+  const dexPinned = dexTicker != null && dexWatchRef.current.some((w) => w.ticker === dexTicker.toUpperCase());
+
+  /** Pinar/despinar o token atualmente exibido na leitura de fragilidade. */
+  async function toggleDexPin() {
+    const symbol = dexReading?.pair.tokenSymbol;
+    if (!symbol) return;
+    const ticker = symbol.toUpperCase();
+    const already = dexWatchRef.current.some((w) => w.ticker === ticker);
+    const next = already
+      ? await unpinDexWatch(dexWatchRef.current, ticker)
+      : await pinDexWatch(
+          dexWatchRef.current,
+          dexItemFromReading(ticker, dexReading.pair, dexReading.fragility),
+        );
+    setDexWatchlist(next);
+    dexWatchRef.current = next;
+    void syncPush(alertRules, watchRef.current, pushToken, next.map((w) => w.ticker));
+  }
+
+  async function unpinDexFromList(ticker: string) {
+    const next = await unpinDexWatch(dexWatchRef.current, ticker);
+    setDexWatchlist(next);
+    dexWatchRef.current = next;
+    void syncPush(alertRules, watchRef.current, pushToken, next.map((w) => w.ticker));
+  }
+
+  /** Reabre a leitura de um token pinado — volta pra Home, onde o card renderiza. */
+  async function openDexFromList(ticker: string) {
+    setView("home");
+    setDexBusy(true);
+    try {
+      const reading = await fetchDexReading(ticker);
+      setDexReading(reading);
+    } catch {
+      // Se falhar, o card simplesmente não aparece — sem erro travando a tela.
     } finally {
       setDexBusy(false);
     }
@@ -557,6 +622,9 @@ function AppInner() {
             onRefreshAll={() => void refreshAllWatch()}
             autoRefreshMin={autoRefreshMin}
             onAutoRefreshMin={setAutoRefresh}
+            dexItems={dexWatchlist}
+            onOpenDex={(ticker) => void openDexFromList(ticker)}
+            onUnpinDex={(ticker) => void unpinDexFromList(ticker)}
           />
         ) : view === "alerts" ? (
           <AlertsScreen
@@ -611,6 +679,8 @@ function AppInner() {
             onSubmit={() => void run()}
             dexReading={dexReading}
             dexBusy={dexBusy}
+            dexPinned={dexPinned}
+            onToggleDexPin={() => void toggleDexPin()}
           />
         )}
 

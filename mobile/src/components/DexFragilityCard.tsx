@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { AlertTriangle, ExternalLink, Sprout } from "lucide-react-native";
+import { AlertTriangle, ExternalLink, Sprout, Star } from "lucide-react-native";
 import { colors, radius, spacing } from "../theme";
 import type { DexFragilityReport, DexPairSnapshot, DexWindow } from "../types";
 
@@ -48,13 +48,19 @@ const LEVEL_LABEL: Record<DexFragilityReport["level"], string> = {
   observavel: "Sem sinal de fragilidade",
 };
 
-type Props = { pair: DexPairSnapshot; fragility: DexFragilityReport };
+type Props = {
+  pair: DexPairSnapshot;
+  fragility: DexFragilityReport;
+  /** Omitido = card sem toggle (ex.: dentro da própria lista de voláteis). */
+  pinned?: boolean;
+  onTogglePin?: () => void;
+};
 
 /**
  * Paridade com dex-fragility-panel.tsx do web. NÃO é a tela de precedente:
  * um par de horas não tem histórico de candles pra estatística de caminho.
  */
-export function DexFragilityCard({ pair, fragility }: Props) {
+export function DexFragilityCard({ pair, fragility, pinned, onTogglePin }: Props) {
   const [win, setWin] = useState<WindowKey>("h24");
   const w: DexWindow = pair[win];
 
@@ -125,6 +131,24 @@ export function DexFragilityCard({ pair, fragility }: Props) {
           {LEVEL_LABEL[fragility.level]}
         </Text>
       </View>
+
+      {onTogglePin ? (
+        <Pressable
+          onPress={onTogglePin}
+          style={[styles.pinBtn, pinned && styles.pinBtnOn]}
+          accessibilityRole="button"
+          accessibilityLabel={pinned ? "Remover da lista de voláteis" : "Adicionar à lista de voláteis"}
+        >
+          <Star
+            size={14}
+            color={pinned ? colors.accentFg : colors.fg}
+            fill={pinned ? colors.accentFg : "transparent"}
+          />
+          <Text style={[styles.pinBtnText, pinned && { color: colors.accentFg }]}>
+            {pinned ? "Na lista de voláteis" : "+ Voláteis"}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.grid}>
         <Cell label="Preço" value={price(pair.priceUsd)} />
@@ -275,6 +299,24 @@ const styles = StyleSheet.create({
   ageRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   age: { color: colors.muted, fontSize: 11 },
   subtitle: { color: colors.subtle, fontSize: 11, marginTop: 1 },
+  pinBtn: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: spacing(3),
+    marginTop: spacing(2),
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pinBtnOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  pinBtnText: { fontSize: 12, fontWeight: "500", color: colors.fg },
   levelRow: {
     flexDirection: "row",
     alignItems: "center",
