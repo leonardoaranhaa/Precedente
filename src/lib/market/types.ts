@@ -1,7 +1,6 @@
 export const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
 
-/** Agrupamento de momento gráfico pra organizar os chips de TF na UI. */
 export const TIMEFRAME_GROUPS = [
   { key: "scalp", label: "Scalp", tfs: ["1m", "5m"] },
   { key: "intraday", label: "Intraday", tfs: ["15m", "1h"] },
@@ -9,7 +8,6 @@ export const TIMEFRAME_GROUPS = [
 ] as const satisfies { key: string; label: string; tfs: readonly Timeframe[] }[];
 export type TimeframeGroupKey = (typeof TIMEFRAME_GROUPS)[number]["key"];
 
-/** Cadência de auto-atualização da Watch (minutos). 0 = desligado. */
 export const WATCH_REFRESH_MINUTES = [0, 1, 5, 15] as const;
 export type WatchRefreshMinutes = (typeof WATCH_REFRESH_MINUTES)[number];
 
@@ -62,12 +60,6 @@ export type HorizonOutcome = {
   medianDrawdownPct: number;
   worstDrawdownPct: number;
   medianRunupPct: number;
-  /**
-   * Distribuição incondicional deste mesmo horizonte, sem filtro de
-   * fingerprint (todo candle a partir do 50) — o que "52% subiu" precisa pra
-   * significar algo: 52% comparado a uma base incondicional de 51% não diz
-   * quase nada; comparado a 30% diz muito.
-   */
   baseline: {
     upPct: number;
     medianPct: number;
@@ -91,6 +83,9 @@ export type Snapshot = {
   consecutive: number;
   lastExtrema: { type: "top" | "bottom"; barsAgo: number; price: number } | null;
   changePct: number;
+  volLast: number;
+  volMedian20: number | null;
+  volRatio: number | null;
 };
 
 export type ChartPoint = {
@@ -103,6 +98,13 @@ export type ChartPoint = {
   sma50: number | null;
 };
 
+export type PatternRegion = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type VisionReading = {
   tendencia: "alta" | "baixa" | "lateral" | "indefinida";
   padrao: string | null;
@@ -112,6 +114,7 @@ export type VisionReading = {
   ativoAparente: string | null;
   leitura: string;
   confianca: "alta" | "media" | "baixa";
+  patternRegion: PatternRegion | null;
 };
 
 export type PrecedentResult = {
@@ -148,8 +151,28 @@ export type OnchainContext = {
   priceChange6hPct: number | null;
   priceChange1hPct: number | null;
   pairAgeHours: number | null;
+  /** Valor de mercado circulante e diluído, como o DexScreener mostra.
+   * Liquidez contra market cap é a leitura de saída: quanto do valor
+   * de papel realmente cabe na pool. */
+  marketCapUsd: number | null;
+  fdvUsd: number | null;
   dexSource: string | null;
   sources: string[];
+};
+
+export type NewsContextPayload = {
+  ticker: string;
+  coin: string;
+  items: {
+    title: string;
+    source: string;
+    link: string;
+    publishedAt: number | null;
+    coins: string[];
+    categories: string[];
+  }[];
+  fetchedAt: number;
+  disclaimer: string;
 };
 
 export type AnalysisPayload = {
@@ -163,8 +186,17 @@ export type AnalysisPayload = {
   chart: ChartPoint[];
   vision: VisionReading | null;
   visionError: string | null;
+  visionQuota?: {
+    used: number;
+    limit: number;
+    remaining: number;
+    nearLimit: boolean;
+    exhausted: boolean;
+    message: string | null;
+  } | null;
   source: string;
   onchain: OnchainContext | null;
+  newsContext: NewsContextPayload | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {

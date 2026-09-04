@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { scanDexDrain } from "@/lib/push/dex-drain";
+import { scanDexDrain } from "@/lib/push/dex-drain-scan";
 import { dbSource } from "@/lib/db";
 import { reportServerError } from "@/lib/sentry.server";
 
@@ -17,8 +17,10 @@ function json(body: unknown, status = 200): Response {
 }
 
 function authorized(request: Request): boolean {
-  const secret = process.env.PUSH_CRON_SECRET;
-  if (!secret) return dbSource !== "neon";
+  const secret = process.env.PUSH_CRON_SECRET ?? process.env.NEWS_CRON_SECRET;
+  if (!secret) {
+    return dbSource !== "neon";
+  }
   const header =
     request.headers.get("x-cron-secret") ??
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");

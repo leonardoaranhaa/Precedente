@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DEFAULT_ALERT_RULES, type AlertRules, type WatchTarget } from "@/lib/push/types";
+import { DEFAULT_ALERT_RULES, MAX_DEX_WATCHES, type AlertRules, type WatchTarget } from "@/lib/push/types";
+import { sanitizeDexTicker } from "@/lib/push/sanitize";
 import { removeSubscription, subscriptionCount, upsertSubscription } from "@/lib/push/store";
 import { TIMEFRAMES, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker } from "@/lib/market/labels";
@@ -15,8 +16,6 @@ import { getSessionUser } from "@/lib/auth/verify.server";
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 
-// Tokens reais do Expo Push seguem um destes formatos; qualquer outra coisa
-// nunca vai entregar notificação — não vale a pena guardar linha na tabela.
 const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 
 const CORS_HEADERS = {
@@ -45,8 +44,6 @@ function parseWatches(raw: unknown): WatchTarget[] {
       ticker,
       timeframe,
       displayTicker: typeof r.displayTicker === "string" ? r.displayTicker : undefined,
-      // Validação/limpeza de verdade acontece em store.ts (sanitizeWatchTarget) —
-      // aqui só repassa o que veio, sem confiar no formato.
       priceZone: r.priceZone as WatchTarget["priceZone"],
       rsiZone: r.rsiZone as WatchTarget["rsiZone"],
     });
@@ -54,15 +51,34 @@ function parseWatches(raw: unknown): WatchTarget[] {
   return out.slice(0, 24);
 }
 
+function parseDexWatches(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw) {
+    const t = sanitizeDexTicker(item);
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out.slice(0, MAX_DEX_WATCHES);
+}
+
 function parseRules(raw: unknown): Partial<AlertRules> | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
   const out: Partial<AlertRules> = {};
   if (typeof r.sampleWeak === "boolean") out.sampleWeak = r.sampleWeak;
+  if (typeof r.sampleRegime === "boolean") out.sampleRegime = r.sampleRegime;
   if (typeof r.drawdownPath === "boolean") out.drawdownPath = r.drawdownPath;
   if (typeof r.extreme20 === "boolean") out.extreme20 = r.extreme20;
   if (typeof r.drawdownThresholdPct === "number" && Number.isFinite(r.drawdownThresholdPct)) {
     out.drawdownThresholdPct = Math.min(50, Math.max(1, r.drawdownThresholdPct));
+  }
+  if (typeof r.fundingExtreme === "boolean") out.fundingExtreme = r.fundingExtreme;
+  if (typeof r.fundingThreshold === "number" && Number.isFinite(r.fundingThreshold)) {
+    out.fundingThreshold = Math.min(0.05, Math.max(0.00005, r.fundingThreshold));
+  }
+  if (typeof r.volumeAnomaly === "boolean") out.volumeAnomaly = r.volumeAnomaly;
+  if (typeof r.volumeMultiple === "number" && Number.isFinite(r.volumeMultiple)) {
+    out.volumeMultiple = Math.min(20, Math.max(1.5, r.volumeMultiple));
   }
   return out;
 }
@@ -90,15 +106,16 @@ export const Route = createFileRoute("/api/push/register")({
         }
 
         const watches = parseWatches(raw.watches);
+        const dexWatches = parseDexWatches(raw.dexWatches);
 
-        // Gates Premium (no-op se BILLING_GATES_ENABLED não estiver ligado).
+        let sessionUserId: string | null = null;
         try {
           const session = await getSessionUser();
-          const userId = session?.id ?? null;
-          await assertPremiumFeatureForUser(userId, "watch_slot", {
+          sessionUserId = session?.id ?? null;
+          await assertPremiumFeatureForUser(sessionUserId, "watch_slot", {
             watchCount: watches.length,
           });
-          await assertPremiumFeatureForUser(userId, "zones", {
+          await assertPremiumFeatureForUser(sessionUserId, "zones", {
             hasEnabledZones: watchesHaveEnabledZones(watches),
           });
         } catch (err) {
@@ -108,8 +125,6 @@ export const Route = createFileRoute("/api/push/register")({
               err.status,
             );
           }
-          // getSessionUser / hasPremium falhou por outro motivo — não derruba registro
-          // se gates estão off; se gates on e DB quebrou, propaga.
           throw err;
         }
 
@@ -118,12 +133,24 @@ export const Route = createFileRoute("/api/push/register")({
             token,
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
             watches,
+            dexWatches,
+            dailySummaryEnabled:
+              typeof raw.dailySummaryEnabled === "boolean" ? raw.dailySummaryEnabled : undefined,
             rules: parseRules(raw.rules) ?? DEFAULT_ALERT_RULES,
+            digestEnabled: typeof raw.digestEnabled === "boolean" ? raw.digestEnabled : undefined,
+            digestHourUtc: typeof raw.digestHourUtc === "number" ? raw.digestHourUtc : undefined,
+            includeMovers: typeof raw.includeMovers === "boolean" ? raw.includeMovers : undefined,
+            userId: sessionUserId,
           });
           return json({
             ok: true,
             watches: sub.watches.length,
+            dexWatches: sub.dexWatches.length,
+            dailySummaryEnabled: sub.dailySummaryEnabled,
             rules: sub.rules,
+            digestEnabled: sub.digestEnabled,
+            digestHourUtc: sub.digestHourUtc,
+            includeMovers: sub.includeMovers,
             subscribers: await subscriptionCount(),
           });
         } catch (err) {

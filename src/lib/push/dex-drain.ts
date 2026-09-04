@@ -1,169 +1,98 @@
-import { fetchOnchainContext } from "@/lib/market/onchain";
-import { mapWithConcurrency } from "@/lib/concurrency";
-import { uniqueWatchPairs } from "./scan-logic";
-import { listSubscriptions, markSent } from "./store";
-import { sendExpoAlerts } from "./expo-send";
-import { shouldScan } from "./evaluate";
-import type { AlertEvent, PushSubscription } from "./types";
-import type { Timeframe, OnchainContext } from "@/lib/market/types";
+/**
+ * Alerta de drenagem — token de ciclo curto no DEX cujo fluxo piora.
+ *
+ * Mesmo padrão de sample-regime.ts (transição de estado, código guardado em
+ * lastSent), aplicado ao motor de fragilidade em vez do motor de precedente.
+ *
+ * DECISÃO DE ESCOPO: só as flags que descrevem fluxo AGORA contam pra
+ * severidade — liquidez_baixa, giro_extremo, pressao_venda, volume_esfriando.
+ * par_novo e saida_estreita ficam de fora: são fatos estruturais (idade do
+ * par, relação liquidez/market cap), verdadeiros a vida inteira do par, não
+ * evidência de que ele está sendo drenado neste momento. Um par pode nascer
+ * fino e continuar fino sem nunca "drenar" — drenagem é MUDANÇA de fluxo.
+ *
+ * Dispara só ao PIORAR. Nunca "recuperou": um par quase morto pode sair de
+ * volume_esfriando simplesmente porque o volume foi a zero em toda janela —
+ * isso não significa que o dinheiro voltou. Alertar "melhorou" nesse caso
+ * seria reafirmação falsa, o oposto do que "prevenção de perda" promete.
+ */
 
-export type DexDrainReport = {
-  subscriptions: number;
-  pairsChecked: number;
-  drainAlerts: number;
-  sent: number;
-  errors: string[];
+import type { DexFragilityReport, FragilityFlag, FragilityFlagId } from "@/lib/market/dex";
+
+const ACTIVE_FLAGS: ReadonlySet<FragilityFlagId> = new Set([
+  "liquidez_baixa",
+  "giro_extremo",
+  "pressao_venda",
+  "volume_esfriando",
+]);
+
+export type DrainLevel = "none" | "watch" | "drain";
+
+function activeFlags(report: DexFragilityReport): FragilityFlag[] {
+  return report.flags.filter((f) => ACTIVE_FLAGS.has(f.id));
+}
+
+/** 2+ flags ativas de severidade alta = drenagem; 1+ ativa (qualquer severidade) = observar. */
+export function drainLevel(report: DexFragilityReport): DrainLevel {
+  const active = activeFlags(report);
+  const activeAlta = active.filter((f) => f.severity === "alta").length;
+  if (activeAlta >= 2) return "drain";
+  if (active.length >= 1) return "watch";
+  return "none";
+}
+
+export function drainLevelCode(level: DrainLevel): number {
+  return level === "drain" ? 2 : level === "watch" ? 1 : 0;
+}
+
+function levelFromCode(code: number): DrainLevel {
+  if (code >= 2) return "drain";
+  if (code >= 1) return "watch";
+  return "none";
+}
+
+export function dexDrainStateKey(ticker: string): string {
+  return `${ticker.toUpperCase()}:_dex_drain`;
+}
+
+export type DrainTransition = {
+  from: DrainLevel;
+  to: DrainLevel;
+  flags: FragilityFlag[];
 };
 
-const DRAIN_CONCURRENCY = 6;
-const DRAIN_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2h per pair
+/**
+ * `prevCode` vem de lastSent[dexDrainStateKey(ticker)] — undefined na primeira
+ * vez que essa subscription vê o par. Nesse caso só dispara se JÁ nasce em
+ * "drain" (o nível máximo, que não tem "piora" seguinte pra detectar): pinar
+ * um token que já está sendo drenado precisa avisar imediatamente, não ficar
+ * mudo esperando uma transição que o teto do nível nunca permite acontecer.
+ */
+export function detectDrainTransition(
+  prevCode: number | undefined,
+  report: DexFragilityReport,
+): DrainTransition | null {
+  const to = drainLevel(report);
+  const toCode = drainLevelCode(to);
 
-const LIQ_CRITICAL_USD = 10_000;
-const SELL_RATIO_THRESHOLD = 0.75;
-
-export type DrainSignal = {
-  ticker: string;
-  displayTicker: string;
-  reason: string;
-  liquidityUsd: number | null;
-  sellRatio6h: number | null;
-  priceChange1hPct: number | null;
-};
-
-export function detectDrain(
-  ticker: string,
-  displayTicker: string,
-  ctx: OnchainContext,
-): DrainSignal | null {
-  const reasons: string[] = [];
-
-  if (ctx.liquidityUsd != null && ctx.liquidityUsd < LIQ_CRITICAL_USD) {
-    reasons.push(`liquidez crítica ($${Math.round(ctx.liquidityUsd)})`);
+  if (prevCode == null) {
+    return to === "drain" ? { from: "none", to, flags: activeFlags(report) } : null;
   }
+  if (toCode <= prevCode) return null;
 
-  const buys6h = ctx.buys6h ?? 0;
-  const sells6h = ctx.sells6h ?? 0;
-  const total6h = buys6h + sells6h;
-  const sellRatio = total6h > 10 ? sells6h / total6h : null;
-
-  if (sellRatio != null && sellRatio >= SELL_RATIO_THRESHOLD) {
-    reasons.push(`${(sellRatio * 100).toFixed(0)}% vendas em 6h`);
-  }
-
-  const pc1h = ctx.priceChange1hPct ?? null;
-  if (pc1h != null && pc1h <= -10) {
-    reasons.push(`preço −${Math.abs(pc1h).toFixed(0)}% em 1h`);
-  }
-
-  if (reasons.length === 0) return null;
-
-  return {
-    ticker,
-    displayTicker,
-    reason: reasons.join(" · "),
-    liquidityUsd: ctx.liquidityUsd,
-    sellRatio6h: sellRatio,
-    priceChange1hPct: pc1h,
-  };
+  return { from: levelFromCode(prevCode), to, flags: activeFlags(report) };
 }
 
-function drainCooldownKey(ticker: string): string {
-  return `${ticker}:dex_drain`;
+export function drainTitle(displayTicker: string, t: DrainTransition): string {
+  if (t.to === "drain") return `${displayTicker} · drenagem ativa`;
+  return `${displayTicker} · fluxo piorando`;
 }
 
-function shouldAlertDrain(sub: PushSubscription, ticker: string, now: number): boolean {
-  const last = sub.lastSent[drainCooldownKey(ticker)] ?? 0;
-  return now - last >= DRAIN_COOLDOWN_MS;
-}
-
-function baseAsset(symbol: string): string {
-  const s = symbol.toUpperCase();
-  for (const q of ["USDT", "USDC", "BUSD", "FDUSD", "BRL"]) {
-    if (s.endsWith(q) && s.length > q.length) return s.slice(0, -q.length);
-  }
-  return s;
-}
-
-export async function scanDexDrain(): Promise<DexDrainReport> {
-  const report: DexDrainReport = {
-    subscriptions: 0,
-    pairsChecked: 0,
-    drainAlerts: 0,
-    sent: 0,
-    errors: [],
-  };
-
-  const now = Date.now();
-  const subs = (await listSubscriptions()).filter(shouldScan);
-  report.subscriptions = subs.length;
-
-  if (subs.length === 0) return report;
-
-  const pairs = uniqueWatchPairs(
-    subs.map((s) => ({ watches: s.watches as { ticker: string; timeframe: Timeframe }[] })),
-  );
-
-  const uniqueTickers = [...new Set(pairs.map((p) => p.ticker))];
-  report.pairsChecked = uniqueTickers.length;
-
-  type TickerResult = { ok: true; ctx: OnchainContext } | { ok: false; error: string };
-  const tickerResults = await mapWithConcurrency(uniqueTickers, DRAIN_CONCURRENCY, async (ticker) => {
-    try {
-      const ctx = await fetchOnchainContext(ticker);
-      return [ticker, { ok: true, ctx }] as const;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "erro";
-      return [ticker, { ok: false, error: msg }] as const;
-    }
-  });
-
-  const resultByTicker = new Map<string, TickerResult>(tickerResults);
-  for (const [ticker, result] of resultByTicker) {
-    if (!result.ok) report.errors.push(`${ticker} — ${result.error}`);
-  }
-
-  const drainByTicker = new Map<string, DrainSignal>();
-  for (const [ticker, result] of resultByTicker) {
-    if (!result.ok) continue;
-    const signal = detectDrain(ticker, baseAsset(ticker), result.ctx);
-    if (signal) drainByTicker.set(ticker, signal);
-  }
-
-  report.drainAlerts = drainByTicker.size;
-
-  for (const sub of subs) {
-    const eventsForToken: AlertEvent[] = [];
-    const cooldownKeys: string[] = [];
-
-    for (const w of sub.watches) {
-      const signal = drainByTicker.get(w.ticker);
-      if (!signal) continue;
-      if (!shouldAlertDrain(sub, w.ticker, now)) continue;
-
-      eventsForToken.push({
-        kind: "sample_weak",
-        ticker: w.ticker,
-        timeframe: w.timeframe,
-        displayTicker: signal.displayTicker,
-        title: `${signal.displayTicker} — sinal de drenagem`,
-        body: signal.reason,
-      });
-      cooldownKeys.push(drainCooldownKey(w.ticker));
-    }
-
-    if (eventsForToken.length === 0) continue;
-
-    try {
-      const result = await sendExpoAlerts(sub.token, eventsForToken);
-      if (result.ok > 0) {
-        report.sent += result.ok;
-        await markSent(sub.token, cooldownKeys);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "falha push";
-      report.errors.push(`token…${sub.token.slice(-8)} — ${msg}`);
-    }
-  }
-
-  return report;
+export function drainBody(t: DrainTransition): string {
+  const flagList = t.flags.map((f) => f.label.toLowerCase()).join(", ");
+  const lead =
+    t.to === "drain"
+      ? "Dois ou mais sinais de fluxo ativos ao mesmo tempo"
+      : "Sinal de fluxo apareceu";
+  return `${lead}: ${flagList}. Estado do par agora — não é estatística de caminho nem ordem de compra ou venda.`;
 }

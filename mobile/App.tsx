@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { analyze, fetchTopTraded } from "./src/api";
+import { analyze, fetchDexReading, fetchTopTraded } from "./src/api";
 import {
   DEFAULT_ALERT_RULES,
   loadAlertRules,
@@ -9,9 +10,17 @@ import {
   type AlertRules,
 } from "./src/alert-settings";
 import { getStoredUser, signIn, signOut, signUp, updateName, type AuthUser } from "./src/auth";
+import {
+  dexItemFromReading,
+  loadDexWatchlist,
+  pinDexWatch,
+  unpinDexWatch,
+  type DexWatchItem,
+} from "./src/dex-watchlist";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
+import { DexFragilityModal } from "./src/components/DexFragilityModal";
 import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
@@ -25,15 +34,17 @@ import { AccountScreen } from "./src/screens/AccountScreen";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
+import { NewsScreen } from "./src/screens/NewsScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { initSentry } from "./src/sentry";
+import { hapticRefreshDone } from "./src/haptics";
 import { getSyncData, setSyncData } from "./src/sync";
 
 initSentry();
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
-import type { StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
+import type { DexReading, StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
 import {
   loadWatchRefreshMinutes,
   saveWatchRefreshMinutes,
@@ -50,8 +61,9 @@ import {
   type WatchItem,
 } from "./src/watchlist";
 import { ZoneModal } from "./src/components/ZoneModal";
+import { NewsPreferencesModal } from "./src/components/NewsPreferencesModal";
 
-type Screen = "home" | "history" | "result" | "watch" | "alerts" | "account";
+type Screen = "home" | "history" | "result" | "watch" | "alerts" | "news" | "account";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -59,9 +71,11 @@ const SYNC_DEBOUNCE_MS = 1500;
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppInner />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppInner />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -75,6 +89,12 @@ function AppInner() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<PipelineStep>("ohlc");
   const [error, setError] = useState<string | null>(null);
+  const [dexReading, setDexReading] = useState<DexReading | null>(null);
+  const [dexBusy, setDexBusy] = useState(false);
+  const [dexModalOpen, setDexModalOpen] = useState(false);
+  const [dexWatchlist, setDexWatchlist] = useState<DexWatchItem[]>([]);
+  const dexWatchRef = useRef<DexWatchItem[]>([]);
+  dexWatchRef.current = dexWatchlist;
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
@@ -85,6 +105,8 @@ function AppInner() {
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
   const [zoneItem, setZoneItem] = useState<WatchItem | null>(null);
+  const [newsPrefsOpen, setNewsPrefsOpen] = useState(false);
+  const [newsRefreshKey, setNewsRefreshKey] = useState(0);
 
   const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -105,9 +127,19 @@ function AppInner() {
   refreshingAllRef.current = refreshingAll;
 
   const syncPush = useCallback(
-    async (rules: AlertRules, watches: WatchItem[], token: string | null) => {
+    async (
+      rules: AlertRules,
+      watches: WatchItem[],
+      token: string | null,
+      dexWatch?: string[],
+    ) => {
       setPushSyncing(true);
-      const res = await syncPushSubscription({ token, watches, rules });
+      const res = await syncPushSubscription({
+        token,
+        watches,
+        rules,
+        dexWatches: dexWatch ?? dexWatchRef.current.map((w) => w.ticker),
+      });
       setPushSyncing(false);
       if (!res.ok) setPushStatus(res.error ?? "Falha ao sincronizar.");
       else if (rules.enabled && token) setPushStatus("Watch sincronizada.");
@@ -119,6 +151,10 @@ function AppInner() {
   useEffect(() => {
     loadHistory().then(setHistory);
     loadWatchlist().then(setWatch);
+    loadDexWatchlist().then((items) => {
+      setDexWatchlist(items);
+      dexWatchRef.current = items;
+    });
     loadWatchRefreshMinutes().then(setAutoRefreshMin);
     getStoredUser().then(setUser);
     loadAlertRules().then(async (rules) => {
@@ -200,8 +236,72 @@ function AppInner() {
     setFocusIds((current) => [id, ...current.filter((x) => x !== id)].slice(0, 8));
   }
 
+  /**
+   * Token fora da Binance não tem precedente (falta histórico de candles),
+   * mas pode ter par no DEX — a leitura de fragilidade entra no lugar do
+   * beco sem saída. Só essas duas frases sinalizam "não listado"; qualquer
+   * outro erro é falha real.
+   */
+  function isNotListed(message: string): boolean {
+    return message.includes("não encontrado") || message.includes("Sem candles");
+  }
+
+  async function loadDexReading(symbol: string) {
+    setDexBusy(true);
+    try {
+      setDexReading(await fetchDexReading(symbol));
+    } catch {
+      // Silencioso: é um extra sobre um erro que o usuário já viu.
+    } finally {
+      setDexBusy(false);
+    }
+  }
+
+  const dexTicker = dexReading ? dexReading.pair.tokenSymbol : null;
+  const dexPinned = dexTicker != null && dexWatchRef.current.some((w) => w.ticker === dexTicker.toUpperCase());
+
+  /** Pinar/despinar o token atualmente exibido na leitura de fragilidade. */
+  async function toggleDexPin() {
+    const symbol = dexReading?.pair.tokenSymbol;
+    if (!symbol) return;
+    const ticker = symbol.toUpperCase();
+    const already = dexWatchRef.current.some((w) => w.ticker === ticker);
+    const next = already
+      ? await unpinDexWatch(dexWatchRef.current, ticker)
+      : await pinDexWatch(
+          dexWatchRef.current,
+          dexItemFromReading(ticker, dexReading.pair, dexReading.fragility),
+        );
+    setDexWatchlist(next);
+    dexWatchRef.current = next;
+    void syncPush(alertRules, watchRef.current, pushToken, next.map((w) => w.ticker));
+  }
+
+  async function unpinDexFromList(ticker: string) {
+    const next = await unpinDexWatch(dexWatchRef.current, ticker);
+    setDexWatchlist(next);
+    dexWatchRef.current = next;
+    void syncPush(alertRules, watchRef.current, pushToken, next.map((w) => w.ticker));
+  }
+
+  /** Reabre a leitura de um token pinado, na hora, sem trocar de aba. */
+  async function openDexFromList(ticker: string) {
+    setDexBusy(true);
+    try {
+      const reading = await fetchDexReading(ticker);
+      setDexReading(reading);
+      if (reading) setDexModalOpen(true);
+    } catch {
+      // Sem leitura, sem modal — não trava a tela em erro.
+    } finally {
+      setDexBusy(false);
+    }
+  }
+
   async function run() {
     setError(null);
+    setDexReading(null);
+    setDexModalOpen(false);
     setBusy(true);
     setStep("ohlc");
     const t1 = setTimeout(() => setStep("stats"), 600);
@@ -239,7 +339,10 @@ function AppInner() {
       setStep("done");
       setView("result");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível concluir a análise.");
+      const message =
+        err instanceof Error ? err.message : "Não foi possível concluir a análise.";
+      setError(message);
+      if (isNotListed(message)) void loadDexReading(ticker);
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -366,6 +469,9 @@ function AppInner() {
           : `Falhou: ${failed.join(", ")}. Os demais foram atualizados.`,
       );
     }
+    // Confirmação tátil só quando algo de fato terminou bem — numa falha total
+    // não é "sucesso" pra vibrar, seria feedback enganoso.
+    if (failed.length < list.length) hapticRefreshDone();
   }
 
   refreshAllFnRef.current = () => {
@@ -482,6 +588,7 @@ function AppInner() {
           <Tab active={view === "home"} onPress={() => setView("home")} label="Analisar" />
           <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
           <Tab active={view === "alerts"} onPress={() => setView("alerts")} label="Alertas" />
+          <Tab active={view === "news"} onPress={() => setView("news")} label="Notíc." />
           <Tab active={view === "history"} onPress={() => setView("history")} label="Hist." />
           <Tab active={view === "account"} onPress={() => setView("account")} label="Conta" />
         </View>
@@ -518,6 +625,9 @@ function AppInner() {
             onRefreshAll={() => void refreshAllWatch()}
             autoRefreshMin={autoRefreshMin}
             onAutoRefreshMin={setAutoRefresh}
+            dexItems={dexWatchlist}
+            onOpenDex={(ticker) => void openDexFromList(ticker)}
+            onUnpinDex={(ticker) => void unpinDexFromList(ticker)}
           />
         ) : view === "alerts" ? (
           <AlertsScreen
@@ -529,6 +639,12 @@ function AppInner() {
             onChange={(next) => void handleAlertRulesChange(next)}
             onRequestPermission={() => void handleRequestPermission()}
             onScanNow={() => void handleScanNow()}
+          />
+        ) : view === "news" ? (
+          <NewsScreen
+            signedIn={Boolean(user)}
+            refreshKey={newsRefreshKey}
+            onOpenPreferences={() => setNewsPrefsOpen(true)}
           />
         ) : view === "history" ? (
           <HistoryScreen
@@ -564,6 +680,9 @@ function AppInner() {
             onTimeframe={setTimeframe}
             onImage={setImage}
             onSubmit={() => void run()}
+            dexReading={dexReading}
+            dexBusy={dexBusy}
+            onOpenDexModal={() => setDexModalOpen(true)}
           />
         )}
 
@@ -582,6 +701,22 @@ function AppInner() {
             void syncPush(alertRules, next, pushToken);
           });
         }}
+      />
+
+      <NewsPreferencesModal
+        visible={newsPrefsOpen}
+        signedIn={Boolean(user)}
+        onClose={() => setNewsPrefsOpen(false)}
+        onSaved={() => setNewsRefreshKey((k) => k + 1)}
+      />
+
+      <DexFragilityModal
+        visible={dexModalOpen}
+        onClose={() => setDexModalOpen(false)}
+        pair={dexReading?.pair ?? null}
+        fragility={dexReading?.fragility ?? null}
+        pinned={dexPinned}
+        onTogglePin={() => void toggleDexPin()}
       />
     </SafeAreaView>
   );

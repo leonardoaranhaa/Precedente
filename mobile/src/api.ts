@@ -1,5 +1,5 @@
 import { ANALYZE_ENDPOINT, API_BASE_URL } from "./config";
-import type { AnalysisPayload, ApiErrorBody, Timeframe, TradedPair } from "./types";
+import type { AnalysisPayload, ApiErrorBody, DexReading, Timeframe, TradedPair } from "./types";
 
 export type AnalyzeRequest = {
   ticker: string;
@@ -44,4 +44,20 @@ export async function fetchTopTraded(limit = 12): Promise<TradedPair[]> {
   }
   const body = (await response.json()) as { pairs?: TradedPair[] };
   return body.pairs ?? [];
+}
+
+/**
+ * Leitura de fragilidade de um token que vive no DEX. Devolve null quando o
+ * token não tem par nenhum — é resposta esperada, não erro.
+ */
+export async function fetchDexReading(ticker: string): Promise<DexReading | null> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/dex?ticker=${encodeURIComponent(ticker)}`,
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Não foi possível ler o DEX (status ${response.status}).`);
+  }
+  const body = (await response.json()) as DexReading;
+  return body?.pair && body?.fragility ? body : null;
 }

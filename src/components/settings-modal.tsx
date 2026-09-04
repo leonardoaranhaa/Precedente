@@ -111,9 +111,15 @@ function NotificationsPanel() {
   return (
     <div className="space-y-3 text-sm text-muted">
       <p>
-        Alertas de preço ficam no app mobile — ative por par direto na sua Watch lá, e
-        escolha se quer aviso quando o ativo sair da faixa de 20 barras.
+        Alertas e digests ficam no <strong className="text-fg font-medium">app mobile</strong>{" "}
+        (aba Alertas): regras de amostra, regime, drawdown, extremo 20 barras, funding e o
+        digest diário da Watch com movers 24h.
       </p>
+      <ul className="list-inside list-disc space-y-1 text-xs text-subtle">
+        <li>Push de prevenção — nunca ordem de compra/venda</li>
+        <li>Digest diário na hora UTC que você escolher</li>
+        <li>Notícias: use o modal de preferências de news no painel</li>
+      </ul>
       <p className="text-xs text-subtle">
         No navegador ainda não mandamos notificação — só o app mobile avisa fora da tela.
       </p>
@@ -140,10 +146,9 @@ function ProfilePanel() {
     try {
       const { error } = await authClient.updateUser({ name: name.trim() });
       if (error) {
-        setNameMsg(error.message ?? "Não deu pra salvar.");
+        setNameMsg(error.message ?? "Não deu pra salvar o nome.");
       } else {
         setNameMsg("Nome atualizado.");
-        void authClient.getSession();
       }
     } catch {
       setNameMsg("Falha de rede. Tente de novo.");

@@ -1,73 +1,156 @@
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { test } from "node:test";
-import { detectDrain } from "./dex-drain.ts";
-import type { OnchainContext } from "@/lib/market/types";
+import {
+  dexDrainStateKey,
+  detectDrainTransition,
+  drainBody,
+  drainLevel,
+  drainLevelCode,
+  drainTitle,
+} from "./dex-drain.ts";
+import type { DexFragilityReport, FragilityFlag } from "@/lib/market/dex";
 
-function makeCtx(overrides: Partial<OnchainContext> = {}): OnchainContext {
+function flag(id: FragilityFlag["id"], severity: FragilityFlag["severity"]): FragilityFlag {
+  return { id, severity, label: id, detail: `detalhe de ${id}` };
+}
+
+function report(flags: FragilityFlag[]): DexFragilityReport {
   return {
-    fetchedAt: Date.now(),
-    fundingRate: null,
-    markPrice: null,
-    openInterest: null,
-    nextFundingTime: null,
-    derivativesSource: null,
-    chainId: "solana",
-    dexId: "raydium",
-    pairUrl: null,
-    liquidityUsd: 500_000,
-    volume24hUsd: 100_000,
-    volume6hUsd: 40_000,
-    volume1hUsd: 8_000,
-    buys24h: 200,
-    sells24h: 200,
-    buys6h: 50,
-    sells6h: 50,
-    priceChange24hPct: -2,
-    priceChange6hPct: -1,
-    priceChange1hPct: 0,
-    pairAgeHours: 72,
-    dexSource: "DexScreener",
-    sources: ["DexScreener"],
-    ...overrides,
+    level: "media",
+    flags,
+    metrics: {
+      liquidityUsd: null,
+      volume24hUsd: null,
+      turnover24h: null,
+      sellRatio24h: null,
+      sellRatio6h: null,
+      volumeTrend: null,
+      pairAgeHours: null,
+      marketCapUsd: null,
+      liqToMcap: null,
+    },
+    disclaimer: "x",
   };
 }
 
-test("detectDrain retorna null quando tudo normal", () => {
-  const result = detectDrain("TOKENUSDT", "TOKEN", makeCtx());
-  assert.equal(result, null);
+describe("drainLevel — só flags ativas contam, estruturais ficam de fora", () => {
+  it("nenhuma flag → none", () => {
+    assert.equal(drainLevel(report([])), "none");
+  });
+
+  it("só flags estruturais (par_novo, saida_estreita) → none, mesmo em alta severidade", () => {
+    const r = report([flag("par_novo", "alta"), flag("saida_estreita", "alta")]);
+    assert.equal(drainLevel(r), "none");
+  });
+
+  it("1 flag ativa de qualquer severidade → watch", () => {
+    assert.equal(drainLevel(report([flag("volume_esfriando", "media")])), "watch");
+    assert.equal(drainLevel(report([flag("liquidez_baixa", "alta")])), "watch");
+  });
+
+  it("2+ flags ativas de severidade alta → drain", () => {
+    const r = report([flag("liquidez_baixa", "alta"), flag("giro_extremo", "alta")]);
+    assert.equal(drainLevel(r), "drain");
+  });
+
+  it("1 ativa alta + 1 ativa média não chega a drain (precisa 2 altas)", () => {
+    const r = report([flag("liquidez_baixa", "alta"), flag("volume_esfriando", "media")]);
+    assert.equal(drainLevel(r), "watch");
+  });
+
+  it("flags estruturais não contam pro total de watch nem elevam a drain", () => {
+    const r = report([
+      flag("liquidez_baixa", "alta"),
+      flag("par_novo", "alta"),
+      flag("saida_estreita", "alta"),
+    ]);
+    // só 1 ativa alta (liquidez_baixa) — as outras 2 são estruturais.
+    assert.equal(drainLevel(r), "watch");
+  });
 });
 
-test("detectDrain detecta liquidez crítica", () => {
-  const result = detectDrain("TOKENUSDT", "TOKEN", makeCtx({ liquidityUsd: 5_000 }));
-  assert.notEqual(result, null);
-  assert.ok(result!.reason.includes("liquidez crítica"));
+describe("drainLevelCode", () => {
+  it("mapeia none/watch/drain pra 0/1/2", () => {
+    assert.equal(drainLevelCode("none"), 0);
+    assert.equal(drainLevelCode("watch"), 1);
+    assert.equal(drainLevelCode("drain"), 2);
+  });
 });
 
-test("detectDrain detecta dominância de vendas em 6h", () => {
-  const result = detectDrain("TOKENUSDT", "TOKEN", makeCtx({ buys6h: 10, sells6h: 90 }));
-  assert.notEqual(result, null);
-  assert.ok(result!.reason.includes("vendas em 6h"));
-  assert.ok(result!.sellRatio6h! >= 0.75);
+describe("dexDrainStateKey", () => {
+  it("normaliza o ticker pra maiúsculo", () => {
+    assert.equal(dexDrainStateKey("legs"), "LEGS:_dex_drain");
+  });
 });
 
-test("detectDrain detecta queda forte de preço em 1h", () => {
-  const result = detectDrain("TOKENUSDT", "TOKEN", makeCtx({ priceChange1hPct: -15 }));
-  assert.notEqual(result, null);
-  assert.ok(result!.reason.includes("1h"));
+describe("detectDrainTransition — primeira observação", () => {
+  it("prevCode undefined e nível é drain → dispara imediatamente", () => {
+    const r = report([flag("liquidez_baixa", "alta"), flag("giro_extremo", "alta")]);
+    const t = detectDrainTransition(undefined, r);
+    assert.ok(t);
+    assert.equal(t.from, "none");
+    assert.equal(t.to, "drain");
+  });
+
+  it("prevCode undefined e nível é watch → fica em silêncio (evita spam ao pinar)", () => {
+    const r = report([flag("volume_esfriando", "media")]);
+    assert.equal(detectDrainTransition(undefined, r), null);
+  });
+
+  it("prevCode undefined e nível é none → silêncio", () => {
+    assert.equal(detectDrainTransition(undefined, report([])), null);
+  });
 });
 
-test("detectDrain combina múltiplos sinais", () => {
-  const result = detectDrain(
-    "TOKENUSDT",
-    "TOKEN",
-    makeCtx({ liquidityUsd: 3_000, buys6h: 5, sells6h: 95, priceChange1hPct: -20 }),
-  );
-  assert.notEqual(result, null);
-  const reasons = result!.reason.split(" · ");
-  assert.ok(reasons.length >= 2);
+describe("detectDrainTransition — só dispara ao piorar", () => {
+  it("watch → drain dispara", () => {
+    const r = report([flag("liquidez_baixa", "alta"), flag("giro_extremo", "alta")]);
+    const t = detectDrainTransition(1, r);
+    assert.ok(t);
+    assert.equal(t.from, "watch");
+    assert.equal(t.to, "drain");
+  });
+
+  it("none → watch dispara", () => {
+    const t = detectDrainTransition(0, report([flag("volume_esfriando", "media")]));
+    assert.ok(t);
+    assert.equal(t.from, "none");
+    assert.equal(t.to, "watch");
+  });
+
+  it("drain → watch (recuperação) NUNCA dispara", () => {
+    assert.equal(detectDrainTransition(2, report([flag("volume_esfriando", "media")])), null);
+  });
+
+  it("drain → none (recuperação total) NUNCA dispara", () => {
+    assert.equal(detectDrainTransition(2, report([])), null);
+  });
+
+  it("mesmo nível não dispara (nem watch→watch nem drain→drain)", () => {
+    assert.equal(detectDrainTransition(1, report([flag("volume_esfriando", "media")])), null);
+    const r = report([flag("liquidez_baixa", "alta"), flag("giro_extremo", "alta")]);
+    assert.equal(detectDrainTransition(2, r), null);
+  });
 });
 
-test("detectDrain ignora sell ratio com poucas transações", () => {
-  const result = detectDrain("TOKENUSDT", "TOKEN", makeCtx({ buys6h: 1, sells6h: 9 }));
-  assert.equal(result, null);
+describe("drainTitle / drainBody", () => {
+  it("título e corpo citam as flags reais, sem linguagem de ordem", () => {
+    const r = report([flag("liquidez_baixa", "alta"), flag("giro_extremo", "alta")]);
+    const t = detectDrainTransition(1, r);
+    assert.ok(t);
+    assert.equal(drainTitle("LEGS", t), "LEGS · drenagem ativa");
+    const body = drainBody(t);
+    assert.match(body, /liquidez_baixa/);
+    assert.match(body, /giro_extremo/);
+    assert.match(body, /não é estatística de caminho/);
+    for (const proibido of ["compre", "venda agora", "alvo", "stop", "entrada"]) {
+      assert.equal(body.toLowerCase().includes(proibido), false);
+    }
+  });
+
+  it("nível watch usa título mais brando", () => {
+    const t = detectDrainTransition(0, report([flag("volume_esfriando", "media")]));
+    assert.ok(t);
+    assert.equal(drainTitle("PEPE", t), "PEPE · fluxo piorando");
+  });
 });

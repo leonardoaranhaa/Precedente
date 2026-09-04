@@ -17,15 +17,18 @@ type ExpoTicket = {
   details?: { error?: string };
 };
 
-/**
- * Envia via Expo Push API (https://exp.host/--/api/v2/push/send).
- * Tokens Expo começam com ExponentPushToken[…] ou ExpoPushToken[…].
- */
+export type SendExpoResult = {
+  ok: number;
+  failed: number;
+  /** Token inválido / DeviceNotRegistered — caller deve podar a subscription. */
+  invalidToken: boolean;
+};
+
 export async function sendExpoAlerts(
   token: string,
   events: AlertEvent[],
-): Promise<{ ok: number; failed: number }> {
-  if (events.length === 0) return { ok: 0, failed: 0 };
+): Promise<SendExpoResult> {
+  if (events.length === 0) return { ok: 0, failed: 0, invalidToken: false };
 
   const messages: ExpoMessage[] = events.map((ev) => ({
     to: token,
@@ -37,7 +40,9 @@ export async function sendExpoAlerts(
     data: {
       kind: ev.kind,
       ticker: ev.ticker,
-      timeframe: ev.timeframe,
+      // dex_drain não tem timeframe (o token não tem candle) — omite em vez
+      // de mandar null, que quebraria o Record<string, string> do Expo.
+      ...(ev.timeframe ? { timeframe: ev.timeframe } : {}),
       displayTicker: ev.displayTicker,
     },
   }));
@@ -60,9 +65,20 @@ export async function sendExpoAlerts(
   const tickets = Array.isArray(json.data) ? json.data : json.data ? [json.data] : [];
   let ok = 0;
   let failed = 0;
+  let invalidToken = false;
   for (const t of tickets) {
-    if (t.status === "ok") ok += 1;
-    else failed += 1;
+    if (t.status === "ok") {
+      ok += 1;
+      continue;
+    }
+    failed += 1;
+    const code = t.details?.error ?? t.message ?? "";
+    if (
+      /DeviceNotRegistered|InvalidCredentials|InvalidToken/i.test(code) ||
+      /not a registered push/i.test(code)
+    ) {
+      invalidToken = true;
+    }
   }
-  return { ok, failed };
+  return { ok, failed, invalidToken };
 }

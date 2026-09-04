@@ -2,43 +2,48 @@ import type { Timeframe } from "@/lib/market/types";
 
 export type AlertKind =
   | "sample_weak"
+  | "sample_regime"
   | "drawdown_path"
   | "extreme_20"
   | "price_zone"
-  | "rsi_zone";
+  | "rsi_zone"
+  | "funding_extreme"
+  | "volume_anomaly"
+  | "dex_drain";
 
 export type AlertRules = {
-  /** Avisa se amostra small ou tiny. */
   sampleWeak: boolean;
-  /** Avisa se |DD mediano H10| >= limiar (%). */
+  sampleRegime: boolean;
   drawdownPath: boolean;
   drawdownThresholdPct: number;
-  /** Avisa se preço colado na máxima/mínima de 20 barras. */
   extreme20: boolean;
+  fundingExtreme: boolean;
+  fundingThreshold: number;
+  volumeAnomaly: boolean;
+  volumeMultiple: number;
 };
 
 export const DEFAULT_ALERT_RULES: AlertRules = {
   sampleWeak: true,
+  sampleRegime: true,
   drawdownPath: true,
   drawdownThresholdPct: 5,
   extreme20: true,
+  fundingExtreme: true,
+  fundingThreshold: 0.0005,
+  volumeAnomaly: true,
+  volumeMultiple: 3,
 };
 
-/** Zona de preço configurada por ativo — dispara quando o fechamento cai dentro da faixa. */
 export type PriceZone = {
   enabled: boolean;
-  /** null = sem piso. */
   min: number | null;
-  /** null = sem teto. */
   max: number | null;
 };
 
-/** Zona de RSI configurada por ativo — dispara quando o RSI cruza um dos limites. */
 export type RsiZone = {
   enabled: boolean;
-  /** Dispara quando RSI <= below. null = desligado. */
   below: number | null;
-  /** Dispara quando RSI >= above. null = desligado. */
   above: number | null;
 };
 
@@ -56,14 +61,34 @@ export type PushSubscription = {
   watches: WatchTarget[];
   rules: AlertRules;
   updatedAt: number;
-  /** key = `${ticker}:${tf}:${kind}` → last sent ms */
   lastSent: Record<string, number>;
+  digestEnabled: boolean;
+  digestHourUtc: number;
+  includeMovers: boolean;
+  lastDigestAt: number | null;
+  userId: string | null;
+  /** Tickers DEX pinados pro alerta de drenagem. Sem timeframe — não têm candles. */
+  dexWatches: string[];
+  /** Resumo diário combinado (watch+notícias) num só push — ver daily-summary-build.ts. */
+  dailySummaryEnabled: boolean;
+};
+
+/** Bem menor que MAX_WATCHES: tokens de ciclo curto têm alta rotatividade —
+ * uma lista grande de moedas já mortas não ajuda ninguém. */
+export const MAX_DEX_WATCHES = 12;
+
+export const DEFAULT_DIGEST = {
+  digestEnabled: false,
+  digestHourUtc: 12,
+  includeMovers: true,
+  lastDigestAt: null as number | null,
 };
 
 export type AlertEvent = {
   kind: AlertKind;
   ticker: string;
-  timeframe: Timeframe;
+  // Eventos DEX (dex_drain) não têm timeframe — o token não tem candle.
+  timeframe: Timeframe | null;
   displayTicker: string;
   title: string;
   body: string;

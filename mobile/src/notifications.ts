@@ -5,15 +5,19 @@ import * as Notifications from "expo-notifications";
 import { API_BASE_URL } from "./config";
 import type { AlertRules } from "./alert-settings";
 import type { WatchItem } from "./watchlist";
+import { hapticForPushKind } from "./haptics";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    hapticForPushKind(notification.request.content.data?.kind);
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 export async function ensureAndroidChannel(): Promise<void> {
@@ -23,7 +27,7 @@ export async function ensureAndroidChannel(): Promise<void> {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 150, 250],
     lightColor: "#c4a574",
-    description: "Amostra fraca, drawdown do caminho e extremos de 20 barras.",
+    description: "Amostra, regime, drawdown, extremos, funding e volume.",
   });
 }
 
@@ -31,7 +35,6 @@ export async function registerForPushAsync(): Promise<string | null> {
   await ensureAndroidChannel();
 
   if (!Device.isDevice) {
-    // Simulador: token Expo pode falhar; seguimos sem push remoto.
     return null;
   }
 
@@ -62,6 +65,8 @@ export async function syncPushSubscription(input: {
   token: string | null;
   watches: WatchItem[];
   rules: AlertRules;
+  /** Tickers DEX pinados pro alerta de drenagem — lista separada da watch. */
+  dexWatches?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   if (!input.token || !input.rules.enabled) {
     if (input.token && !input.rules.enabled) {
@@ -92,12 +97,21 @@ export async function syncPushSubscription(input: {
           ...(w.priceZone ? { priceZone: w.priceZone } : {}),
           ...(w.rsiZone ? { rsiZone: w.rsiZone } : {}),
         })),
+        dexWatches: input.dexWatches ?? [],
         rules: {
           sampleWeak: input.rules.sampleWeak,
+          sampleRegime: input.rules.sampleRegime,
           drawdownPath: input.rules.drawdownPath,
           drawdownThresholdPct: input.rules.drawdownThresholdPct,
           extreme20: input.rules.extreme20,
+          fundingExtreme: input.rules.fundingExtreme,
+          fundingThreshold: input.rules.fundingThreshold,
+          volumeAnomaly: input.rules.volumeAnomaly,
+          volumeMultiple: input.rules.volumeMultiple,
         },
+        digestEnabled: input.rules.digestEnabled,
+        digestHourUtc: input.rules.digestHourUtc,
+        includeMovers: input.rules.includeMovers,
       }),
     });
     if (!res.ok) {
@@ -110,7 +124,6 @@ export async function syncPushSubscription(input: {
   }
 }
 
-/** Dispara scan no backend (opcional; útil após abrir o app). */
 export async function requestPushScan(cronSecret?: string): Promise<void> {
   try {
     await fetch(`${API_BASE_URL}/api/push/scan`, {

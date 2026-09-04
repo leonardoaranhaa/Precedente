@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { scanDailySummary } from "@/lib/push/daily-summary";
+import { scanDailySummaries } from "@/lib/push/daily-summary-scan";
 import { dbSource } from "@/lib/db";
 import { reportServerError } from "@/lib/sentry.server";
 
@@ -17,8 +17,10 @@ function json(body: unknown, status = 200): Response {
 }
 
 function authorized(request: Request): boolean {
-  const secret = process.env.PUSH_CRON_SECRET;
-  if (!secret) return dbSource !== "neon";
+  const secret = process.env.PUSH_CRON_SECRET ?? process.env.NEWS_CRON_SECRET;
+  if (!secret) {
+    return dbSource !== "neon";
+  }
   const header =
     request.headers.get("x-cron-secret") ??
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -34,11 +36,11 @@ export const Route = createFileRoute("/api/push/daily-summary-scan")({
           return json({ error: "Não autorizado." }, 401);
         }
         try {
-          const report = await scanDailySummary();
+          const report = await scanDailySummaries();
           return json({ ok: true, ...report });
         } catch (err) {
           reportServerError(err, { route: "/api/push/daily-summary-scan" });
-          const message = err instanceof Error ? err.message : "Falha no daily summary.";
+          const message = err instanceof Error ? err.message : "Falha no daily summary scan.";
           return json({ error: message }, 500);
         }
       },

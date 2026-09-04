@@ -8,14 +8,20 @@ import { AnalysisResult } from "@/components/analysis-result";
 import { HistoryPanel } from "@/components/history-panel";
 import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
+import { NewsPanel } from "@/components/news-panel";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { WatchComparator } from "@/components/watch-comparator";
 import { WatchPanel } from "@/components/watch-panel";
 import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
+import { DexFragilityPanel } from "@/components/dex-fragility-panel";
 import { makeThumb } from "@/lib/compress";
 import { loadHistory, pushHistory, saveHistory } from "@/lib/history";
+// Só type — apagado na compilação, não vira import estático da fachada.
+import type { DexFragilityReport, DexPairSnapshot } from "@/lib/market/dex";
 import {
   TIMEFRAME_GROUPS,
   type StoredAnalysis,
@@ -37,11 +43,22 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-type View = "home" | "history" | "result" | "watch";
+type View = "home" | "history" | "result" | "watch" | "news";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
 const SYNC_DEBOUNCE_MS = 1500;
+
+type DexReading = { pair: DexPairSnapshot; fragility: DexFragilityReport };
+
+/**
+ * O motor de precedentes só recusa por falta de histórico de candles. Essas
+ * são as duas frases que a análise devolve nesse caso (ver lib/analyze.ts) —
+ * qualquer outro erro é falha real, não motivo pra oferecer o DEX.
+ */
+function isNotListed(message: string): boolean {
+  return message.includes("não encontrado") || message.includes("Sem candles");
+}
 
 function Home() {
   const [view, setView] = useState<View>("home");
@@ -51,6 +68,10 @@ function Home() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<PipelineStep>("ohlc");
   const [error, setError] = useState<string | null>(null);
+  // Token fora da Binance não tem precedente, mas pode ter par no DEX — a
+  // leitura de fragilidade entra no lugar do beco sem saída.
+  const [dexReading, setDexReading] = useState<DexReading | null>(null);
+  const [dexBusy, setDexBusy] = useState(false);
   const [result, setResult] = useState<StoredAnalysis | null>(null);
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [watch, setWatch] = useState<WatchItem[]>([]);
@@ -151,6 +172,7 @@ function Home() {
 
   async function run() {
     setError(null);
+    setDexReading(null);
     setBusy(true);
     setStep("ohlc");
     const t1 = window.setTimeout(() => setStep("stats"), 600);
@@ -180,10 +202,30 @@ function Home() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Não foi possível concluir a análise.";
       setError(cleanError(message));
+      if (isNotListed(message)) void loadDexReading(ticker);
     } finally {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       setBusy(false);
+    }
+  }
+
+  /**
+   * Leitura de fragilidade pra token que não está na Binance. Fetch direto na
+   * rota — nunca importar @/lib/market/dex daqui (a fachada só é alcançada por
+   * import() dinâmico no servidor). Ver docs/dex-arquitetura.md.
+   */
+  async function loadDexReading(symbol: string) {
+    setDexBusy(true);
+    try {
+      const res = await fetch(`/api/dex?ticker=${encodeURIComponent(symbol)}`);
+      if (!res.ok) return;
+      const body = (await res.json()) as DexReading;
+      if (body?.pair && body?.fragility) setDexReading(body);
+    } catch {
+      // Silencioso de propósito: é um extra sobre um erro que o usuário já viu.
+    } finally {
+      setDexBusy(false);
     }
   }
 
@@ -396,6 +438,9 @@ function Home() {
               <Tab active={view === "watch"} onClick={() => setView("watch")} className="xl:hidden">
                 Watch
               </Tab>
+              <Tab active={view === "news"} onClick={() => setView("news")}>
+                Notícias
+              </Tab>
               <Tab active={view === "history"} onClick={() => setView("history")}>
                 Histórico
               </Tab>
@@ -509,7 +554,12 @@ function Home() {
                     <li>Nada aqui é ordem de compra ou venda — só contexto de risco.</li>
                   </ul>
                 </div>
+                {watch.length >= 2 ? (
+                  <WatchComparator items={watch} onSelect={openFromWatch} className="lg:col-span-2" />
+                ) : null}
               </div>
+            ) : view === "news" ? (
+              <NewsPanel className="mt-6" />
             ) : view === "history" ? (
               <div className="mt-6">
                 <h1 className="font-display text-3xl tracking-tight">Histórico</h1>
@@ -544,6 +594,8 @@ function Home() {
                     </p>
                   </div>
 
+                  <RiskLogPanel />
+
                   {busy ? (
                     <Pipeline step={step} hasImage={Boolean(image)} />
                   ) : (
@@ -560,6 +612,18 @@ function Home() {
                       onSubmit={() => void run()}
                     />
                   )}
+
+                  {dexBusy ? (
+                    <p className="text-[11px] text-subtle">
+                      Procurando este token no DEX…
+                    </p>
+                  ) : null}
+                  {!busy && dexReading ? (
+                    <DexFragilityPanel
+                      pair={dexReading.pair}
+                      fragility={dexReading.fragility}
+                    />
+                  ) : null}
                 </div>
 
                 <div className={cn("space-y-6", busy && "opacity-50")}>

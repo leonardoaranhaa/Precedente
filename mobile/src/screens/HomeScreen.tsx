@@ -12,9 +12,11 @@ import * as ImagePicker from "expo-image-picker";
 import { X, ImagePlus } from "lucide-react-native";
 import { Button } from "../components/Button";
 import { Pipeline, type PipelineStep } from "../components/Pipeline";
+import { RiskLogPanel } from "../components/RiskLogPanel";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
-import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type Timeframe } from "../types";
+import { DexFragilitySummary } from "../components/DexFragilitySummary";
+import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type DexReading, type Timeframe } from "../types";
 import { normalizeTicker } from "../format";
 
 export type PickedImage = { uri: string; width: number; height: number };
@@ -26,6 +28,10 @@ type Props = {
   busy: boolean;
   step: PipelineStep;
   error: string | null;
+  /** Leitura do DEX quando o token não tem histórico na Binance. */
+  dexReading: DexReading | null;
+  dexBusy: boolean;
+  onOpenDexModal?: () => void;
   topTraded: string[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
@@ -40,6 +46,9 @@ export function HomeScreen({
   busy,
   step,
   error,
+  dexReading,
+  dexBusy,
+  onOpenDexModal,
   topTraded,
   onTicker,
   onTimeframe,
@@ -76,6 +85,8 @@ export function HomeScreen({
         O print descreve o que se vê. A estatística vem do OHLC real: RSI, médias, e o que o
         preço fez depois das vezes anteriores.
       </Text>
+
+      <RiskLogPanel />
 
       {busy ? (
         <Pipeline step={step} hasImage={Boolean(image)} />
@@ -158,6 +169,18 @@ export function HomeScreen({
           </View>
 
           {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+          {dexBusy ? (
+            <Text style={styles.dexHint}>Procurando este token no DEX…</Text>
+          ) : null}
+          {dexReading ? (
+            <View style={styles.dexWrap}>
+              <DexFragilitySummary
+                pair={dexReading.pair}
+                fragility={dexReading.fragility}
+                onPress={() => onOpenDexModal?.()}
+              />
+            </View>
+          ) : null}
 
           <Button
             title="Analisar"
@@ -267,6 +290,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   errorText: { fontSize: 12, color: colors.down },
+  dexHint: { fontSize: 11, color: colors.subtle, marginTop: 8 },
+  dexWrap: { marginTop: 12 },
   errorBanner: {
     backgroundColor: "rgba(193,123,106,0.12)",
     color: colors.down,
