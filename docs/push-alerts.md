@@ -16,6 +16,7 @@ Notificações de **prevenção de perdas** para pares na Watch. Sempre factuais
 | `price_zone` / `rsi_zone` | zonas de preço/RSI configuradas pelo usuário |
 | `funding_extreme` | funding acima do limiar configurado |
 | `volume_anomaly` | barra atual ≥ N× a mediana das 20 anteriores (contexto de atividade) |
+| `dex_drain` | token DEX pinado piora de nível de fragilidade (liquidez/giro/venda/volume) — nunca dispara na recuperação |
 
 Cooldown de 6h por par+kind (`lastSent` na subscription).
 
@@ -31,6 +32,7 @@ Cooldown de 6h por par+kind (`lastSent` na subscription).
 | `POST` | `/api/push/funding-digest-scan` | Digest de funding/OI 2×/dia (08h e 20h UTC) |
 | `POST` | `/api/push/opening-scan` | Precedente de abertura |
 | `POST` | `/api/push/weekly-risk-scan` | Resumo semanal de riscos sinalizados |
+| `POST` | `/api/push/dex-drain-scan` | Drenagem dos tickers DEX pinados (`dexWatches`) |
 | `POST` | `/api/news/scan` | Digest de notícias |
 | `GET` | `/api/news/health` | Saúde dos feeds RSS |
 
@@ -75,6 +77,7 @@ Scripts disponíveis em `scripts/` (cada um bate na rota correspondente):
 | `funding-digest-cron.mjs` | `/api/push/funding-digest-scan` | `0 8,20 * * *` |
 | `opening-scan-cron.mjs` | `/api/push/opening-scan` | `0 * * * *` |
 | `weekly-risk-cron.mjs` | `/api/push/weekly-risk-scan` | `0 12 * * 1` |
+| `dex-drain-scan-cron.mjs` | `/api/push/dex-drain-scan` | `*/15 * * * *` (fluxo DEX muda rápido) |
 | `news-digest-cron.mjs` | `/api/news/scan` | `0 * * * *` |
 | `rss-health-cron.mjs` | `/api/news/health` | `0 */6 * * *` |
 

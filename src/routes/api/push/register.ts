@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DEFAULT_ALERT_RULES, type AlertRules, type WatchTarget } from "@/lib/push/types";
+import { DEFAULT_ALERT_RULES, MAX_DEX_WATCHES, type AlertRules, type WatchTarget } from "@/lib/push/types";
+import { sanitizeDexTicker } from "@/lib/push/sanitize";
 import { removeSubscription, subscriptionCount, upsertSubscription } from "@/lib/push/store";
 import { TIMEFRAMES, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker } from "@/lib/market/labels";
@@ -50,6 +51,16 @@ function parseWatches(raw: unknown): WatchTarget[] {
   return out.slice(0, 24);
 }
 
+function parseDexWatches(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw) {
+    const t = sanitizeDexTicker(item);
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out.slice(0, MAX_DEX_WATCHES);
+}
+
 function parseRules(raw: unknown): Partial<AlertRules> | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
@@ -95,6 +106,7 @@ export const Route = createFileRoute("/api/push/register")({
         }
 
         const watches = parseWatches(raw.watches);
+        const dexWatches = parseDexWatches(raw.dexWatches);
 
         let sessionUserId: string | null = null;
         try {
@@ -121,6 +133,7 @@ export const Route = createFileRoute("/api/push/register")({
             token,
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
             watches,
+            dexWatches,
             rules: parseRules(raw.rules) ?? DEFAULT_ALERT_RULES,
             digestEnabled: typeof raw.digestEnabled === "boolean" ? raw.digestEnabled : undefined,
             digestHourUtc: typeof raw.digestHourUtc === "number" ? raw.digestHourUtc : undefined,
@@ -130,6 +143,7 @@ export const Route = createFileRoute("/api/push/register")({
           return json({
             ok: true,
             watches: sub.watches.length,
+            dexWatches: sub.dexWatches.length,
             rules: sub.rules,
             digestEnabled: sub.digestEnabled,
             digestHourUtc: sub.digestHourUtc,

@@ -41,3 +41,12 @@ export function sanitizeWatchTarget(w: WatchTarget): WatchTarget {
     ...(rsiZone ? { rsiZone } : {}),
   };
 }
+
+/** Mesma validação de /api/dex — só letras/números, 2 a 20 chars. */
+const DEX_TICKER_RE = /^[A-Z0-9]{2,20}$/;
+
+export function sanitizeDexTicker(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const ticker = v.trim().toUpperCase();
+  return DEX_TICKER_RE.test(ticker) ? ticker : null;
+}

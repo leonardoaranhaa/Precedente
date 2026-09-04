@@ -32,6 +32,7 @@ import { Route as ApiNewsHealthRouteImport } from './routes/api/news/health'
 import { Route as ApiNewsPreferencesRouteImport } from './routes/api/news/preferences'
 import { Route as ApiNewsScanRouteImport } from './routes/api/news/scan'
 import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
+import { Route as ApiPushDexDrainScanRouteImport } from './routes/api/push/dex-drain-scan'
 import { Route as ApiPushDigestScanRouteImport } from './routes/api/push/digest-scan'
 import { Route as ApiPushFundingDigestScanRouteImport } from './routes/api/push/funding-digest-scan'
 import { Route as ApiPushOpeningScanRouteImport } from './routes/api/push/opening-scan'
@@ -156,6 +157,11 @@ const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
   path: '/api/ops/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushDexDrainScanRoute = ApiPushDexDrainScanRouteImport.update({
+  id: '/api/push/dex-drain-scan',
+  path: '/api/push/dex-drain-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushDigestScanRoute = ApiPushDigestScanRouteImport.update({
   id: '/api/push/digest-scan',
   path: '/api/push/digest-scan',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -348,6 +358,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -413,6 +425,7 @@ export interface RootRouteChildren {
   ApiNewsPreferencesRoute: typeof ApiNewsPreferencesRoute
   ApiNewsScanRoute: typeof ApiNewsScanRoute
   ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
+  ApiPushDexDrainScanRoute: typeof ApiPushDexDrainScanRoute
   ApiPushDigestScanRoute: typeof ApiPushDigestScanRoute
   ApiPushFundingDigestScanRoute: typeof ApiPushFundingDigestScanRoute
   ApiPushOpeningScanRoute: typeof ApiPushOpeningScanRoute
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpsAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/dex-drain-scan': {
+      id: '/api/push/dex-drain-scan'
+      path: '/api/push/dex-drain-scan'
+      fullPath: '/api/push/dex-drain-scan'
+      preLoaderRoute: typeof ApiPushDexDrainScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/digest-scan': {
       id: '/api/push/digest-scan'
       path: '/api/push/digest-scan'
@@ -661,6 +681,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiNewsPreferencesRoute: ApiNewsPreferencesRoute,
   ApiNewsScanRoute: ApiNewsScanRoute,
   ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
+  ApiPushDexDrainScanRoute: ApiPushDexDrainScanRoute,
   ApiPushDigestScanRoute: ApiPushDigestScanRoute,
   ApiPushFundingDigestScanRoute: ApiPushFundingDigestScanRoute,
   ApiPushOpeningScanRoute: ApiPushOpeningScanRoute,

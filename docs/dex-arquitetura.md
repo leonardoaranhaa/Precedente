@@ -175,3 +175,71 @@ histórico por conta própria — é um serviço, não uma tela.
 
 Pronto: camadas 1 a 3, `GET /api/dex`, 23 testes de domínio.
 Falta: camada 4 (painel web e mobile) e o alerta de drenagem.
+
+## Alerta de drenagem (`dex_drain`)
+
+Fecha o padrão do BABYAI: um token que tinha US$ 888K de volume caiu pra
+US$ 54 em horas. O produto já sabia ler isso (é literalmente a flag
+`volume_esfriando`); faltava avisar quando acontece, não só mostrar quando
+o usuário volta a olhar.
+
+### Escopo desta entrega
+
+**Dentro**: motor completo — domínio, persistência, scan, rota — testável
+por curl exatamente como os outros 7 scans, sem depender de nada além do
+código. Não depende do Etapa 4 (criar os serviços cron no Railway) pra
+existir como capacidade; depende dele só pra rodar sozinho em produção,
+igual aos outros 7.
+
+**Fora**: UI de "pinar" o token no mobile (a única plataforma com push —
+web nunca chama `/api/push/register`). Fica de fora porque exige uma
+decisão de produto que não é técnica: uma lista nova de moedas voláteis, ou
+reaproveitar a aba Watch existente? Isso muda a navegação do app; não é
+disciplina de import, é escolha de UX.
+
+### Por que só 4 das 7 flags contam
+
+`liquidez_baixa`, `giro_extremo`, `pressao_venda`, `volume_esfriando`
+descrevem o fluxo **agora**. `par_novo` e `saida_estreita` são fatos
+estruturais — idade do par, relação liquidez/market cap — verdadeiros a
+vida inteira dele. Um par pode nascer fino e continuar fino sem nunca
+"drenar": drenagem é **mudança**, não estado. Contar as estruturais
+inflaria a severidade de qualquer token pequeno pra sempre, mesmo parado.
+
+### Por que só dispara ao piorar
+
+Um par quase morto pode sair de `volume_esfriando` simplesmente porque o
+volume foi a zero em toda janela — isso não significa que o dinheiro
+voltou. Alertar "recuperou" nesse caso seria reafirmação falsa, o oposto do
+que "prevenção de perda" promete. `detectDrainTransition` nunca constrói um
+evento de melhora; a função nem aceita esse caminho de retorno.
+
+### Nível na primeira observação
+
+Quando uma subscription vê um ticker pela primeira vez (`prevCode`
+indefinido), o alerta só dispara se o par **já nasce** no nível máximo
+(`drain`). Pinar um token que já está sendo drenado precisa avisar na
+hora — ficar mudo esperando uma "piora" que o teto do nível nunca permite
+detectar seria o oposto do propósito.
+
+### Cooldown por cima da transição
+
+O código de estado não é monotônico (recuperação grava um código mais
+baixo), então um par oscilando `none↔watch` entre scans de minutos
+re-disparava "fluxo piorando" a cada volta sem um piso de tempo. Por isso
+`dex-drain-scan.ts` aplica o mesmo `COOLDOWN_MS` (6h) do resto do sistema
+por cima da detecção de transição — exportado de `evaluate.ts` pra esse fim.
+
+### Modelo de dados
+
+`dexWatches: string[]` em `PushSubscription` — tickers puros, sem
+timeframe. Forçar um timeframe falso num token sem candle seria mentir no
+schema, o mesmo motivo pelo qual `WatchTarget` não serve aqui. Persistido
+em `dex_watches` (migração `0009_dex_watches.sql`, aditiva — mesmo padrão
+de `0008_push_user.sql`). Cap de 12, bem menor que o de 24 do Watch normal:
+tokens de ciclo curto têm alta rotatividade, uma lista grande de moedas já
+mortas não ajuda ninguém.
+
+Fora do gate de billing `watch_slot` (que hoje só olha `watches.length`) —
+decisão deliberada de manter simples enquanto a feature é nova; o cap fixo
+de 12 já limita o abuso independente de tier.

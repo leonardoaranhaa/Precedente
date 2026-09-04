@@ -14,7 +14,7 @@ import {
   type SampleNote,
 } from "./sample-regime.ts";
 
-const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h por par+tipo
+export const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h por par+tipo
 
 function horizon10(payload: AnalysisPayload) {
   const hs = payload.precedent.horizons;
