@@ -19,6 +19,7 @@ type Row = {
   digest_hour_utc?: unknown;
   include_movers?: unknown;
   last_digest_at?: unknown;
+  user_id?: unknown;
 };
 
 function asObject(v: unknown): Record<string, unknown> {
@@ -102,6 +103,12 @@ function rowToSub(row: Row): PushSubscription {
       ...(typeof rulesRaw.fundingThreshold === "number"
         ? { fundingThreshold: rulesRaw.fundingThreshold }
         : {}),
+      ...(typeof rulesRaw.volumeAnomaly === "boolean"
+        ? { volumeAnomaly: rulesRaw.volumeAnomaly }
+        : {}),
+      ...(typeof rulesRaw.volumeMultiple === "number"
+        ? { volumeMultiple: rulesRaw.volumeMultiple }
+        : {}),
     },
     updatedAt,
     lastSent,
@@ -111,6 +118,7 @@ function rowToSub(row: Row): PushSubscription {
     includeMovers:
       typeof row.include_movers === "boolean" ? row.include_movers : DEFAULT_DIGEST.includeMovers,
     lastDigestAt: parseLastDigestAt(row.last_digest_at),
+    userId: typeof row.user_id === "string" && row.user_id.length > 0 ? row.user_id : null,
   };
 }
 
@@ -132,6 +140,7 @@ export async function upsertSubscription(input: {
   digestEnabled?: boolean;
   digestHourUtc?: number;
   includeMovers?: boolean;
+  userId?: string | null;
 }): Promise<PushSubscription> {
   const token = input.token.trim();
   if (!token || token.length < 20) {
@@ -168,6 +177,9 @@ export async function upsertSubscription(input: {
       ? input.includeMovers
       : (existing?.includeMovers ?? DEFAULT_DIGEST.includeMovers);
 
+  const userId =
+    input.userId !== undefined ? input.userId : (existing?.userId ?? null);
+
   const sub: PushSubscription = {
     token,
     platform,
@@ -179,15 +191,16 @@ export async function upsertSubscription(input: {
     digestHourUtc,
     includeMovers,
     lastDigestAt: existing?.lastDigestAt ?? null,
+    userId,
   };
 
   const persisted = await trySql(async (sql) => {
     await sql.query(
       `INSERT INTO push_subscriptions (
          token, platform, watches, rules, last_sent, updated_at,
-         digest_enabled, digest_hour_utc, include_movers
+         digest_enabled, digest_hour_utc, include_movers, user_id
        )
-       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, now(), $6, $7, $8)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, now(), $6, $7, $8, $9)
        ON CONFLICT (token) DO UPDATE SET
          platform = EXCLUDED.platform,
          watches = EXCLUDED.watches,
@@ -196,6 +209,7 @@ export async function upsertSubscription(input: {
          digest_enabled = EXCLUDED.digest_enabled,
          digest_hour_utc = EXCLUDED.digest_hour_utc,
          include_movers = EXCLUDED.include_movers,
+         user_id = COALESCE(EXCLUDED.user_id, push_subscriptions.user_id),
          updated_at = now()`,
       [
         sub.token,
@@ -206,6 +220,7 @@ export async function upsertSubscription(input: {
         sub.digestEnabled,
         sub.digestHourUtc,
         sub.includeMovers,
+        sub.userId,
       ],
     );
     return sub;
@@ -220,7 +235,7 @@ export async function getSubscription(token: string): Promise<PushSubscription |
   const fromDb = await trySql(async (sql) => {
     const rows = await sql.query<Row>(
       `SELECT token, platform, watches, rules, last_sent, updated_at,
-              digest_enabled, digest_hour_utc, include_movers, last_digest_at
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id
        FROM push_subscriptions WHERE token = $1`,
       [t],
     );
@@ -247,7 +262,7 @@ export async function listSubscriptions(): Promise<PushSubscription[]> {
   const fromDb = await trySql(async (sql) => {
     const rows = await sql.query<Row>(
       `SELECT token, platform, watches, rules, last_sent, updated_at,
-              digest_enabled, digest_hour_utc, include_movers, last_digest_at
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id
        FROM push_subscriptions ORDER BY updated_at DESC`,
     );
     return rows.map(rowToSub);
@@ -309,4 +324,20 @@ export async function markRegimeState(
     );
     return true;
   });
+}
+
+export async function listSubscriptionsByUserId(userId: string): Promise<PushSubscription[]> {
+  const uid = userId.trim();
+  if (!uid) return [];
+  const fromDb = await trySql(async (sql) => {
+    const rows = await sql.query<Row>(
+      `SELECT token, platform, watches, rules, last_sent, updated_at,
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id
+       FROM push_subscriptions WHERE user_id = $1 ORDER BY updated_at DESC`,
+      [uid],
+    );
+    return rows.map(rowToSub);
+  });
+  if (fromDb) return fromDb;
+  return [...memory.values()].filter((s) => s.userId === uid);
 }
