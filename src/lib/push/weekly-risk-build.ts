@@ -10,6 +10,7 @@ export type WeeklyRiskCounts = {
   price_zone: number;
   rsi_zone: number;
   funding_extreme: number;
+  volume_anomaly: number;
 };
 
 export const EMPTY_WEEKLY: WeeklyRiskCounts = {
@@ -20,6 +21,7 @@ export const EMPTY_WEEKLY: WeeklyRiskCounts = {
   price_zone: 0,
   rsi_zone: 0,
   funding_extreme: 0,
+  volume_anomaly: 0,
 };
 
 const LABELS: Record<keyof WeeklyRiskCounts, string> = {
@@ -30,6 +32,7 @@ const LABELS: Record<keyof WeeklyRiskCounts, string> = {
   price_zone: "zona de preço",
   rsi_zone: "zona de RSI",
   funding_extreme: "funding elevado",
+  volume_anomaly: "volume anômalo",
 };
 
 export function countRiskFromLastSent(

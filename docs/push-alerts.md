@@ -1,49 +1,25 @@
-# Alertas push — Precedente
+# Push alerts (prevenção)
 
-## Visão
+Alertas factuais — **sem** linguagem de compra/venda.
 
-Notificações de **prevenção de perdas** para pares na Watch:
+## Kinds
 
-- amostra `small` / `tiny`
-- transição de **regime de amostra** (ok ↔ small ↔ tiny)
-- drawdown mediano do caminho (H10) acima do limiar
-- preço colado na máxima/mínima de 20 barras
+- **sample_weak** — amostra small/tiny
+- **sample_regime** — transição de regime de amostra
+- **drawdown_path** — DD mediano do caminho acima do limiar
+- **extreme_20** — perto de high20/low20
+- **price_zone** / **rsi_zone** — zonas configuradas
 - **funding** acima do limiar configurado
-- **digest diário** da Watch (+ movers 24h opcional)
+- **volume anômalo** — barra atual ≥ N× mediana das 20 anteriores (contexto de atividade)
 
-Sem linguagem de compra/venda.
+## Cadência
 
-## API
+- Scan geral: `*/30`
+- Zone scan: `*/15` (só pares com zona)
+- Digests e health: ver `railway.cron.toml`
 
-| Método | Rota | Uso |
-|--------|------|-----|
-| `POST` | `/api/push/register` | Registra token Expo + watches + regras + digest |
-| `DELETE` | `/api/push/register` | Remove subscription |
-| `POST` | `/api/push/scan` | Reanalisa e envia push |
-| `POST` | `/api/push/digest-scan` | Digest diário (cron) |
+## Mobile
 
-### Auth do scan
+Aba **Alertas**: liga push, regras (amostra, regime, DD, extremo, funding, volume) e digest diário.
 
-Defina `PUSH_CRON_SECRET` no Railway. Envie:
-
-```http
-X-Cron-Secret: <secret>
-```
-
-ou `Authorization: Bearer <secret>`.
-
-Sem a variável, o scan fica aberto (apenas para dev).
-
-## App mobile
-
-Aba **Alertas**: liga push, regras (amostra, regime, DD, extremo, funding) e digest
-(hora UTC + movers). O register envia `rules` + `digestEnabled` / `digestHourUtc` /
-`includeMovers`.
-
-## Cron no Railway
-
-Ver `railway.cron.toml` e scripts:
-
-- `push-scan-cron.mjs` — a cada 30 min
-- `watch-digest-cron.mjs` — a cada hora (só envia na hora do usuário)
-- `rss-health-cron.mjs` — health dos feeds (opcional)
+Cooldown 6h por par+kind.

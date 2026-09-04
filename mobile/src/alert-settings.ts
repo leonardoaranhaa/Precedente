@@ -5,16 +5,14 @@ const KEY = "precedente.alerts.v1";
 export type AlertRules = {
   enabled: boolean;
   sampleWeak: boolean;
-  /** Transição de regime ok↔small↔tiny. */
   sampleRegime: boolean;
   drawdownPath: boolean;
   drawdownThresholdPct: number;
   extreme20: boolean;
-  /** |funding| acima do limiar. */
   fundingExtreme: boolean;
-  /** Fração (0.0005 = 0,05%). */
   fundingThreshold: number;
-  /** Digest diário da watch (+ movers). */
+  volumeAnomaly: boolean;
+  volumeMultiple: number;
   digestEnabled: boolean;
   digestHourUtc: number;
   includeMovers: boolean;
@@ -29,6 +27,8 @@ export const DEFAULT_ALERT_RULES: AlertRules = {
   extreme20: true,
   fundingExtreme: true,
   fundingThreshold: 0.0005,
+  volumeAnomaly: true,
+  volumeMultiple: 3,
   digestEnabled: false,
   digestHourUtc: 12,
   includeMovers: true,

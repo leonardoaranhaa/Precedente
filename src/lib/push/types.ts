@@ -7,7 +7,8 @@ export type AlertKind =
   | "extreme_20"
   | "price_zone"
   | "rsi_zone"
-  | "funding_extreme";
+  | "funding_extreme"
+  | "volume_anomaly";
 
 export type AlertRules = {
   sampleWeak: boolean;
@@ -17,6 +18,8 @@ export type AlertRules = {
   extreme20: boolean;
   fundingExtreme: boolean;
   fundingThreshold: number;
+  volumeAnomaly: boolean;
+  volumeMultiple: number;
 };
 
 export const DEFAULT_ALERT_RULES: AlertRules = {
@@ -27,6 +30,8 @@ export const DEFAULT_ALERT_RULES: AlertRules = {
   extreme20: true,
   fundingExtreme: true,
   fundingThreshold: 0.0005,
+  volumeAnomaly: true,
+  volumeMultiple: 3,
 };
 
 export type PriceZone = {
