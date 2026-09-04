@@ -1,13 +1,3 @@
-# Serviço CRON separado no Railway (não use no serviço web principal).
-#
-# Setup:
-# 1. No mesmo projeto Railway, New Service → GitHub → mesmo repo Precedente
-# 2. Settings deste serviço:
-#    - Root Directory: (raiz do repo)
-#    - Custom Start Command: node scripts/push-scan-cron.mjs
-#    - Cron Schedule: */30 * * * *
-# 3. Variables: PUSH_CRON_SECRET, PUBLIC_APP_URL
-
 [build]
 builder = "NIXPACKS"
 buildCommand = "echo skip-build"
@@ -17,22 +7,10 @@ startCommand = "node scripts/push-scan-cron.mjs"
 cronSchedule = "*/30 * * * *"
 restartPolicyType = "NEVER"
 
-# --- Digest de notícias ---
-# Start Command: node scripts/news-digest-cron.mjs
-# Cron Schedule: 0 * * * *
-
-# --- Digest diário da watch + movers 24h ---
-# Start Command: node scripts/watch-digest-cron.mjs
-# Cron Schedule: 0 * * * *
-
-# --- Health RSS ---
-# Start Command: node scripts/rss-health-cron.mjs
-# Cron Schedule: 0 */6 * * *
-
-# --- Funding digest (08h e 20h UTC) ---
-# Start Command: node scripts/funding-digest-cron.mjs
-# Cron Schedule: 0 8,20 * * *
-
-# --- Zone revalidation (pares com zona ligada) ---
-# Start Command: node scripts/zone-scan-cron.mjs
-# Cron Schedule: */15 * * * *
+# news-digest-cron.mjs — 0 * * * *
+# watch-digest-cron.mjs — 0 * * * *
+# rss-health-cron.mjs — 0 */6 * * *
+# funding-digest-cron.mjs — 0 8,20 * * *
+# zone-scan-cron.mjs — */15 * * * *
+# opening-scan-cron.mjs — 0 * * * * (janela: dom 20h / seg 06h UTC)
+# weekly-risk-cron.mjs — 0 * * * * (janela: dom 18h UTC)
