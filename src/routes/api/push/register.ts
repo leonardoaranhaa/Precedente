@@ -92,13 +92,14 @@ export const Route = createFileRoute("/api/push/register")({
 
         const watches = parseWatches(raw.watches);
 
+        let sessionUserId: string | null = null;
         try {
           const session = await getSessionUser();
-          const userId = session?.id ?? null;
-          await assertPremiumFeatureForUser(userId, "watch_slot", {
+          sessionUserId = session?.id ?? null;
+          await assertPremiumFeatureForUser(sessionUserId, "watch_slot", {
             watchCount: watches.length,
           });
-          await assertPremiumFeatureForUser(userId, "zones", {
+          await assertPremiumFeatureForUser(sessionUserId, "zones", {
             hasEnabledZones: watchesHaveEnabledZones(watches),
           });
         } catch (err) {
@@ -120,6 +121,7 @@ export const Route = createFileRoute("/api/push/register")({
             digestEnabled: typeof raw.digestEnabled === "boolean" ? raw.digestEnabled : undefined,
             digestHourUtc: typeof raw.digestHourUtc === "number" ? raw.digestHourUtc : undefined,
             includeMovers: typeof raw.includeMovers === "boolean" ? raw.includeMovers : undefined,
+            userId: sessionUserId,
           });
           return json({
             ok: true,
