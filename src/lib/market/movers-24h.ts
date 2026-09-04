@@ -138,7 +138,7 @@ export async function fetchMovers24h(opts: MoversOptions = {}): Promise<MoversSn
     async () => {
       let lastErr: Error | null = null;
       let raw: BinanceTicker24h[] = [];
-      let source = BASES[0];
+      let source: string = BASES[0];
       for (const base of BASES) {
         try {
           raw = await fetchAllTickers(base);

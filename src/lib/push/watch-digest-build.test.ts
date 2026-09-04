@@ -30,6 +30,9 @@ function payload(overrides: Partial<{ sampleNote: "ok" | "small" | "tiny"; dd: n
       consecutive: 0,
       lastExtrema: null,
       changePct: 0,
+      volLast: 100,
+      volMedian20: 100,
+      volRatio: 1,
     },
     precedent: {
       fingerprint: {
