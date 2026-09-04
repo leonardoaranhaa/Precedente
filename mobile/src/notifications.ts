@@ -89,6 +89,8 @@ export async function syncPushSubscription(input: {
           ticker: w.ticker,
           timeframe: w.timeframe,
           displayTicker: w.displayTicker,
+          ...(w.priceZone ? { priceZone: w.priceZone } : {}),
+          ...(w.rsiZone ? { rsiZone: w.rsiZone } : {}),
         })),
         rules: {
           sampleWeak: input.rules.sampleWeak,

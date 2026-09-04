@@ -135,3 +135,52 @@ export async function currentAuthHeader(): Promise<Record<string, string>> {
   const token = await getToken();
   return token ? authHeaders(token) : {};
 }
+
+type SimpleResult = { ok: true } | { ok: false; error: string };
+
+export async function updateName(name: string): Promise<SimpleResult> {
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Entre na sua conta primeiro." };
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/auth/update-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify({ name }),
+    });
+  } catch {
+    return { ok: false, error: "Falha de rede. Confira sua conexão." };
+  }
+  const json = (await response.json().catch(() => null)) as { message?: string } | null;
+  if (!response.ok) return { ok: false, error: json?.message ?? "Não deu pra salvar." };
+  if (memUser) {
+    memUser = { ...memUser, name };
+    await safeSet(USER_KEY, JSON.stringify(memUser));
+  }
+  return { ok: true };
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<SimpleResult> {
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Entre na sua conta primeiro." };
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  } catch {
+    return { ok: false, error: "Falha de rede. Confira sua conexão." };
+  }
+  const json = (await response.json().catch(() => null)) as { message?: string; token?: string } | null;
+  if (!response.ok) return { ok: false, error: json?.message ?? "Não deu pra trocar a senha." };
+  if (json?.token) {
+    memToken = json.token;
+    await safeSet(TOKEN_KEY, json.token);
+  }
+  return { ok: true };
+}

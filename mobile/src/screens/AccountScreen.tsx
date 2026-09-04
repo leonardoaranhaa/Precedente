@@ -9,8 +9,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { LogOut, Sparkles, User } from "lucide-react-native";
-import type { AuthUser } from "../auth";
+import { ChevronDown, ChevronRight, LogOut, Sparkles, User } from "lucide-react-native";
+import { changePassword, type AuthUser } from "../auth";
 import { getBillingStatus } from "../billing";
 import { colors, radius } from "../theme";
 import { Button } from "../components/Button";
@@ -26,6 +26,7 @@ export function AccountScreen({
   onSignOut,
   onCheckout,
   onManage,
+  onUpdateName,
 }: {
   user: AuthUser | null;
   busy: boolean;
@@ -35,6 +36,7 @@ export function AccountScreen({
   onSignOut: () => void;
   onCheckout: () => Promise<{ url: string } | { error: string }>;
   onManage: () => Promise<{ url: string } | { error: string }>;
+  onUpdateName: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [name, setName] = useState("");
@@ -162,11 +164,157 @@ export function AccountScreen({
         ) : null}
       </View>
 
+      <View style={styles.card}>
+        <ExpandableRow label="Nome" summary={user.name}>
+          <NameForm user={user} onUpdateName={onUpdateName} />
+        </ExpandableRow>
+        <View style={styles.rowDivider} />
+        <ExpandableRow label="Senha" summary="••••••••">
+          <PasswordForm />
+        </ExpandableRow>
+        <View style={styles.rowDivider} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Notificações</Text>
+          <Text style={styles.rowValue}>Por par, na Watch</Text>
+        </View>
+      </View>
+
       <Pressable style={styles.signOutBtn} onPress={onSignOut}>
         <LogOut size={16} color={colors.muted} />
         <Text style={styles.signOutText}>Sair</Text>
       </Pressable>
     </ScrollView>
+  );
+}
+
+/**
+ * Linha de configuração que expande no toque, em vez de formulário sempre
+ * aberto — no celular a tela é curta, e um card com tudo visível de uma vez
+ * fica pesado. Só "Nome" e "Senha" abrem; o resto do app usa o mesmo padrão.
+ */
+function ExpandableRow({
+  label,
+  summary,
+  children,
+}: {
+  label: string;
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable style={styles.row} onPress={() => setOpen((o) => !o)}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          {!open ? <Text style={styles.rowValue}>{summary}</Text> : null}
+          {open ? (
+            <ChevronDown size={16} color={colors.subtle} />
+          ) : (
+            <ChevronRight size={16} color={colors.subtle} />
+          )}
+        </View>
+      </Pressable>
+      {open ? <View style={{ marginTop: 10, gap: 8 }}>{children}</View> : null}
+    </View>
+  );
+}
+
+function NameForm({
+  user,
+  onUpdateName,
+}: {
+  user: AuthUser;
+  onUpdateName: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+}) {
+  const [name, setName] = useState(user.name);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function save() {
+    if (busy || !name.trim()) return;
+    setBusy(true);
+    setMsg(null);
+    const result = await onUpdateName(name.trim());
+    setBusy(false);
+    setMsg(result.ok ? "Nome atualizado." : result.error);
+  }
+
+  return (
+    <>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Nome"
+          placeholderTextColor={colors.subtle}
+          style={[styles.input, { flex: 1, height: 40 }]}
+        />
+        <Pressable style={[styles.billingBtn, { height: 40 }]} disabled={busy} onPress={() => void save()}>
+          {busy ? (
+            <ActivityIndicator size="small" color={colors.accentFg} />
+          ) : (
+            <Text style={styles.billingBtnText}>Salvar</Text>
+          )}
+        </Pressable>
+      </View>
+      {msg ? <Text style={styles.hint}>{msg}</Text> : null}
+    </>
+  );
+}
+
+function PasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  async function save() {
+    if (busy || !currentPassword || newPassword.length < 8) return;
+    setBusy(true);
+    setMsg(null);
+    const result = await changePassword(currentPassword, newPassword);
+    setBusy(false);
+    if (result.ok) {
+      setMsg({ text: "Senha alterada.", ok: true });
+      setCurrentPassword("");
+      setNewPassword("");
+    } else {
+      setMsg({ text: result.error, ok: false });
+    }
+  }
+
+  return (
+    <>
+      <TextInput
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+        placeholder="Senha atual"
+        placeholderTextColor={colors.subtle}
+        secureTextEntry
+        style={[styles.input, { height: 40 }]}
+      />
+      <TextInput
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder="Nova senha (mín. 8 caracteres)"
+        placeholderTextColor={colors.subtle}
+        secureTextEntry
+        style={[styles.input, { height: 40 }]}
+      />
+      <Pressable
+        style={[styles.billingBtn, { alignSelf: "flex-start" }]}
+        disabled={busy}
+        onPress={() => void save()}
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color={colors.accentFg} />
+        ) : (
+          <Text style={styles.billingBtnText}>Atualizar senha</Text>
+        )}
+      </Pressable>
+      {msg ? <Text style={[styles.hint, msg.ok && { color: colors.up }]}>{msg.text}</Text> : null}
+    </>
   );
 }
 
@@ -202,6 +350,9 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  rowLabel: { fontSize: 13, fontWeight: "500", color: colors.fg },
+  rowValue: { fontSize: 12, color: colors.subtle },
+  rowDivider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
   planBadge: { flexDirection: "row", alignItems: "center", gap: 6 },
   planText: { fontSize: 13, fontWeight: "600", color: colors.subtle },
   billingBtn: {

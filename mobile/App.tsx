@@ -8,7 +8,7 @@ import {
   saveAlertRules,
   type AlertRules,
 } from "./src/alert-settings";
-import { getStoredUser, signIn, signOut, signUp, type AuthUser } from "./src/auth";
+import { getStoredUser, signIn, signOut, signUp, updateName, type AuthUser } from "./src/auth";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
 import type { PipelineStep } from "./src/components/Pipeline";
@@ -27,7 +27,10 @@ import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
+import { initSentry } from "./src/sentry";
 import { getSyncData, setSyncData } from "./src/sync";
+
+initSentry();
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
 import type { StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
@@ -40,9 +43,13 @@ import {
   loadWatchlist,
   removeWatch,
   saveWatchlist,
+  updateZone,
   upsertWatch,
+  type PriceZone,
+  type RsiZone,
   type WatchItem,
 } from "./src/watchlist";
+import { ZoneModal } from "./src/components/ZoneModal";
 
 type Screen = "home" | "history" | "result" | "watch" | "alerts" | "account";
 
@@ -77,6 +84,7 @@ function AppInner() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
+  const [zoneItem, setZoneItem] = useState<WatchItem | null>(null);
 
   const [alertRules, setAlertRules] = useState<AlertRules>(DEFAULT_ALERT_RULES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -442,6 +450,12 @@ function AppInner() {
     setUser(result.user);
   }
 
+  async function handleUpdateName(name: string) {
+    const result = await updateName(name);
+    if (result.ok) setUser((u) => (u ? { ...u, name } : u));
+    return result;
+  }
+
   async function handleSignOut() {
     await signOut();
     syncedUserIdRef.current = null;
@@ -500,6 +514,7 @@ function AppInner() {
               })
             }
             onRefresh={(item) => void refreshWatchItem(item, { openResult: true })}
+            onOpenZone={setZoneItem}
             onRefreshAll={() => void refreshAllWatch()}
             autoRefreshMin={autoRefreshMin}
             onAutoRefreshMin={setAutoRefresh}
@@ -534,6 +549,7 @@ function AppInner() {
             onSignOut={() => void handleSignOut()}
             onCheckout={startPremiumCheckout}
             onManage={openBillingPortal}
+            onUpdateName={handleUpdateName}
           />
         ) : (
           <HomeScreen
@@ -553,6 +569,20 @@ function AppInner() {
 
         {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
       </View>
+
+      <ZoneModal
+        visible={zoneItem != null}
+        item={zoneItem}
+        onClose={() => setZoneItem(null)}
+        onSave={(zones: { priceZone: PriceZone; rsiZone: RsiZone }) => {
+          if (!zoneItem) return;
+          void updateZone(watchRef.current, zoneItem.id, zones).then((next) => {
+            setWatch(next);
+            watchRef.current = next;
+            void syncPush(alertRules, next, pushToken);
+          });
+        }}
+      />
     </SafeAreaView>
   );
 }

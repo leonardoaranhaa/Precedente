@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getMyEntitlement } from "@/lib/billing/entitlements";
 import { openBillingPortal, startPremiumCheckout } from "@/lib/billing/checkout";
+import { PLAN_LIMITS } from "@/lib/billing/plan-limits";
 import { cn } from "@/lib/utils";
 
 export function AccountMenu() {
@@ -94,13 +95,19 @@ export function AccountMenu() {
           <p className="mt-1.5 text-[11px] leading-relaxed text-down">{billingError}</p>
         ) : null}
         {!active ? (
-          <p className="mt-1.5 text-[11px] leading-relaxed text-subtle">
-            Assinar não muda o que o app mostra: sempre estatística do passado, nunca
-            recomendação.{" "}
-            <Link to="/aviso-de-risco" className="underline-offset-4 hover:text-fg hover:underline">
-              Aviso de risco
-            </Link>
-          </p>
+          <div className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-subtle">
+            <p>
+              Premium: até {PLAN_LIMITS.premium.maxWatches} pares em alerta, zonas de preço/RSI
+              por ativo e até {PLAN_LIMITS.premium.visionPerDay} leituras de print/dia. Análise
+              OHLC continua livre.
+            </p>
+            <p>
+              Assinar não muda a tese do app: sempre estatística do passado, nunca recomendação.{" "}
+              <Link to="/aviso-de-risco" className="underline-offset-4 hover:text-fg hover:underline">
+                Aviso de risco
+              </Link>
+            </p>
+          </div>
         ) : null}
 
         <button

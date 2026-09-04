@@ -1,9 +1,13 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { initSentryClient, reportClientError, SentryErrorBoundary } from "@/lib/sentry-client";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Precedente";
+
+initSentryClient();
 
 export const Route = createRootRoute({
   head: () => ({
@@ -33,11 +37,27 @@ export const Route = createRootRoute({
     <html lang="pt-BR" className="antialiased" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* aplica o tema salvo antes do 1º paint, evita flash de tema errado */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         <PreviewHostBridge />
         <AuthProvider>
-          <Outlet />
+          <SentryErrorBoundary
+            fallback={() => (
+              <main className="grid min-h-dvh place-items-center bg-bg p-6 text-center">
+                <div>
+                  <p className="font-display text-lg text-fg">Algo deu errado.</p>
+                  <p className="mt-1 text-sm text-muted">
+                    Recarregue a página. Se persistir, tenta de novo em alguns minutos.
+                  </p>
+                </div>
+              </main>
+            )}
+            onError={(err) => reportClientError(err, { source: "error-boundary" })}
+          >
+            <Outlet />
+          </SentryErrorBoundary>
         </AuthProvider>
         <Scripts />
       </body>

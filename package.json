@@ -17,9 +17,11 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs'; s1=$?; node --experimental-strip-types --test src/lib/analyze-rate-limit-logic.test.ts src/lib/anthropic-cost.test.ts src/lib/app-data/app-data.test.ts src/lib/concurrency.test.ts src/lib/market/baseline-copy.test.ts src/lib/push/scan-logic.test.ts src/lib/auth/gate-identity.test.ts src/lib/billing/entitlements.test.ts src/lib/market/indicators.test.ts src/lib/market/precedent.test.ts src/lib/rate-limit.test.ts src/lib/sync-limits.test.ts; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]",
+    "test": "node --test 'scripts/**/*.test.mjs'; s1=$?; npm run -s test:unit; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]",
+    "test:unit": "node --experimental-strip-types --test src/lib/analyze-rate-limit-logic.test.ts src/lib/anthropic-cost.test.ts src/lib/app-data/app-data.test.ts src/lib/circuit-breaker.test.ts src/lib/concurrency.test.ts src/lib/external-intel-rate-limit-logic.test.ts src/lib/market/baseline-copy.test.ts src/lib/market/external-intel.test.ts src/lib/push/evaluate.test.ts src/lib/push/sanitize.test.ts src/lib/push/scan-logic.test.ts src/lib/auth/gate-identity.test.ts src/lib/billing/entitlements.test.ts src/lib/billing/plan-limits.test.ts src/lib/market/indicators.test.ts src/lib/market/precedent.test.ts src/lib/rate-limit.test.ts src/lib/sync-limits.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
@@ -46,6 +48,8 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@sentry/node": "^10.73.0",
+    "@sentry/react": "^10.73.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-router": "^1.170.0",
@@ -78,6 +82,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.16.5",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.2.0",

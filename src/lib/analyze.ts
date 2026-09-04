@@ -2,11 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { CircuitOpenError, withCircuitBreaker } from "./circuit-breaker";
 import { displayTicker, normalizeTicker } from "./market/labels";
 import { analyzeSeries } from "./market/precedent";
 import type { AnalysisPayload, Timeframe, VisionReading } from "./market/types";
 import { TIMEFRAMES } from "./market/types";
 import { opus5CostUsd } from "./anthropic-cost";
+import { billingGatesEnabled, PremiumRequiredError } from "./billing/plan-limits";
 
 type AnalyzeInput = {
   ticker: string;
@@ -69,24 +71,30 @@ async function readChart(
 
   let response;
   try {
-    response = await client.messages.parse({
-      model: "claude-opus-5",
-      max_tokens: 16000,
-      output_config: {
-        effort: "low",
-        format: zodOutputFormat(VisionSchema),
-      },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data } },
-            { type: "text", text: VISION_PROMPT },
+    response = await withCircuitBreaker(
+      "Leitura visual",
+      { failureThreshold: 5, cooldownMs: 30_000 },
+      () =>
+        client.messages.parse({
+          model: "claude-opus-5",
+          max_tokens: 16000,
+          output_config: {
+            effort: "low",
+            format: zodOutputFormat(VisionSchema),
+          },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mediaType, data } },
+                { type: "text", text: VISION_PROMPT },
+              ],
+            },
           ],
-        },
-      ],
-    });
+        }),
+    );
   } catch (err) {
+    if (err instanceof CircuitOpenError) throw err;
     if (err instanceof Anthropic.AuthenticationError) {
       throw new Error("Chave da leitura visual inválida.");
     }
@@ -150,6 +158,39 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
+  // Gates Premium na leitura de print — só com BILLING_GATES_ENABLED.
+  // billingGatesEnabled/PremiumRequiredError vêm de plan-limits.ts (módulo
+  // puro, sem DB) por import ESTÁTICO de propósito: esse mesmo módulo já é
+  // importado estaticamente noutros pontos (rotas, componentes). Importá-lo
+  // dinamicamente aqui quebra o build de produção — analyze.ts é alcançável
+  // do bundle do cliente via routes/index.tsx, e o Rolldown gera um chunk
+  // corrompido pro módulo quando ele é importado estático+dinâmico ao mesmo
+  // tempo cruzando a fronteira cliente/servidor (achado via bisect: runtime
+  // real quebrava com "SyntaxError: Export 'ssr_exports' is not defined",
+  // invisível a tsc/lint/testes e até a `vite build`, que só verifica que
+  // compila — só aparece rodando o binário compilado de verdade).
+  // assert-premium.server.ts/vision-quota.ts continuam dinâmicos — são
+  // server-only de verdade (DB / estado em memória do processo).
+  if (data.imageDataUrl) {
+    if (billingGatesEnabled()) {
+      const { getSessionUser } = await import("./auth/verify.server");
+      const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
+      const { getVisionCountToday, incrementVisionCount } = await import("./billing/vision-quota");
+      const session = await getSessionUser();
+      if (!session?.id) {
+        throw new PremiumRequiredError(
+          "vision",
+          "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
+        );
+      }
+      await assertPremiumFeatureForUser(session.id, "vision", {
+        visionCountToday: getVisionCountToday(session.id),
+      });
+      // Reserva a cota antes da chamada cara (falha de modelo ainda consome cota IP via rate limit).
+      incrementVisionCount(session.id);
+    }
+  }
+
   const startedAt = Date.now();
   const { fetchOHLCV } = await import("./market/exchange");
   const { fetchOnchainContext, summarizeDexForError } = await import("./market/onchain");
@@ -198,13 +239,6 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
 
   const [visionPart, onchain] = await Promise.all([visionPromise, onchainPromise]);
 
-  const hasOnchain =
-    onchain &&
-    (onchain.fundingRate != null ||
-      onchain.openInterest != null ||
-      onchain.liquidityUsd != null ||
-      onchain.volume24hUsd != null);
-
   const { logAnalysis } = await import("./analyze-log");
   logAnalysis({
     ticker: data.ticker,
@@ -230,7 +264,10 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     vision: visionPart.vision,
     visionError: visionPart.visionError,
     source: market.source,
-    onchain: hasOnchain ? onchain : null,
+    // `onchain` só vira null se fetchOnchainContext lançar (nunca deveria —
+    // ela mesma nunca lança). Um contexto "vazio" (todas as fontes falharam)
+    // segue passando adiante — a UI degrada com legenda em vez de sumir.
+    onchain,
   };
 }
 

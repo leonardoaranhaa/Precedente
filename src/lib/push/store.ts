@@ -1,6 +1,9 @@
 import { getSql } from "@/lib/db";
 import type { AlertRules, PushSubscription, WatchTarget } from "./types";
 import { DEFAULT_ALERT_RULES } from "./types";
+import { sanitizeWatchTarget } from "./sanitize";
+
+export { sanitizeWatchTarget } from "./sanitize";
 
 /**
  * Persistência preferencial em Postgres (Neon / PGLite via getSql).
@@ -50,7 +53,7 @@ function rowToSub(row: Row): PushSubscription {
   const lastSentRaw = asObject(row.last_sent);
   const watches = asArray(row.watches)
     .filter((w): w is WatchTarget => Boolean(w && typeof w === "object"))
-    .map((w) => w as WatchTarget);
+    .map((w) => sanitizeWatchTarget(w as WatchTarget));
 
   const lastSent: Record<string, number> = {};
   for (const [k, v] of Object.entries(lastSentRaw)) {
@@ -114,7 +117,8 @@ export async function upsertSubscription(input: {
 
   const watches = (input.watches ?? existing?.watches ?? [])
     .filter((w) => w.ticker && w.timeframe)
-    .slice(0, MAX_WATCHES);
+    .slice(0, MAX_WATCHES)
+    .map(sanitizeWatchTarget);
 
   const rules: AlertRules = {
     ...DEFAULT_ALERT_RULES,

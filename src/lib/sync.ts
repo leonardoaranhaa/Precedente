@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { assertSyncPayload, isSyncKind, type SyncKind } from "@/lib/sync-limits";
+import { countWatchItems } from "@/lib/billing/plan-limits";
 
 export type { SyncKind };
 
@@ -19,6 +20,15 @@ export async function getSyncDataFor(userId: string, kind: SyncKind): Promise<Js
 
 /** Substitui o blob sincronizado do usuário por inteiro (mesmo padrão do localStorage). */
 export async function setSyncDataFor(userId: string, kind: SyncKind, data: unknown): Promise<void> {
+  if (kind === "watch") {
+    // Dinâmico: assert-premium.server.ts puxa DB/auth server-side — um import
+    // estático aqui derruba o build de produção (sync.ts é alcançável do
+    // cliente via getSyncData/setSyncData). Mesmo padrão de analyze.ts.
+    const { assertPremiumFeatureForUser } = await import("@/lib/billing/assert-premium.server");
+    await assertPremiumFeatureForUser(userId, "watch_slot", {
+      watchCount: countWatchItems(data),
+    });
+  }
   const sql = await getSql();
   await sql.query(
     `insert into user_sync_data (user_id, kind, data, updated_at)
