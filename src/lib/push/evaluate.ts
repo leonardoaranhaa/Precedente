@@ -1,7 +1,12 @@
 import type { AnalysisPayload } from "@/lib/market/types";
-import type { AlertEvent, AlertRules, PushSubscription, WatchTarget } from "./types";
+import type {
+  AlertEvent,
+  AlertRules,
+  PushSubscription,
+  WatchTarget,
+} from "./types";
 import {
-  detectRegimeTransition,
+  isRegimeTransition,
   regimeBody,
   regimeStateKey,
   regimeTitle,
@@ -79,72 +84,76 @@ export function evaluateAlerts(
 
   if (rules.sampleRegime) {
     const note = payload.precedent.sampleNote as SampleNote;
-    const prevCode = lastSent[regimeStateKey(payload.ticker, payload.timeframe)];
-    const transition = detectRegimeTransition(prevCode, note);
-    if (transition && !cool("sample_regime")) {
+    const key = regimeStateKey(payload.ticker, payload.timeframe);
+    const prevCode = lastSent[key] ?? 0;
+    const currCode = sampleNoteCode(note);
+    if (isRegimeTransition(prevCode, currCode) && !cool("sample_regime")) {
       events.push({
         ...base,
         kind: "sample_regime",
-        title: regimeTitle(payload.displayTicker, transition),
-        body: regimeBody(transition, payload.precedent.matches),
+        title: regimeTitle(payload.displayTicker, note),
+        body: regimeBody(note, payload.precedent.matches),
       });
     }
   }
 
-  if (rules.fundingExtreme && payload.onchain?.fundingRate != null) {
+  if (rules.drawdownPath && !cool("drawdown_path")) {
+    const h = horizon10(payload);
+    if (h && Math.abs(h.medianDrawdownPct) >= rules.drawdownThresholdPct) {
+      events.push({
+        ...base,
+        kind: "drawdown_path",
+        title: `${payload.displayTicker} · DD do caminho`,
+        body: `Drawdown mediano do caminho ~${h.medianDrawdownPct.toFixed(1).replace(".", ",")}% (limiar ${rules.drawdownThresholdPct}%). Só estatística de precedentes.`,
+      });
+    }
+  }
+
+  if (rules.extreme20 && !cool("extreme_20")) {
+    if (payload.snapshot.near20High || payload.snapshot.near20Low) {
+      const side = payload.snapshot.near20High ? "high20" : "low20";
+      events.push({
+        ...base,
+        kind: "extreme_20",
+        title: `${payload.displayTicker} · perto de ${side}`,
+        body: `Preço perto da extrema de 20 barras (${side}). Contexto de posição, não ordem.`,
+      });
+    }
+  }
+
+  if (
+    rules.fundingExtreme &&
+    payload.onchain?.fundingRate != null &&
+    !cool("funding_extreme")
+  ) {
     const fr = payload.onchain.fundingRate;
     const thr = rules.fundingThreshold > 0 ? rules.fundingThreshold : 0.0005;
-    if (Math.abs(fr) >= thr && !cool("funding_extreme")) {
+    if (Math.abs(fr) >= thr) {
       events.push({
         ...base,
         kind: "funding_extreme",
         title: `${payload.displayTicker} · funding elevado`,
-        body: `Funding em ${formatFundingPct(fr)} (|f| ≥ ${formatFundingPct(thr)}). Só contexto de posicionamento — não é ordem de exposição.`,
+        body: `Funding ${formatFundingPct(fr)} (|limiar| ${formatFundingPct(thr)}). Posicionamento de perp — não sinal de direção.`,
       });
     }
   }
 
-  const h = horizon10(payload);
+  const priceZone = watch.priceZone;
   if (
-    rules.drawdownPath &&
-    h &&
-    Math.abs(h.medianDrawdownPct) >= rules.drawdownThresholdPct &&
-    !cool("drawdown_path")
+    priceZone?.enabled &&
+    (priceZone.min != null || priceZone.max != null) &&
+    !cool("price_zone")
   ) {
-    const dd = h.medianDrawdownPct.toFixed(1).replace(".", ",");
-    events.push({
-      ...base,
-      kind: "drawdown_path",
-      title: `${payload.displayTicker} · caminho com DD elevado`,
-      body: `Drawdown mediano em ${h.bars} barras: ${dd}%. O risco está no trajeto, não só no ponto final.`,
-    });
-  }
-
-  if (
-    rules.extreme20 &&
-    (payload.snapshot.near20High || payload.snapshot.near20Low) &&
-    !cool("extreme_20")
-  ) {
-    const side = payload.snapshot.near20High ? "máxima" : "mínima";
-    events.push({
-      ...base,
-      kind: "extreme_20",
-      title: `${payload.displayTicker} · extremo 20 barras`,
-      body: `Preço colado na ${side} de 20 barras. Contexto de fragilidade no fingerprint — sem ordem de exposição.`,
-    });
-  }
-
-  const zone = watch.priceZone;
-  if (zone?.enabled && (zone.min != null || zone.max != null) && !cool("price_zone")) {
     const price = payload.snapshot.last.c;
-    const inZone = (zone.min == null || price >= zone.min) && (zone.max == null || price <= zone.max);
-    if (inZone) {
+    const inMin = priceZone.min == null || price >= priceZone.min;
+    const inMax = priceZone.max == null || price <= priceZone.max;
+    if (inMin && inMax) {
       const range =
-        zone.min != null && zone.max != null
-          ? `${formatPrice(zone.min)}–${formatPrice(zone.max)}`
-          : zone.min != null
-            ? `acima de ${formatPrice(zone.min)}`
-            : `abaixo de ${formatPrice(zone.max!)}`;
+        priceZone.min != null && priceZone.max != null
+          ? `${formatPrice(priceZone.min)}–${formatPrice(priceZone.max)}`
+          : priceZone.min != null
+            ? `≥ ${formatPrice(priceZone.min)}`
+            : `≤ ${formatPrice(priceZone.max!)}`;
       events.push({
         ...base,
         kind: "price_zone",
@@ -167,6 +176,26 @@ export function evaluateAlerts(
         body: `RSI em ${rsi.toFixed(0)}, ${below ? "abaixo" : "acima"} do limite configurado (${
           below ? rsiZone.below : rsiZone.above
         }).${ctx ? ` ${ctx}.` : ""}`,
+      });
+    }
+  }
+
+  if (
+    rules.volumeAnomaly &&
+    payload.snapshot.volRatio != null &&
+    !cool("volume_anomaly")
+  ) {
+    const multiple =
+      typeof rules.volumeMultiple === "number" && rules.volumeMultiple > 1
+        ? rules.volumeMultiple
+        : 3;
+    if (payload.snapshot.volRatio >= multiple) {
+      const ratio = payload.snapshot.volRatio.toFixed(1).replace(".", ",");
+      events.push({
+        ...base,
+        kind: "volume_anomaly",
+        title: `${payload.displayTicker} · volume anômalo`,
+        body: `Volume da barra atual ~${ratio}× a mediana das 20 anteriores. Atividade elevada no TF — contexto, não direção de trade.${ctx ? ` ${ctx}.` : ""}`,
       });
     }
   }
