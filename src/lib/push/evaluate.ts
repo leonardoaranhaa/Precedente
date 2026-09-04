@@ -6,7 +6,7 @@ import type {
   WatchTarget,
 } from "./types";
 import {
-  isRegimeTransition,
+  detectRegimeTransition,
   regimeBody,
   regimeStateKey,
   regimeTitle,
@@ -86,13 +86,13 @@ export function evaluateAlerts(
     const note = payload.precedent.sampleNote as SampleNote;
     const key = regimeStateKey(payload.ticker, payload.timeframe);
     const prevCode = lastSent[key] ?? 0;
-    const currCode = sampleNoteCode(note);
-    if (isRegimeTransition(prevCode, currCode) && !cool("sample_regime")) {
+    const transition = detectRegimeTransition(prevCode > 0 ? prevCode : undefined, note);
+    if (transition && !cool("sample_regime")) {
       events.push({
         ...base,
         kind: "sample_regime",
-        title: regimeTitle(payload.displayTicker, note),
-        body: regimeBody(note, payload.precedent.matches),
+        title: regimeTitle(payload.displayTicker, transition),
+        body: regimeBody(transition, payload.precedent.matches),
       });
     }
   }
