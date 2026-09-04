@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiDexRouteImport } from './routes/api/dex'
 import { Route as ApiPriceRouteImport } from './routes/api/price'
 import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
@@ -31,6 +32,7 @@ import { Route as ApiNewsHealthRouteImport } from './routes/api/news/health'
 import { Route as ApiNewsPreferencesRouteImport } from './routes/api/news/preferences'
 import { Route as ApiNewsScanRouteImport } from './routes/api/news/scan'
 import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
+import { Route as ApiPushDexDrainScanRouteImport } from './routes/api/push/dex-drain-scan'
 import { Route as ApiPushDigestScanRouteImport } from './routes/api/push/digest-scan'
 import { Route as ApiPushFundingDigestScanRouteImport } from './routes/api/push/funding-digest-scan'
 import { Route as ApiPushOpeningScanRouteImport } from './routes/api/push/opening-scan'
@@ -67,6 +69,11 @@ const TermosRoute = TermosRouteImport.update({
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDexRoute = ApiDexRouteImport.update({
+  id: '/api/dex',
+  path: '/api/dex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPriceRoute = ApiPriceRouteImport.update({
@@ -150,6 +157,11 @@ const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
   path: '/api/ops/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushDexDrainScanRoute = ApiPushDexDrainScanRouteImport.update({
+  id: '/api/push/dex-drain-scan',
+  path: '/api/push/dex-drain-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushDigestScanRoute = ApiPushDigestScanRouteImport.update({
   id: '/api/push/digest-scan',
   path: '/api/push/digest-scan',
@@ -194,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -210,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -225,6 +239,7 @@ export interface FileRoutesByTo {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -241,6 +256,7 @@ export interface FileRoutesByTo {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -257,6 +273,7 @@ export interface FileRoutesById {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -273,6 +290,7 @@ export interface FileRoutesById {
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
   '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/digest-scan': typeof ApiPushDigestScanRoute
   '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
   '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
@@ -290,6 +308,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -306,6 +325,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -321,6 +341,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -337,6 +358,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -352,6 +374,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -368,6 +391,7 @@ export interface FileRouteTypes {
     | '/api/news/preferences'
     | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/dex-drain-scan'
     | '/api/push/digest-scan'
     | '/api/push/funding-digest-scan'
     | '/api/push/opening-scan'
@@ -384,6 +408,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiDexRoute: typeof ApiDexRoute
   ApiPriceRoute: typeof ApiPriceRoute
   ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
@@ -400,6 +425,7 @@ export interface RootRouteChildren {
   ApiNewsPreferencesRoute: typeof ApiNewsPreferencesRoute
   ApiNewsScanRoute: typeof ApiNewsScanRoute
   ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
+  ApiPushDexDrainScanRoute: typeof ApiPushDexDrainScanRoute
   ApiPushDigestScanRoute: typeof ApiPushDigestScanRoute
   ApiPushFundingDigestScanRoute: typeof ApiPushFundingDigestScanRoute
   ApiPushOpeningScanRoute: typeof ApiPushOpeningScanRoute
@@ -451,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/api/analyze'
       fullPath: '/api/analyze'
       preLoaderRoute: typeof ApiAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dex': {
+      id: '/api/dex'
+      path: '/api/dex'
+      fullPath: '/api/dex'
+      preLoaderRoute: typeof ApiDexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/price': {
@@ -565,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpsAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/dex-drain-scan': {
+      id: '/api/push/dex-drain-scan'
+      path: '/api/push/dex-drain-scan'
+      fullPath: '/api/push/dex-drain-scan'
+      preLoaderRoute: typeof ApiPushDexDrainScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/digest-scan': {
       id: '/api/push/digest-scan'
       path: '/api/push/digest-scan'
@@ -624,6 +664,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiDexRoute: ApiDexRoute,
   ApiPriceRoute: ApiPriceRoute,
   ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,
@@ -640,6 +681,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiNewsPreferencesRoute: ApiNewsPreferencesRoute,
   ApiNewsScanRoute: ApiNewsScanRoute,
   ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
+  ApiPushDexDrainScanRoute: ApiPushDexDrainScanRoute,
   ApiPushDigestScanRoute: ApiPushDigestScanRoute,
   ApiPushFundingDigestScanRoute: ApiPushFundingDigestScanRoute,
   ApiPushOpeningScanRoute: ApiPushOpeningScanRoute,

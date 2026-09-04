@@ -40,7 +40,9 @@ export async function sendExpoAlerts(
     data: {
       kind: ev.kind,
       ticker: ev.ticker,
-      timeframe: ev.timeframe,
+      // dex_drain não tem timeframe (o token não tem candle) — omite em vez
+      // de mandar null, que quebraria o Record<string, string> do Expo.
+      ...(ev.timeframe ? { timeframe: ev.timeframe } : {}),
       displayTicker: ev.displayTicker,
     },
   }));

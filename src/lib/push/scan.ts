@@ -4,7 +4,7 @@ import { mapWithConcurrency } from "@/lib/concurrency";
 import { alertCooldownKey, evaluateAlerts, regimeStatePatch, shouldScan } from "./evaluate";
 import { sendExpoAlerts } from "./expo-send";
 import { pairKey, uniqueWatchPairs } from "./scan-logic";
-import { listSubscriptions, markSent, markRegimeState, removeSubscription } from "./store";
+import { listSubscriptions, markSent, markStateCodes, removeSubscription } from "./store";
 
 export type ScanReport = {
   subscriptions: number;
@@ -74,7 +74,7 @@ export async function scanAllSubscriptions(): Promise<ScanReport> {
     }
 
     if (regimePatches.length > 0) {
-      await markRegimeState(sub.token, regimePatches);
+      await markStateCodes(sub.token, regimePatches);
     }
 
     if (eventsForToken.length === 0) continue;

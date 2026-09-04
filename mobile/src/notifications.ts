@@ -65,6 +65,8 @@ export async function syncPushSubscription(input: {
   token: string | null;
   watches: WatchItem[];
   rules: AlertRules;
+  /** Tickers DEX pinados pro alerta de drenagem — lista separada da watch. */
+  dexWatches?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   if (!input.token || !input.rules.enabled) {
     if (input.token && !input.rules.enabled) {
@@ -95,6 +97,7 @@ export async function syncPushSubscription(input: {
           ...(w.priceZone ? { priceZone: w.priceZone } : {}),
           ...(w.rsiZone ? { rsiZone: w.rsiZone } : {}),
         })),
+        dexWatches: input.dexWatches ?? [],
         rules: {
           sampleWeak: input.rules.sampleWeak,
           sampleRegime: input.rules.sampleRegime,

@@ -8,7 +8,8 @@ export type AlertKind =
   | "price_zone"
   | "rsi_zone"
   | "funding_extreme"
-  | "volume_anomaly";
+  | "volume_anomaly"
+  | "dex_drain";
 
 export type AlertRules = {
   sampleWeak: boolean;
@@ -66,7 +67,13 @@ export type PushSubscription = {
   includeMovers: boolean;
   lastDigestAt: number | null;
   userId: string | null;
+  /** Tickers DEX pinados pro alerta de drenagem. Sem timeframe — não têm candles. */
+  dexWatches: string[];
 };
+
+/** Bem menor que MAX_WATCHES: tokens de ciclo curto têm alta rotatividade —
+ * uma lista grande de moedas já mortas não ajuda ninguém. */
+export const MAX_DEX_WATCHES = 12;
 
 export const DEFAULT_DIGEST = {
   digestEnabled: false,
@@ -78,7 +85,8 @@ export const DEFAULT_DIGEST = {
 export type AlertEvent = {
   kind: AlertKind;
   ticker: string;
-  timeframe: Timeframe;
+  // Eventos DEX (dex_drain) não têm timeframe — o token não tem candle.
+  timeframe: Timeframe | null;
   displayTicker: string;
   title: string;
   body: string;

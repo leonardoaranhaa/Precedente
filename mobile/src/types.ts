@@ -151,6 +151,11 @@ export type OnchainContext = {
   priceChange6hPct?: number | null;
   priceChange1hPct?: number | null;
   pairAgeHours?: number | null;
+  /** Valor de mercado circulante e diluído, como o DexScreener mostra.
+   * Liquidez contra market cap é a leitura de saída: quanto do valor
+   * de papel realmente cabe na pool. */
+  marketCapUsd?: number | null;
+  fdvUsd?: number | null;
   dexSource: string | null;
   sources: string[];
 };
@@ -196,3 +201,73 @@ export type TradedPair = {
   changePct: number;
   quoteVolume: number;
 };
+
+// --- DEX: leitura de fragilidade (tokens de ciclo curto) -------------------
+// Espelha src/lib/market/dex/ do web. NÃO é precedente: um par de horas não
+// tem histórico de candles pra estatística de caminho, então aqui não há
+// mediana, drawdown nem P10/P90 — só o estado do par agora.
+
+export type DexWindow = {
+  buys: number | null;
+  sells: number | null;
+  volumeUsd: number | null;
+  priceChangePct: number | null;
+};
+
+export type DexSocial = { type: string; url: string };
+
+export type DexPairSnapshot = {
+  chainId: string | null;
+  dexId: string | null;
+  labels: string[];
+  pairAddress: string | null;
+  pairUrl: string | null;
+  tokenSymbol: string | null;
+  tokenName: string | null;
+  tokenAddress: string | null;
+  quoteSymbol: string | null;
+  imageUrl: string | null;
+  headerUrl: string | null;
+  websites: string[];
+  socials: DexSocial[];
+  boostsActive: number | null;
+  priceUsd: number | null;
+  liquidityUsd: number | null;
+  marketCapUsd: number | null;
+  fdvUsd: number | null;
+  pairAgeHours: number | null;
+  m5: DexWindow;
+  h1: DexWindow;
+  h6: DexWindow;
+  h24: DexWindow;
+  fetchedAt: number;
+  source: string;
+};
+
+export type FragilityLevel = "extrema" | "alta" | "media" | "observavel";
+
+export type FragilityFlag = {
+  id: string;
+  label: string;
+  detail: string;
+  severity: "alta" | "media";
+};
+
+export type DexFragilityReport = {
+  level: FragilityLevel;
+  flags: FragilityFlag[];
+  metrics: {
+    liquidityUsd: number | null;
+    volume24hUsd: number | null;
+    turnover24h: number | null;
+    sellRatio24h: number | null;
+    sellRatio6h: number | null;
+    volumeTrend: number | null;
+    pairAgeHours: number | null;
+    marketCapUsd: number | null;
+    liqToMcap: number | null;
+  };
+  disclaimer: string;
+};
+
+export type DexReading = { pair: DexPairSnapshot; fragility: DexFragilityReport };

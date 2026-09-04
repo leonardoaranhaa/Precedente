@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
+import { DexWatchlistSection } from "../components/DexWatchlistSection";
 import { colors, radius } from "../theme";
 import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from "../format";
 import {
@@ -27,6 +28,7 @@ import {
 import { watchRefreshLabel } from "../watch-refresh";
 import { TIMEFRAMES, WATCH_REFRESH_MINUTES, type WatchRefreshMinutes } from "../types";
 import type { WatchItem } from "../watchlist";
+import type { DexWatchItem } from "../dex-watchlist";
 
 const TAB_LABEL: Record<WatchTab, string> = {
   mine: "Minha watch",
@@ -47,6 +49,9 @@ export function WatchScreen({
   onRefresh,
   onRefreshAll,
   onOpenZone,
+  dexItems = [],
+  onOpenDex,
+  onUnpinDex,
 }: {
   items: WatchItem[];
   focusIds?: string[];
@@ -60,6 +65,10 @@ export function WatchScreen({
   onRefresh: (item: WatchItem) => void;
   onRefreshAll: () => void;
   onOpenZone: (item: WatchItem) => void;
+  /** Lista separada — tokens DEX pinados pro alerta de drenagem. */
+  dexItems?: DexWatchItem[];
+  onOpenDex?: (ticker: string) => void;
+  onUnpinDex?: (ticker: string) => void;
 }) {
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
@@ -74,13 +83,18 @@ export function WatchScreen({
 
   if (items.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Star size={22} color={colors.subtle} />
-        <Text style={styles.emptyTitle}>Nenhum par na watch.</Text>
-        <Text style={styles.emptyHint}>
-          Depois de analisar um par, toque em + Watch para acompanhar amostra e drawdown aqui.
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.list}>
+        {onOpenDex && onUnpinDex ? (
+          <DexWatchlistSection items={dexItems} onOpen={onOpenDex} onUnpin={onUnpinDex} />
+        ) : null}
+        <View style={styles.empty}>
+          <Star size={22} color={colors.subtle} />
+          <Text style={styles.emptyTitle}>Nenhum par na watch.</Text>
+          <Text style={styles.emptyHint}>
+            Depois de analisar um par, toque em + Watch para acompanhar amostra e drawdown aqui.
+          </Text>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -92,7 +106,11 @@ export function WatchScreen({
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       ListHeaderComponent={
-        <View style={styles.header}>
+        <View>
+          {onOpenDex && onUnpinDex ? (
+            <DexWatchlistSection items={dexItems} onOpen={onOpenDex} onUnpin={onUnpinDex} />
+          ) : null}
+          <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Watch</Text>
@@ -215,6 +233,7 @@ export function WatchScreen({
             <Text style={styles.col}>Δ</Text>
             <Text style={styles.col}>Amostra</Text>
             <Text style={styles.col}>DD10</Text>
+          </View>
           </View>
         </View>
       }
