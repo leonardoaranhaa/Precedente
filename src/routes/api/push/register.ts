@@ -134,6 +134,8 @@ export const Route = createFileRoute("/api/push/register")({
             platform: typeof raw.platform === "string" ? raw.platform : undefined,
             watches,
             dexWatches,
+            dailySummaryEnabled:
+              typeof raw.dailySummaryEnabled === "boolean" ? raw.dailySummaryEnabled : undefined,
             rules: parseRules(raw.rules) ?? DEFAULT_ALERT_RULES,
             digestEnabled: typeof raw.digestEnabled === "boolean" ? raw.digestEnabled : undefined,
             digestHourUtc: typeof raw.digestHourUtc === "number" ? raw.digestHourUtc : undefined,
@@ -144,6 +146,7 @@ export const Route = createFileRoute("/api/push/register")({
             ok: true,
             watches: sub.watches.length,
             dexWatches: sub.dexWatches.length,
+            dailySummaryEnabled: sub.dailySummaryEnabled,
             rules: sub.rules,
             digestEnabled: sub.digestEnabled,
             digestHourUtc: sub.digestHourUtc,

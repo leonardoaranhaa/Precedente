@@ -6,7 +6,15 @@ const memoryDigest = new Map<string, number>();
 
 export async function listDigestSubscriptions(): Promise<PushSubscription[]> {
   const all = await listSubscriptions();
-  return all.filter((s) => s.digestEnabled === true);
+  // dailySummaryEnabled é mutuamente exclusivo: quem ligou o resumo
+  // combinado não recebe o digest de watch isolado também (ver
+  // docs/push-alerts.md e daily-summary-build.ts).
+  return all.filter((s) => s.digestEnabled === true && !s.dailySummaryEnabled);
+}
+
+export async function listDailySummarySubscriptions(): Promise<PushSubscription[]> {
+  const all = await listSubscriptions();
+  return all.filter((s) => s.dailySummaryEnabled === true && s.userId != null);
 }
 
 export async function markDigestSent(token: string, at = Date.now()): Promise<void> {
