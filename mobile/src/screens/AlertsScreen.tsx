@@ -54,7 +54,7 @@ export function AlertsScreen({
       </View>
       <Text style={styles.subtitle}>
         Notificações de prevenção para pares na Watch. Nunca ordem de compra ou venda — só
-        contexto de amostra, caminho, funding e extremos.
+        contexto de amostra, caminho, funding, volume e extremos.
       </Text>
 
       <View style={styles.card}>
@@ -176,6 +176,14 @@ export function AlertsScreen({
             </Pressable>
           ))}
         </View>
+
+        <RuleRow
+          title="Volume anômalo"
+          hint="Barra atual ≥ N× a mediana das 20 anteriores — atividade, não direção."
+          value={rules.volumeAnomaly}
+          disabled={!rules.enabled}
+          onChange={(v) => toggle("volumeAnomaly", v)}
+        />
       </View>
 
       <View style={[styles.card, !rules.enabled && { opacity: 0.45 }]}>
