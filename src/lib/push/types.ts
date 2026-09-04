@@ -60,6 +60,7 @@ export type PushSubscription = {
   digestHourUtc: number;
   includeMovers: boolean;
   lastDigestAt: number | null;
+  userId: string | null;
 };
 
 export const DEFAULT_DIGEST = {

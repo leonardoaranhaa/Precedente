@@ -1,29 +1,4 @@
-export const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
-export type Timeframe = (typeof TIMEFRAMES)[number];
-
-/** Agrupamento de momento gráfico pra organizar os chips de TF na UI. */
-export const TIMEFRAME_GROUPS = [
-  { key: "scalp", label: "Scalp", tfs: ["1m", "5m"] },
-  { key: "intraday", label: "Intraday", tfs: ["15m", "1h"] },
-  { key: "swing", label: "Swing", tfs: ["4h", "1d"] },
-] as const satisfies { key: string; label: string; tfs: readonly Timeframe[] }[];
-export type TimeframeGroupKey = (typeof TIMEFRAME_GROUPS)[number]["key"];
-
-export const WATCH_REFRESH_MINUTES = [0, 1, 5, 15] as const;
-export type WatchRefreshMinutes = (typeof WATCH_REFRESH_MINUTES)[number];
-
-export const POPULAR_TICKERS = [
-  "BTC",
-  "ETH",
-  "SOL",
-  "BNB",
-  "XRP",
-  "DOGE",
-  "LINK",
-  "AVAX",
-  "SUI",
-  "ADA",
-] as const;
+export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 
 export type Candle = {
   t: number;
@@ -32,40 +7,6 @@ export type Candle = {
   l: number;
   c: number;
   v: number;
-};
-
-export type MaSide = "above" | "below" | "near";
-export type Extreme = "high20" | "low20" | "none";
-export type Direction = "up" | "down";
-
-export type Fingerprint = {
-  rsiBucket: string;
-  vsSma20: MaSide;
-  vsSma50: MaSide;
-  extreme: Extreme;
-  direction: Direction;
-};
-
-export type HorizonOutcome = {
-  bars: number;
-  label: string;
-  samples: number;
-  upPct: number;
-  downPct: number;
-  flatPct: number;
-  medianPct: number;
-  meanPct: number;
-  p10: number;
-  p90: number;
-  medianPath: number[];
-  medianDrawdownPct: number;
-  worstDrawdownPct: number;
-  medianRunupPct: number;
-  baseline: {
-    upPct: number;
-    medianPct: number;
-    medianDrawdownPct: number;
-  };
 };
 
 export type Snapshot = {
@@ -86,22 +27,22 @@ export type Snapshot = {
   changePct: number;
 };
 
-export type ChartPoint = {
-  t: number;
-  o: number;
-  h: number;
-  l: number;
-  c: number;
-  sma20: number | null;
-  sma50: number | null;
-};
-
-/** Caixa aproximada do padrão no print, em frações 0..1 da imagem (origem no canto superior esquerdo). */
-export type PatternRegion = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+export type HorizonOutcome = {
+  bars: number;
+  label: string;
+  samples: number;
+  upPct: number;
+  downPct: number;
+  flatPct: number;
+  medianPct: number;
+  meanPct: number;
+  p10: number;
+  p90: number;
+  medianPath: number[];
+  medianDrawdownPct: number;
+  worstDrawdownPct: number;
+  medianRunupPct: number;
+  baseline: { upPct: number; medianPct: number; medianDrawdownPct: number };
 };
 
 export type VisionReading = {
@@ -113,12 +54,17 @@ export type VisionReading = {
   ativoAparente: string | null;
   leitura: string;
   confianca: "alta" | "media" | "baixa";
-  /** null quando não há padrão citado, ou o modelo não está confiante na localização. */
-  patternRegion: PatternRegion | null;
+  patternRegion: { x: number; y: number; width: number; height: number } | null;
 };
 
 export type PrecedentResult = {
-  fingerprint: Fingerprint;
+  fingerprint: {
+    rsiBucket: string;
+    vsSma20: string;
+    vsSma50: string;
+    extreme: string;
+    direction: string;
+  };
   fingerprintLabel: string;
   matches: number;
   total: number;
@@ -129,30 +75,22 @@ export type PrecedentResult = {
   chartMatches: { t: number; score: number }[];
 };
 
+export type ChartPoint = {
+  t: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  sma20: number | null;
+  sma50: number | null;
+};
+
 export type OnchainContext = {
-  fetchedAt: number;
   fundingRate: number | null;
-  markPrice: number | null;
   openInterest: number | null;
-  nextFundingTime: number | null;
-  derivativesSource: string | null;
-  chainId: string | null;
-  dexId: string | null;
-  pairUrl: string | null;
+  markPrice: number | null;
   liquidityUsd: number | null;
-  volume24hUsd: number | null;
-  volume6hUsd?: number | null;
-  volume1hUsd?: number | null;
-  buys24h: number | null;
-  sells24h: number | null;
-  buys6h?: number | null;
-  sells6h?: number | null;
-  priceChange24hPct: number | null;
-  priceChange6hPct?: number | null;
-  priceChange1hPct?: number | null;
-  pairAgeHours?: number | null;
-  dexSource: string | null;
-  sources: string[];
+  [key: string]: unknown;
 };
 
 export type AnalysisPayload = {
@@ -166,6 +104,14 @@ export type AnalysisPayload = {
   chart: ChartPoint[];
   vision: VisionReading | null;
   visionError: string | null;
+  visionQuota?: {
+    used: number;
+    limit: number;
+    remaining: number;
+    nearLimit: boolean;
+    exhausted: boolean;
+    message: string | null;
+  } | null;
   source: string;
   onchain?: OnchainContext | null;
 };
@@ -183,7 +129,4 @@ export type TradedPair = {
   symbol: string;
   display: string;
   base: string;
-  lastPrice: number;
-  changePct: number;
-  quoteVolume: number;
 };
