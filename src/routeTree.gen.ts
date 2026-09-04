@@ -24,12 +24,20 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
 import { Route as ApiBillingStatusRouteImport } from './routes/api/billing/status'
+import { Route as ApiBillingVisionStatusRouteImport } from './routes/api/billing/vision-status'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
 import { Route as ApiNewsFeedRouteImport } from './routes/api/news/feed'
+import { Route as ApiNewsHealthRouteImport } from './routes/api/news/health'
 import { Route as ApiNewsPreferencesRouteImport } from './routes/api/news/preferences'
+import { Route as ApiNewsScanRouteImport } from './routes/api/news/scan'
 import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
+import { Route as ApiPushDigestScanRouteImport } from './routes/api/push/digest-scan'
+import { Route as ApiPushFundingDigestScanRouteImport } from './routes/api/push/funding-digest-scan'
+import { Route as ApiPushOpeningScanRouteImport } from './routes/api/push/opening-scan'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
+import { Route as ApiPushWeeklyRiskScanRouteImport } from './routes/api/push/weekly-risk-scan'
+import { Route as ApiPushZoneScanRouteImport } from './routes/api/push/zone-scan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -107,6 +115,11 @@ const ApiBillingStatusRoute = ApiBillingStatusRouteImport.update({
   path: '/api/billing/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBillingVisionStatusRoute = ApiBillingVisionStatusRouteImport.update({
+  id: '/api/billing/vision-status',
+  path: '/api/billing/vision-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
   id: '/api/billing/webhook',
   path: '/api/billing/webhook',
@@ -117,14 +130,40 @@ const ApiNewsFeedRoute = ApiNewsFeedRouteImport.update({
   path: '/api/news/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNewsHealthRoute = ApiNewsHealthRouteImport.update({
+  id: '/api/news/health',
+  path: '/api/news/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiNewsPreferencesRoute = ApiNewsPreferencesRouteImport.update({
   id: '/api/news/preferences',
   path: '/api/news/preferences',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNewsScanRoute = ApiNewsScanRouteImport.update({
+  id: '/api/news/scan',
+  path: '/api/news/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
   id: '/api/ops/analysis',
   path: '/api/ops/analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushDigestScanRoute = ApiPushDigestScanRouteImport.update({
+  id: '/api/push/digest-scan',
+  path: '/api/push/digest-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushFundingDigestScanRoute =
+  ApiPushFundingDigestScanRouteImport.update({
+    id: '/api/push/funding-digest-scan',
+    path: '/api/push/funding-digest-scan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPushOpeningScanRoute = ApiPushOpeningScanRouteImport.update({
+  id: '/api/push/opening-scan',
+  path: '/api/push/opening-scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
@@ -135,6 +174,16 @@ const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
 const ApiPushScanRoute = ApiPushScanRouteImport.update({
   id: '/api/push/scan',
   path: '/api/push/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushWeeklyRiskScanRoute = ApiPushWeeklyRiskScanRouteImport.update({
+  id: '/api/push/weekly-risk-scan',
+  path: '/api/push/weekly-risk-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushZoneScanRoute = ApiPushZoneScanRouteImport.update({
+  id: '/api/push/zone-scan',
+  path: '/api/push/zone-scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -154,12 +203,20 @@ export interface FileRoutesByFullPath {
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
+  '/api/billing/vision-status': typeof ApiBillingVisionStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/health': typeof ApiNewsHealthRoute
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
+  '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/digest-scan': typeof ApiPushDigestScanRoute
+  '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
+  '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
+  '/api/push/weekly-risk-scan': typeof ApiPushWeeklyRiskScanRoute
+  '/api/push/zone-scan': typeof ApiPushZoneScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -177,12 +234,20 @@ export interface FileRoutesByTo {
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
+  '/api/billing/vision-status': typeof ApiBillingVisionStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/health': typeof ApiNewsHealthRoute
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
+  '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/digest-scan': typeof ApiPushDigestScanRoute
+  '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
+  '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
+  '/api/push/weekly-risk-scan': typeof ApiPushWeeklyRiskScanRoute
+  '/api/push/zone-scan': typeof ApiPushZoneScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -201,12 +266,20 @@ export interface FileRoutesById {
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/status': typeof ApiBillingStatusRoute
+  '/api/billing/vision-status': typeof ApiBillingVisionStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/news/feed': typeof ApiNewsFeedRoute
+  '/api/news/health': typeof ApiNewsHealthRoute
   '/api/news/preferences': typeof ApiNewsPreferencesRoute
+  '/api/news/scan': typeof ApiNewsScanRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/digest-scan': typeof ApiPushDigestScanRoute
+  '/api/push/funding-digest-scan': typeof ApiPushFundingDigestScanRoute
+  '/api/push/opening-scan': typeof ApiPushOpeningScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
+  '/api/push/weekly-risk-scan': typeof ApiPushWeeklyRiskScanRoute
+  '/api/push/zone-scan': typeof ApiPushZoneScanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,12 +299,20 @@ export interface FileRouteTypes {
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/status'
+    | '/api/billing/vision-status'
     | '/api/billing/webhook'
     | '/api/news/feed'
+    | '/api/news/health'
     | '/api/news/preferences'
+    | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/digest-scan'
+    | '/api/push/funding-digest-scan'
+    | '/api/push/opening-scan'
     | '/api/push/register'
     | '/api/push/scan'
+    | '/api/push/weekly-risk-scan'
+    | '/api/push/zone-scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,12 +330,20 @@ export interface FileRouteTypes {
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/status'
+    | '/api/billing/vision-status'
     | '/api/billing/webhook'
     | '/api/news/feed'
+    | '/api/news/health'
     | '/api/news/preferences'
+    | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/digest-scan'
+    | '/api/push/funding-digest-scan'
+    | '/api/push/opening-scan'
     | '/api/push/register'
     | '/api/push/scan'
+    | '/api/push/weekly-risk-scan'
+    | '/api/push/zone-scan'
   id:
     | '__root__'
     | '/'
@@ -272,12 +361,20 @@ export interface FileRouteTypes {
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/status'
+    | '/api/billing/vision-status'
     | '/api/billing/webhook'
     | '/api/news/feed'
+    | '/api/news/health'
     | '/api/news/preferences'
+    | '/api/news/scan'
     | '/api/ops/analysis'
+    | '/api/push/digest-scan'
+    | '/api/push/funding-digest-scan'
+    | '/api/push/opening-scan'
     | '/api/push/register'
     | '/api/push/scan'
+    | '/api/push/weekly-risk-scan'
+    | '/api/push/zone-scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -296,12 +393,20 @@ export interface RootRouteChildren {
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiBillingStatusRoute: typeof ApiBillingStatusRoute
+  ApiBillingVisionStatusRoute: typeof ApiBillingVisionStatusRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
   ApiNewsFeedRoute: typeof ApiNewsFeedRoute
+  ApiNewsHealthRoute: typeof ApiNewsHealthRoute
   ApiNewsPreferencesRoute: typeof ApiNewsPreferencesRoute
+  ApiNewsScanRoute: typeof ApiNewsScanRoute
   ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
+  ApiPushDigestScanRoute: typeof ApiPushDigestScanRoute
+  ApiPushFundingDigestScanRoute: typeof ApiPushFundingDigestScanRoute
+  ApiPushOpeningScanRoute: typeof ApiPushOpeningScanRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
+  ApiPushWeeklyRiskScanRoute: typeof ApiPushWeeklyRiskScanRoute
+  ApiPushZoneScanRoute: typeof ApiPushZoneScanRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -411,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/vision-status': {
+      id: '/api/billing/vision-status'
+      path: '/api/billing/vision-status'
+      fullPath: '/api/billing/vision-status'
+      preLoaderRoute: typeof ApiBillingVisionStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/billing/webhook': {
       id: '/api/billing/webhook'
       path: '/api/billing/webhook'
@@ -425,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNewsFeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/news/health': {
+      id: '/api/news/health'
+      path: '/api/news/health'
+      fullPath: '/api/news/health'
+      preLoaderRoute: typeof ApiNewsHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/news/preferences': {
       id: '/api/news/preferences'
       path: '/api/news/preferences'
@@ -432,11 +551,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNewsPreferencesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/news/scan': {
+      id: '/api/news/scan'
+      path: '/api/news/scan'
+      fullPath: '/api/news/scan'
+      preLoaderRoute: typeof ApiNewsScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ops/analysis': {
       id: '/api/ops/analysis'
       path: '/api/ops/analysis'
       fullPath: '/api/ops/analysis'
       preLoaderRoute: typeof ApiOpsAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/digest-scan': {
+      id: '/api/push/digest-scan'
+      path: '/api/push/digest-scan'
+      fullPath: '/api/push/digest-scan'
+      preLoaderRoute: typeof ApiPushDigestScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/funding-digest-scan': {
+      id: '/api/push/funding-digest-scan'
+      path: '/api/push/funding-digest-scan'
+      fullPath: '/api/push/funding-digest-scan'
+      preLoaderRoute: typeof ApiPushFundingDigestScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/opening-scan': {
+      id: '/api/push/opening-scan'
+      path: '/api/push/opening-scan'
+      fullPath: '/api/push/opening-scan'
+      preLoaderRoute: typeof ApiPushOpeningScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/push/register': {
@@ -451,6 +598,20 @@ declare module '@tanstack/react-router' {
       path: '/api/push/scan'
       fullPath: '/api/push/scan'
       preLoaderRoute: typeof ApiPushScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/weekly-risk-scan': {
+      id: '/api/push/weekly-risk-scan'
+      path: '/api/push/weekly-risk-scan'
+      fullPath: '/api/push/weekly-risk-scan'
+      preLoaderRoute: typeof ApiPushWeeklyRiskScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/zone-scan': {
+      id: '/api/push/zone-scan'
+      path: '/api/push/zone-scan'
+      fullPath: '/api/push/zone-scan'
+      preLoaderRoute: typeof ApiPushZoneScanRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -472,12 +633,20 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiBillingStatusRoute: ApiBillingStatusRoute,
+  ApiBillingVisionStatusRoute: ApiBillingVisionStatusRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiNewsFeedRoute: ApiNewsFeedRoute,
+  ApiNewsHealthRoute: ApiNewsHealthRoute,
   ApiNewsPreferencesRoute: ApiNewsPreferencesRoute,
+  ApiNewsScanRoute: ApiNewsScanRoute,
   ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
+  ApiPushDigestScanRoute: ApiPushDigestScanRoute,
+  ApiPushFundingDigestScanRoute: ApiPushFundingDigestScanRoute,
+  ApiPushOpeningScanRoute: ApiPushOpeningScanRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,
+  ApiPushWeeklyRiskScanRoute: ApiPushWeeklyRiskScanRoute,
+  ApiPushZoneScanRoute: ApiPushZoneScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

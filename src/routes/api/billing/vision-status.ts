@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSessionUser } from "@/lib/auth/verify.server";
 import { hasPremium } from "@/lib/billing/entitlements";
 import { billingGatesEnabled } from "@/lib/billing/plan-limits";
-import { getVisionQuotaSnapshot } from "@/lib/billing/vision-quota";
 
 export const Route = createFileRoute("/api/billing/vision-status")({
   server: {
@@ -34,6 +33,7 @@ export const Route = createFileRoute("/api/billing/vision-status")({
           );
         }
         const isPremium = await hasPremium(session.id);
+        const { getVisionQuotaSnapshot } = await import("@/lib/billing/vision-quota");
         const snap = getVisionQuotaSnapshot(session.id, isPremium);
         return new Response(JSON.stringify({ gatesEnabled: true, isPremium, ...snap }), {
           status: 200,

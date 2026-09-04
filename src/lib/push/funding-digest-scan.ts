@@ -3,7 +3,6 @@
  * Estado em lastSent["_funding_digest"] = timestamp.
  */
 
-import { fetchOnchainContext } from "@/lib/market/onchain";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { sendExpoAlerts } from "./expo-send";
 import {
@@ -77,6 +76,7 @@ export async function scanFundingDigests(nowMs = Date.now()): Promise<FundingDig
   const tickers = [...byTicker.values()];
   report.pairs = tickers.length;
 
+  const { fetchOnchainContext } = await import("@/lib/market/onchain");
   const rowByTicker = new Map<string, FundingRow>();
   const results = await mapWithConcurrency(tickers, FETCH_CONCURRENCY, async (t) => {
     try {
