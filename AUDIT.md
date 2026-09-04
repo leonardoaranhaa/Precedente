@@ -422,3 +422,29 @@ defensável é *leitura de print* (caro, mágico, limitável por cota) + *alerta
 (recorrente por natureza). A análise OHLC deveria continuar grátis e ilimitada —
 é o funil inteiro. Mas essa decisão só deve ser tomada **depois** de `OPS-01`,
 com número de custo real na mão.
+
+**Vision, cenário, avaliação específica — o que já está decidido vs. o que falta.**
+Levantamento concreto do estado atual dos três (não é proposta, é o que o
+código já faz ou já anuncia fazer):
+
+- **Vision** (leitura de print) — já gated. `PremiumFeature: "vision"` em
+  `plan-limits.ts`, cota diária (`visionPerDay`: 2 grátis / 10 premium),
+  enforçada em `assert-premium.server.ts`. Nada a decidir aqui, só manter.
+- **Cenário** (`ScenarioAssistant`/`scenario.ts`) — **sem custo de LLM**.
+  Confirmado lendo o código: é cálculo local sobre os horizontes já
+  computados, nenhuma chamada à Anthropic. Não tem — e não deveria ter —
+  gate de billing. Cobrar por isso contradiz o próprio princípio já escrito
+  acima ("a análise OHLC deveria continuar grátis e ilimitada").
+- **"Avaliação específica"** — é `src/lib/market/external-intel.ts`: agente
+  separado com busca web real via Anthropic (Sonnet + até N buscas,
+  ~US$ 0,01 cada), pra trazer contexto de notícia/mercado que o motor OHLC
+  não tem. O próprio arquivo já se declara protótipo e já argumenta pelo
+  gate no comentário de topo — mas **não está gated, nem chamado por
+  nenhuma tela ou rota ainda**. Não há `PremiumFeature` correspondente em
+  `plan-limits.ts`. Antes de expor isso em qualquer UI, precisa de: (1) um
+  `PremiumFeature` novo (ex. `"market_intel"`) com cota diária, no mesmo
+  padrão de `vision`; (2) uma rota que chame o módulo e aplique
+  `assertPremiumFeatureForUser`; (3) número de custo real medido (mesma
+  exigência que `OPS-01` já coloca pra qualquer novo gate). Não fiz essa
+  wiring agora porque seria construir a porta de um cômodo que ainda não
+  existe — o protótipo não tem consumidor.
