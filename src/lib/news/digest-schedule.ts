@@ -4,8 +4,6 @@
  * e ainda não enviamos "hoje" (UTC day).
  */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export function utcDayStart(ms: number): number {
   const d = new Date(ms);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());

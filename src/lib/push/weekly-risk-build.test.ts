@@ -32,6 +32,7 @@ test("body sem linguagem de trade", () => {
       price_zone: 0,
       rsi_zone: 0,
       funding_extreme: 0,
+      volume_anomaly: 0,
     },
     3,
   );

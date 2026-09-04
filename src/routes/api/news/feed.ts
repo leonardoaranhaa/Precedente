@@ -59,7 +59,7 @@ export const Route = createFileRoute("/api/news/feed")({
         const coinsParam = url.searchParams.get("coins");
         const categoriesParam = url.searchParams.get("categories");
 
-        let prefs: NewsPreferences;
+        let prefs: Pick<NewsPreferences, "coins" | "categories">;
         if (coinsParam != null || categoriesParam != null) {
           const categories = parseListParam(categoriesParam, (s) => s.toLowerCase()).filter(
             (c): c is NewsCategory => (KNOWN_CATEGORIES as string[]).includes(c),

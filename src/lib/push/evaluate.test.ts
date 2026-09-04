@@ -6,9 +6,14 @@ import type { AlertRules } from "./types.ts";
 
 const RULES_OFF: AlertRules = {
   sampleWeak: false,
+  sampleRegime: false,
   drawdownPath: false,
   drawdownThresholdPct: 5,
   extreme20: false,
+  fundingExtreme: false,
+  fundingThreshold: 0.0005,
+  volumeAnomaly: false,
+  volumeMultiple: 3,
 };
 
 function payload(overrides: { price?: number; rsi?: number } = {}): AnalysisPayload {
@@ -34,6 +39,9 @@ function payload(overrides: { price?: number; rsi?: number } = {}): AnalysisPayl
       consecutive: 0,
       lastExtrema: null,
       changePct: 0,
+      volLast: 100,
+      volMedian20: 100,
+      volRatio: 1,
     },
     precedent: {
       fingerprint: {
