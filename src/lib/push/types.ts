@@ -69,6 +69,8 @@ export type PushSubscription = {
   userId: string | null;
   /** Tickers DEX pinados pro alerta de drenagem. Sem timeframe — não têm candles. */
   dexWatches: string[];
+  /** Resumo diário combinado (watch+notícias) num só push — ver daily-summary-build.ts. */
+  dailySummaryEnabled: boolean;
 };
 
 /** Bem menor que MAX_WATCHES: tokens de ciclo curto têm alta rotatividade —

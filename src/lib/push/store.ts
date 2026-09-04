@@ -21,6 +21,7 @@ type Row = {
   last_digest_at?: unknown;
   user_id?: unknown;
   dex_watches?: unknown;
+  daily_summary_enabled?: unknown;
 };
 
 function asObject(v: unknown): Record<string, unknown> {
@@ -125,6 +126,7 @@ function rowToSub(row: Row): PushSubscription {
     lastDigestAt: parseLastDigestAt(row.last_digest_at),
     userId: typeof row.user_id === "string" && row.user_id.length > 0 ? row.user_id : null,
     dexWatches,
+    dailySummaryEnabled: row.daily_summary_enabled === true,
   };
 }
 
@@ -143,6 +145,7 @@ export async function upsertSubscription(input: {
   platform?: string;
   watches?: WatchTarget[];
   dexWatches?: string[];
+  dailySummaryEnabled?: boolean;
   rules?: Partial<AlertRules>;
   digestEnabled?: boolean;
   digestHourUtc?: number;
@@ -169,6 +172,11 @@ export async function upsertSubscription(input: {
     .map((t) => sanitizeDexTicker(t))
     .filter((t): t is string => t != null)
     .slice(0, MAX_DEX_WATCHES);
+
+  const dailySummaryEnabled =
+    typeof input.dailySummaryEnabled === "boolean"
+      ? input.dailySummaryEnabled
+      : (existing?.dailySummaryEnabled ?? false);
 
   const rules: AlertRules = {
     ...DEFAULT_ALERT_RULES,
@@ -197,6 +205,7 @@ export async function upsertSubscription(input: {
     platform,
     watches,
     dexWatches,
+    dailySummaryEnabled,
     rules,
     updatedAt: Date.now(),
     lastSent: existing?.lastSent ?? {},
@@ -211,9 +220,10 @@ export async function upsertSubscription(input: {
     await sql.query(
       `INSERT INTO push_subscriptions (
          token, platform, watches, rules, last_sent, updated_at,
-         digest_enabled, digest_hour_utc, include_movers, user_id, dex_watches
+         digest_enabled, digest_hour_utc, include_movers, user_id, dex_watches,
+         daily_summary_enabled
        )
-       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, now(), $6, $7, $8, $9, $10::jsonb)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, now(), $6, $7, $8, $9, $10::jsonb, $11)
        ON CONFLICT (token) DO UPDATE SET
          platform = EXCLUDED.platform,
          watches = EXCLUDED.watches,
@@ -224,6 +234,7 @@ export async function upsertSubscription(input: {
          include_movers = EXCLUDED.include_movers,
          user_id = COALESCE(EXCLUDED.user_id, push_subscriptions.user_id),
          dex_watches = EXCLUDED.dex_watches,
+         daily_summary_enabled = EXCLUDED.daily_summary_enabled,
          updated_at = now()`,
       [
         sub.token,
@@ -236,6 +247,7 @@ export async function upsertSubscription(input: {
         sub.includeMovers,
         sub.userId,
         JSON.stringify(sub.dexWatches),
+        sub.dailySummaryEnabled,
       ],
     );
     return sub;
@@ -250,7 +262,7 @@ export async function getSubscription(token: string): Promise<PushSubscription |
   const fromDb = await trySql(async (sql) => {
     const rows = await sql.query<Row>(
       `SELECT token, platform, watches, rules, last_sent, updated_at,
-              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches, daily_summary_enabled
        FROM push_subscriptions WHERE token = $1`,
       [t],
     );
@@ -277,7 +289,7 @@ export async function listSubscriptions(): Promise<PushSubscription[]> {
   const fromDb = await trySql(async (sql) => {
     const rows = await sql.query<Row>(
       `SELECT token, platform, watches, rules, last_sent, updated_at,
-              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches, daily_summary_enabled
        FROM push_subscriptions ORDER BY updated_at DESC`,
     );
     return rows.map(rowToSub);
@@ -347,7 +359,7 @@ export async function listSubscriptionsByUserId(userId: string): Promise<PushSub
   const fromDb = await trySql(async (sql) => {
     const rows = await sql.query<Row>(
       `SELECT token, platform, watches, rules, last_sent, updated_at,
-              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches
+              digest_enabled, digest_hour_utc, include_movers, last_digest_at, user_id, dex_watches, daily_summary_enabled
        FROM push_subscriptions WHERE user_id = $1 ORDER BY updated_at DESC`,
       [uid],
     );
