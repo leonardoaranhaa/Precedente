@@ -27,7 +27,7 @@ export async function ensureAndroidChannel(): Promise<void> {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 150, 250],
     lightColor: "#c4a574",
-    description: "Amostra, regime, drawdown, extremos e funding.",
+    description: "Amostra, regime, drawdown, extremos, funding e volume.",
   });
 }
 
@@ -103,6 +103,8 @@ export async function syncPushSubscription(input: {
           extreme20: input.rules.extreme20,
           fundingExtreme: input.rules.fundingExtreme,
           fundingThreshold: input.rules.fundingThreshold,
+          volumeAnomaly: input.rules.volumeAnomaly,
+          volumeMultiple: input.rules.volumeMultiple,
         },
         digestEnabled: input.rules.digestEnabled,
         digestHourUtc: input.rules.digestHourUtc,
