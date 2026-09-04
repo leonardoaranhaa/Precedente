@@ -151,6 +151,11 @@ export type OnchainContext = {
   priceChange6hPct?: number | null;
   priceChange1hPct?: number | null;
   pairAgeHours?: number | null;
+  /** Valor de mercado circulante e diluído, como o DexScreener mostra.
+   * Liquidez contra market cap é a leitura de saída: quanto do valor
+   * de papel realmente cabe na pool. */
+  marketCapUsd?: number | null;
+  fdvUsd?: number | null;
   dexSource: string | null;
   sources: string[];
 };

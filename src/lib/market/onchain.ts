@@ -172,11 +172,28 @@ type DexPair = {
   marketCap?: number;
 };
 
+/** Transações nas últimas 24h. Um par sem negócio não é mercado, é vitrine. */
+function txns24h(p: DexPair): number {
+  return (p.txns?.h24?.buys ?? 0) + (p.txns?.h24?.sells ?? 0);
+}
+
+/**
+ * Escolhe o par que melhor representa o token.
+ *
+ * Liquidez sozinha engana: existem pools com liquidez declarada absurda e
+ * quase nenhum negócio. Visto na prática ao validar /api/dex — PEPE trazia
+ * uma pool de US$ 9B com US$ 4 de volume e 1 compra/1 venda em 24h, e era
+ * essa que ganhava. Como o par escolhido decide TODA a leitura de fragilidade,
+ * atividade real precisa pesar tanto quanto profundidade.
+ */
 function scorePair(p: DexPair, base: string): number {
   const sym = (p.baseToken?.symbol ?? "").toUpperCase();
   const quote = (p.quoteToken?.symbol ?? "").toUpperCase();
   const liq = p.liquidity?.usd ?? 0;
-  let score = Math.log10(Math.max(liq, 1));
+  const vol = p.volume?.h24 ?? 0;
+  let score = Math.log10(Math.max(liq, 1)) + Math.log10(Math.max(vol, 1));
+  // Pool parada: profundidade que ninguém usa não descreve o mercado do token.
+  if (txns24h(p) < 10) score -= 15;
   if (sym === base) score += 20;
   else if (sym.includes(base) || base.includes(sym)) score += 5;
   if (["USDT", "USDC", "USD", "DAI", "SOL", "WETH", "ETH", "WBNB"].includes(quote)) {
@@ -222,6 +239,8 @@ async function fetchDexContext(symbol: string): Promise<{
   priceChange6hPct: number | null;
   priceChange1hPct: number | null;
   pairAgeHours: number | null;
+  marketCapUsd: number | null;
+  fdvUsd: number | null;
   source: string | null;
 }> {
   const base = baseAsset(symbol);
@@ -233,13 +252,13 @@ async function fetchDexContext(symbol: string): Promise<{
       `${DEX_TOKEN_PAIRS}/${canonical.chainId}/${encodeURIComponent(canonical.address)}`,
     );
     if (Array.isArray(pairs) && pairs.length > 0) {
-      // Já ancorado no contrato certo — só falta o par mais líquido dele,
-      // sem precisar da heurística de nome usada na busca genérica.
-      let bestLiq = -1;
+      // Já ancorado no contrato certo, mas o mesmo problema de pool parada
+      // vale aqui: o melhor par é o que tem profundidade E negócio.
+      let bestScore = -Infinity;
       for (const p of pairs) {
-        const liq = p.liquidity?.usd ?? 0;
-        if (liq > bestLiq) {
-          bestLiq = liq;
+        const s = scorePair(p, base);
+        if (s > bestScore) {
+          bestScore = s;
           best = p;
         }
       }
@@ -290,6 +309,8 @@ async function fetchDexContext(symbol: string): Promise<{
       priceChange6hPct: null,
       priceChange1hPct: null,
       pairAgeHours: null,
+      marketCapUsd: null,
+      fdvUsd: null,
       source: null,
     };
   }
@@ -318,6 +339,8 @@ async function fetchDexContext(symbol: string): Promise<{
     priceChange1hPct:
       typeof best.priceChange?.h1 === "number" ? best.priceChange.h1 : null,
     pairAgeHours,
+    marketCapUsd: typeof best.marketCap === "number" ? best.marketCap : null,
+    fdvUsd: typeof best.fdv === "number" ? best.fdv : null,
     source: "DexScreener",
   };
 }
@@ -356,6 +379,8 @@ export async function fetchOnchainContext(symbol: string): Promise<OnchainContex
     priceChange6hPct: dex.priceChange6hPct,
     priceChange1hPct: dex.priceChange1hPct,
     pairAgeHours: dex.pairAgeHours,
+    marketCapUsd: dex.marketCapUsd,
+    fdvUsd: dex.fdvUsd,
     dexSource: dex.source,
     sources,
   };

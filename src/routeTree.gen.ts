@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiDexRouteImport } from './routes/api/dex'
 import { Route as ApiPriceRouteImport } from './routes/api/price'
 import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
@@ -67,6 +68,11 @@ const TermosRoute = TermosRouteImport.update({
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDexRoute = ApiDexRouteImport.update({
+  id: '/api/dex',
+  path: '/api/dex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPriceRoute = ApiPriceRouteImport.update({
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/dex': typeof ApiDexRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/termos'
     | '/api/analyze'
+    | '/api/dex'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiDexRoute: typeof ApiDexRoute
   ApiPriceRoute: typeof ApiPriceRoute
   ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
@@ -451,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/api/analyze'
       fullPath: '/api/analyze'
       preLoaderRoute: typeof ApiAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dex': {
+      id: '/api/dex'
+      path: '/api/dex'
+      fullPath: '/api/dex'
+      preLoaderRoute: typeof ApiDexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/price': {
@@ -624,6 +644,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiDexRoute: ApiDexRoute,
   ApiPriceRoute: ApiPriceRoute,
   ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,

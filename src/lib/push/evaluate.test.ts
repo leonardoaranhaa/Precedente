@@ -188,6 +188,8 @@ describe("evaluateAlerts — zone alerts carry onchain/fingerprint context", () 
       priceChange6hPct: null,
       priceChange1hPct: null,
       pairAgeHours: null,
+      marketCapUsd: null,
+      fdvUsd: null,
       dexSource: null,
       sources: ["Binance"],
     };
