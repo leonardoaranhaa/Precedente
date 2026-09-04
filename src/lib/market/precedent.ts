@@ -9,6 +9,7 @@ import {
   sma,
 } from "./indicators.ts";
 import { fingerprintLabel, horizonCaption } from "./labels.ts";
+import { computeVolumeAnomaly } from "./volume-anomaly.ts";
 import type {
   Candle,
   ChartPoint,
@@ -114,13 +115,6 @@ function scoreMatch(target: Fingerprint, candidate: Fingerprint): number {
   return score;
 }
 
-/**
- * Candles i e i+1 com o mesmo fingerprint não são observações independentes
- * — seus horizontes de N barras se sobrepõem quase por inteiro. Descarta
- * qualquer match a menos de `minGap` barras do match anterior aceito, pra
- * não contar o mesmo movimento várias vezes como "ocorrências" diferentes.
- * Assume `matches` já ordenado crescente por `i` (varredura gulosa).
- */
 export function dedupeOverlappingMatches<T extends { i: number }>(
   matches: T[],
   minGap: number,
@@ -252,10 +246,6 @@ export function analyzeSeries(
 
   const matchIdx = used.map((c) => c.i);
 
-  // Distribuição incondicional do mesmo par/TF, sem filtro de fingerprint —
-  // "52% subiu" só significa algo comparado a essa base. Mesma janela [50, last)
-  // que os candidatos usam; buildHorizon já descarta índices próximos demais
-  // do fim da série pra cada horizonte.
   const baselineIdx: number[] = [];
   for (let i = 50; i < last; i++) baselineIdx.push(i);
 
@@ -298,6 +288,7 @@ export function analyzeSeries(
   const l20 = low20[last]!;
   const r = rsiArr[last]!;
 
+  const volAnom = computeVolumeAnomaly(candles, 20);
   const snapshot: Snapshot = {
     last: lastCandle,
     prev,
@@ -314,6 +305,9 @@ export function analyzeSeries(
     consecutive: consecutiveDirection(candles, last),
     lastExtrema: lastSwing(candles, last),
     changePct: prev ? ((lastCandle.c - prev.c) / prev.c) * 100 : 0,
+    volLast: volAnom.volLast,
+    volMedian20: volAnom.volMedian,
+    volRatio: volAnom.volRatio,
   };
 
   const from = Math.max(0, candles.length - CHART_BARS);
