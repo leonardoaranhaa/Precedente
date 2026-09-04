@@ -161,6 +161,22 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   const { assertAnalyzeRateLimit } = await import("./analyze-rate-limit.server");
   assertAnalyzeRateLimit(data.imageDataUrl != null);
 
+  // ⚠️ Disciplina de imports neste arquivo — não mexa sem ler:
+  // analyze.ts é alcançável do bundle do cliente (via routes/index.tsx). Quando
+  // o MESMO módulo é importado estático num lugar e dinâmico noutro cruzando a
+  // fronteira cliente/servidor, o Rolldown gera um chunk corrompido e o servidor
+  // compilado morre com "SyntaxError: Export 'ssr_exports' is not defined" —
+  // invisível a tsc, lint e até `vite build`, que só verifica que compila.
+  // Já derrubou produção duas vezes (2026-09-03/04: market/onchain importado
+  // estaticamente em push/funding-digest-scan.ts, billing/vision-quota em
+  // routes/api/billing/vision-status.ts).
+  // Regra: módulo server-only (DB, estado do processo) fica DINÂMICO aqui E em
+  // todo o resto do código — nunca estático noutro arquivo. Antes de trocar um
+  // import de dinâmico pra estático (ou vice-versa), faça grep do caminho do
+  // módulo em todo src/ e confirme que não existe o outro jeito em lugar nenhum.
+  // billingGatesEnabled/PremiumRequiredError vêm de plan-limits.ts por import
+  // ESTÁTICO de propósito: módulo puro, já importado estaticamente em rotas e
+  // componentes, então tem que continuar estático em todo lugar.
   let visionQuota: AnalysisPayload["visionQuota"] = null;
   if (data.imageDataUrl) {
     if (billingGatesEnabled()) {
