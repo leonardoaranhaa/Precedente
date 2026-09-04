@@ -16,7 +16,9 @@ Sem linguagem de compra/venda.
 |--------|------|-----|
 | `POST` | `/api/push/register` | Registra token Expo + watches + regras |
 | `DELETE` | `/api/push/register` | Remove subscription |
-| `POST` | `/api/push/scan` | Reanalisa e envia push |
+| `POST` | `/api/push/scan` | Reanalisa e envia push (cron 30 min) |
+| `POST` | `/api/push/daily-summary-scan` | Resumo diário consolidado (cron 1x/dia) |
+| `POST` | `/api/push/dex-drain-scan` | Alerta de drenagem DEX (cron 10 min) |
 
 ### Auth do scan
 
@@ -72,20 +74,61 @@ Railway **não** agenda HTTP no serviço web 24/7. O padrão certo é um **segun
 
 Referência de config: `railway.cron.toml` (documentação; o start command e o cron você confirma no dashboard).
 
+### 2b. daily-summary-scan-cron (resumo diário)
+
+1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
+2. **Settings → Deploy**
+   - **Custom Start Command:** `node scripts/daily-summary-scan-cron.mjs`
+   - **Cron Schedule:** `0 10 * * *` (10:00 UTC = 07:00 BRT, 1×/dia)
+3. **Variables:**
+
+| Variável | Valor |
+|----------|--------|
+| `PUSH_CRON_SECRET` | **igual** ao do web |
+| `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
+
+Resposta esperada: `ok: true`, contagens de `subscriptions` / `analyzed` / `sent`.
+
+### 2c. dex-drain-scan-cron (drenagem DEX)
+
+1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
+2. **Settings → Deploy**
+   - **Custom Start Command:** `node scripts/dex-drain-scan-cron.mjs`
+   - **Cron Schedule:** `*/10 * * * *` (a cada 10 min)
+3. **Variables:**
+
+| Variável | Valor |
+|----------|--------|
+| `PUSH_CRON_SECRET` | **igual** ao do web |
+| `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
+
+Resposta esperada: `ok: true`, contagens de `pairsChecked` / `drainAlerts` / `sent`.
+
 ### 3. Testar na mão
 
 ```bash
+# Scan de alertas (a cada 30 min)
 curl -sS -X POST "https://<web>.up.railway.app/api/push/scan" \
+  -H "Content-Type: application/json" \
+  -H "X-Cron-Secret: $PUSH_CRON_SECRET" \
+  -d '{}'
+
+# Resumo diário
+curl -sS -X POST "https://<web>.up.railway.app/api/push/daily-summary-scan" \
+  -H "Content-Type: application/json" \
+  -H "X-Cron-Secret: $PUSH_CRON_SECRET" \
+  -d '{}'
+
+# Drenagem DEX
+curl -sS -X POST "https://<web>.up.railway.app/api/push/dex-drain-scan" \
   -H "Content-Type: application/json" \
   -H "X-Cron-Secret: $PUSH_CRON_SECRET" \
   -d '{}'
 ```
 
-Resposta esperada: `ok: true`, contagens de `analyzed` / `alerts` / `sentOk`.
-
 ### 4. Logs
 
-No serviço cron: Deployments → último run → logs de `[push-scan-cron]`.
+No serviço cron: Deployments → último run → logs de `[push-scan-cron]` / `[daily-summary-cron]` / `[dex-drain-cron]`.
 Se o status ficar **Active** sem sair, o próximo schedule é **pulado** (exigência do Railway).
 
 ### Expressões úteis (UTC)

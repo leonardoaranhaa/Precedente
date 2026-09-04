@@ -24,6 +24,8 @@ import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/porta
 import { Route as ApiBillingStatusRouteImport } from './routes/api/billing/status'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
 import { Route as ApiOpsAnalysisRouteImport } from './routes/api/ops/analysis'
+import { Route as ApiPushDailySummaryScanRouteImport } from './routes/api/push/daily-summary-scan'
+import { Route as ApiPushDexDrainScanRouteImport } from './routes/api/push/dex-drain-scan'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiPushScanRouteImport } from './routes/api/push/scan'
 
@@ -103,6 +105,16 @@ const ApiOpsAnalysisRoute = ApiOpsAnalysisRouteImport.update({
   path: '/api/ops/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushDailySummaryScanRoute = ApiPushDailySummaryScanRouteImport.update({
+  id: '/api/push/daily-summary-scan',
+  path: '/api/push/daily-summary-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushDexDrainScanRoute = ApiPushDexDrainScanRouteImport.update({
+  id: '/api/push/dex-drain-scan',
+  path: '/api/push/dex-drain-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
   id: '/api/push/register',
   path: '/api/push/register',
@@ -130,6 +142,8 @@ export interface FileRoutesByFullPath {
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/daily-summary-scan': typeof ApiPushDailySummaryScanRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -149,6 +163,8 @@ export interface FileRoutesByTo {
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/daily-summary-scan': typeof ApiPushDailySummaryScanRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -169,6 +185,8 @@ export interface FileRoutesById {
   '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/ops/analysis': typeof ApiOpsAnalysisRoute
+  '/api/push/daily-summary-scan': typeof ApiPushDailySummaryScanRoute
+  '/api/push/dex-drain-scan': typeof ApiPushDexDrainScanRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/push/scan': typeof ApiPushScanRoute
 }
@@ -190,6 +208,8 @@ export interface FileRouteTypes {
     | '/api/billing/status'
     | '/api/billing/webhook'
     | '/api/ops/analysis'
+    | '/api/push/daily-summary-scan'
+    | '/api/push/dex-drain-scan'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesByTo: FileRoutesByTo
@@ -209,6 +229,8 @@ export interface FileRouteTypes {
     | '/api/billing/status'
     | '/api/billing/webhook'
     | '/api/ops/analysis'
+    | '/api/push/daily-summary-scan'
+    | '/api/push/dex-drain-scan'
     | '/api/push/register'
     | '/api/push/scan'
   id:
@@ -228,6 +250,8 @@ export interface FileRouteTypes {
     | '/api/billing/status'
     | '/api/billing/webhook'
     | '/api/ops/analysis'
+    | '/api/push/daily-summary-scan'
+    | '/api/push/dex-drain-scan'
     | '/api/push/register'
     | '/api/push/scan'
   fileRoutesById: FileRoutesById
@@ -248,6 +272,8 @@ export interface RootRouteChildren {
   ApiBillingStatusRoute: typeof ApiBillingStatusRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
   ApiOpsAnalysisRoute: typeof ApiOpsAnalysisRoute
+  ApiPushDailySummaryScanRoute: typeof ApiPushDailySummaryScanRoute
+  ApiPushDexDrainScanRoute: typeof ApiPushDexDrainScanRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiPushScanRoute: typeof ApiPushScanRoute
 }
@@ -359,6 +385,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpsAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/daily-summary-scan': {
+      id: '/api/push/daily-summary-scan'
+      path: '/api/push/daily-summary-scan'
+      fullPath: '/api/push/daily-summary-scan'
+      preLoaderRoute: typeof ApiPushDailySummaryScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/dex-drain-scan': {
+      id: '/api/push/dex-drain-scan'
+      path: '/api/push/dex-drain-scan'
+      fullPath: '/api/push/dex-drain-scan'
+      preLoaderRoute: typeof ApiPushDexDrainScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/register': {
       id: '/api/push/register'
       path: '/api/push/register'
@@ -392,18 +432,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBillingStatusRoute: ApiBillingStatusRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiOpsAnalysisRoute: ApiOpsAnalysisRoute,
+  ApiPushDailySummaryScanRoute: ApiPushDailySummaryScanRoute,
+  ApiPushDexDrainScanRoute: ApiPushDexDrainScanRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiPushScanRoute: ApiPushScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
