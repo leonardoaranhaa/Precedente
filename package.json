@@ -21,7 +21,8 @@
     "test:unit": "node --experimental-strip-types --test src/lib/analyze-rate-limit-logic.test.ts src/lib/anthropic-cost.test.ts src/lib/app-data/app-data.test.ts src/lib/circuit-breaker.test.ts src/lib/concurrency.test.ts src/lib/external-intel-rate-limit-logic.test.ts src/lib/market/baseline-copy.test.ts src/lib/market/external-intel.test.ts src/lib/news/classify.test.ts src/lib/news/filter.test.ts src/lib/news/rss.test.ts src/lib/news/sanitize.test.ts src/lib/news/digest-schedule.test.ts src/lib/news/context-for-ticker.test.ts src/lib/pattern-region.test.ts src/lib/push/evaluate.test.ts src/lib/push/sanitize.test.ts src/lib/push/scan-logic.test.ts src/lib/push/watch-digest-build.test.ts src/lib/push/sample-regime.test.ts src/lib/push/funding-digest-build.test.ts src/lib/market/movers-24h.test.ts src/lib/auth/gate-identity.test.ts src/lib/billing/entitlements.test.ts src/lib/billing/plan-limits.test.ts src/lib/billing/vision-quota.test.ts src/lib/market/indicators.test.ts src/lib/market/precedent.test.ts src/lib/rate-limit.test.ts src/lib/sync-limits.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prepare": "node scripts/install-hooks.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Bloqueia commit se o typecheck falhar.
+# Instalado via `npm run prepare` (scripts/install-hooks.mjs).
+# Não pega bugs que só aparecem rodando o binário compilado — ver AGENTS.project.md.
+
+npm run -s typecheck
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "pre-commit: npm run typecheck falhou — commit bloqueado."
+  echo "Corrija os erros acima, ou use 'git commit --no-verify' se tiver certeza (não recomendado)."
+  exit 1
+fi
+
+exit 0
