@@ -65,6 +65,10 @@ function parseRules(raw: unknown): Partial<AlertRules> | undefined {
   if (typeof r.fundingThreshold === "number" && Number.isFinite(r.fundingThreshold)) {
     out.fundingThreshold = Math.min(0.05, Math.max(0.00005, r.fundingThreshold));
   }
+  if (typeof r.volumeAnomaly === "boolean") out.volumeAnomaly = r.volumeAnomaly;
+  if (typeof r.volumeMultiple === "number" && Number.isFinite(r.volumeMultiple)) {
+    out.volumeMultiple = Math.min(20, Math.max(1.5, r.volumeMultiple));
+  }
   return out;
 }
 
