@@ -4,7 +4,7 @@ import {
   assessDexFragility,
   DEX_FRAGILITY_DISCLAIMER,
   type DexFragilityInput,
-} from "./dex-fragility.ts";
+} from "./fragility.ts";
 
 /** Par saudável: velho, líquido, giro baixo, fluxo equilibrado. */
 function base(): DexFragilityInput {

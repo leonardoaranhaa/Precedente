@@ -1,19 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { assessDexFragility } from "@/lib/market/dex-fragility";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 /**
+ * CAMADA 3 — GET /api/dex?ticker=X
+ *
  * Leitura de fragilidade de um token que vive no DEX (ciclo curto, tipo
  * Moonshot). Rota separada de /api/analyze de propósito: aqui NÃO há
  * precedente — o par não tem histórico de candles pra isso. O que se entrega
  * é o estado de liquidez e fluxo agora.
  *
- * ATENÇÃO ao import de `@/lib/market/onchain`: ele é dinâmico aqui e nos
- * outros dois pontos do projeto (analyze.ts e push/funding-digest-scan.ts).
- * Misturar estático e dinâmico no mesmo módulo através da fronteira
- * client/server corrompe o chunk do Rolldown e derruba o servidor compilado
- * com "Export 'ssr_exports' is not defined in module" — invisível pro tsc,
- * pro eslint e pro `vite build`. Já aconteceu duas vezes em produção.
+ * ATENÇÃO ao import de `@/lib/market/dex`: é DINÂMICO, e a fachada é o único
+ * caminho pra dentro de dex/. Nada aqui pode importar dex/fetch, dex/types ou
+ * dex/fragility estaticamente — um módulo alcançado de forma estática num
+ * lugar e dinâmica em outro, cruzando a fronteira client/server, corrompe o
+ * chunk do Rolldown e derruba o servidor compilado com "Export 'ssr_exports'
+ * is not defined in module". É invisível pro tsc, pro eslint e pro
+ * `vite build`; só aparece rodando o binário. Já aconteceu duas vezes em
+ * produção. Ver docs/dex-arquitetura.md.
  */
 
 const RATE_LIMIT = 30;
@@ -49,10 +52,10 @@ export const Route = createFileRoute("/api/dex")({
         }
 
         try {
-          const { fetchOnchainContext } = await import("@/lib/market/onchain");
-          const onchain = await fetchOnchainContext(ticker);
+          const { readDexPair } = await import("@/lib/market/dex");
+          const reading = await readDexPair(ticker);
 
-          if (onchain.dexSource === null && onchain.liquidityUsd === null) {
+          if (!reading) {
             return json(
               {
                 error: `Nenhum par de ${ticker} encontrado no DEX. Sem par, não há liquidez nem fluxo pra ler.`,
@@ -61,15 +64,10 @@ export const Route = createFileRoute("/api/dex")({
             );
           }
 
-          return json({
-            ticker,
-            onchain,
-            fragility: assessDexFragility(onchain),
-            // Cache curto: liquidez e fluxo de par novo mudam por minuto.
-          }, 200, "public, max-age=30");
+          // Cache curto: liquidez e fluxo de par novo mudam por minuto.
+          return json({ ticker, ...reading }, 200, "public, max-age=30");
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "Não foi possível ler o DEX agora.";
+          const message = err instanceof Error ? err.message : "Não foi possível ler o DEX agora.";
           return json({ error: message }, 502);
         }
       },
