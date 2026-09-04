@@ -55,12 +55,15 @@ Railway **não** agenda HTTP no serviço web 24/7. O padrão certo é um **segun
 | `DATABASE_URL` | Postgres / Neon |
 | `PUSH_CRON_SECRET` | string longa aleatória |
 
-### 2. Novo serviço no mesmo projeto
+### 2. Serviço cron consolidado (`push-scan-cron`)
+
+Um único serviço Railway chama os três endpoints em sequência a cada 10 min.
+O resumo diário tem cooldown interno de 20h, então só dispara ~1×/dia mesmo rodando a cada 10 min.
 
 1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
 2. **Settings → Deploy**
    - **Custom Start Command:** `node scripts/push-scan-cron.mjs`
-   - **Cron Schedule:** `*/30 * * * *` (a cada 30 min, UTC; mínimo Railway = 5 min)
+   - **Cron Schedule:** `*/10 * * * *` (a cada 10 min, UTC; mínimo Railway = 5 min)
 3. **Variables** deste serviço cron:
 
 | Variável | Valor |
@@ -68,41 +71,12 @@ Railway **não** agenda HTTP no serviço web 24/7. O padrão certo é um **segun
 | `PUSH_CRON_SECRET` | **igual** ao do web |
 | `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
 
-   Ou diretamente: `SCAN_URL=https://<web>.up.railway.app/api/push/scan`
-
 4. **Não** coloque Cron Schedule no serviço web principal (ele precisa ficar Active 24/7).
 
-Referência de config: `railway.cron.toml` (documentação; o start command e o cron você confirma no dashboard).
-
-### 2b. daily-summary-scan-cron (resumo diário)
-
-1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
-2. **Settings → Deploy**
-   - **Custom Start Command:** `node scripts/daily-summary-scan-cron.mjs`
-   - **Cron Schedule:** `0 10 * * *` (10:00 UTC = 07:00 BRT, 1×/dia)
-3. **Variables:**
-
-| Variável | Valor |
-|----------|--------|
-| `PUSH_CRON_SECRET` | **igual** ao do web |
-| `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
-
-Resposta esperada: `ok: true`, contagens de `subscriptions` / `analyzed` / `sent`.
-
-### 2c. dex-drain-scan-cron (drenagem DEX)
-
-1. **New → GitHub Repo** → `leonardoaranhaa/Precedente` (mesmo repo).
-2. **Settings → Deploy**
-   - **Custom Start Command:** `node scripts/dex-drain-scan-cron.mjs`
-   - **Cron Schedule:** `*/10 * * * *` (a cada 10 min)
-3. **Variables:**
-
-| Variável | Valor |
-|----------|--------|
-| `PUSH_CRON_SECRET` | **igual** ao do web |
-| `PUBLIC_APP_URL` | `https://<seu-servico-web>.up.railway.app` |
-
-Resposta esperada: `ok: true`, contagens de `pairsChecked` / `drainAlerts` / `sent`.
+O script chama em sequência:
+1. `/api/push/scan` — alertas de prevenção
+2. `/api/push/dex-drain-scan` — drenagem DEX (cooldown 2h/ticker)
+3. `/api/push/daily-summary-scan` — resumo diário (cooldown 20h/subscriber)
 
 ### 3. Testar na mão
 
