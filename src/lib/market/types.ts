@@ -83,6 +83,9 @@ export type Snapshot = {
   consecutive: number;
   lastExtrema: { type: "top" | "bottom"; barsAgo: number; price: number } | null;
   changePct: number;
+  volLast: number;
+  volMedian20: number | null;
+  volRatio: number | null;
 };
 
 export type ChartPoint = {
