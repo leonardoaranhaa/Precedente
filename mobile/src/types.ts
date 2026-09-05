@@ -271,3 +271,29 @@ export type DexFragilityReport = {
 };
 
 export type DexReading = { pair: DexPairSnapshot; fragility: DexFragilityReport };
+
+// --- Movers: maiores movimentações 24h (Binance spot USDT) -----------------
+
+export type MoverRow = {
+  symbol: string;
+  base: string;
+  lastPrice: number;
+  changePct: number;
+  volumeBase: number;
+  quoteVolume: number;
+  high: number;
+  low: number;
+  open: number;
+  session: "acima" | "abaixo" | "lateral";
+  rangePct: number;
+};
+
+export type MoversSnapshot = {
+  fetchedAt: number;
+  source: string;
+  byAbsChange: MoverRow[];
+  byQuoteVolume: MoverRow[];
+  gainers: MoverRow[];
+  losers: MoverRow[];
+  disclaimer: string;
+};
