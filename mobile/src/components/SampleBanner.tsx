@@ -12,9 +12,11 @@ import type { PrecedentResult } from "../types";
 export function SampleBanner({
   sampleNote,
   matches,
+  compact = false,
 }: {
   sampleNote: PrecedentResult["sampleNote"];
   matches: number;
+  compact?: boolean;
 }) {
   const tiny = sampleNote === "tiny";
   const tone =
@@ -27,6 +29,22 @@ export function SampleBanner({
         : "rgba(125,155,122,0.14)";
   const Icon =
     sampleNote === "tiny" ? AlertTriangle : sampleNote === "small" ? Info : CheckCircle2;
+
+  if (compact) {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          { backgroundColor: bg, borderColor: tone, borderWidth: 1, paddingVertical: 10 },
+        ]}
+      >
+        <Icon size={14} color={tone} />
+        <Text style={[styles.title, { color: tone, fontSize: 12 }]} numberOfLines={1}>
+          {sampleTitle(sampleNote)} · n={matches}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
