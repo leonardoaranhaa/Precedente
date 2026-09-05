@@ -106,17 +106,14 @@ export function OhlcChartModal({
   }
 
   const pinch = Gesture.Pinch()
-    .onStart((e) => {
+    .onStart((e: any) => {
       pinchBaseCount.value = countShared.value;
       pinchBaseStart.value = startShared.value;
-      // Barra sob os dedos, e onde ela cai na janela (fração 0..1) — fica
-      // fixa ali durante o gesto, então o zoom ancora no ponto do pinch em
-      // vez de sempre puxar pro meio da janela atual.
       const frac = Math.max(0, Math.min(1, e.focalX / chartW));
       pinchFocalFrac.value = frac;
       pinchFocalBar.value = pinchBaseStart.value + frac * pinchBaseCount.value;
     })
-    .onUpdate((e) => {
+    .onUpdate((e: any) => {
       "worklet";
       const rawCount = pinchBaseCount.value / Math.max(0.1, e.scale);
       const clamped = Math.max(MIN_VISIBLE, Math.min(totalBars, Math.round(rawCount)));
@@ -139,7 +136,7 @@ export function OhlcChartModal({
     .onStart(() => {
       panBaseStart.value = startShared.value;
     })
-    .onUpdate((e) => {
+    .onUpdate((e: any) => {
       "worklet";
       if (countShared.value >= totalBars) return;
       const barsPerPx = countShared.value / chartW;
@@ -154,7 +151,7 @@ export function OhlcChartModal({
 
   const crosshairLongPress = Gesture.LongPress()
     .minDuration(180)
-    .onStart((e) => {
+    .onStart((e: any) => {
       "worklet";
       crosshairActive.value = true;
       crosshairX.value = e.x;
@@ -170,7 +167,7 @@ export function OhlcChartModal({
   const crosshairPan = Gesture.Pan()
     .minPointers(1)
     .maxPointers(1)
-    .onUpdate((e) => {
+    .onUpdate((e: any) => {
       "worklet";
       if (!crosshairActive.value) return;
       const clampedX = Math.max(0, Math.min(chartW, e.x));
