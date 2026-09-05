@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import { RiskCard } from "../components/RiskCard";
 import { SampleBanner } from "../components/SampleBanner";
 import { ScenarioCard } from "../components/ScenarioCard";
 import { TimeframeSwitch } from "../components/TimeframeSwitch";
+import { ResultTabs, type ResultTab } from "../components/ResultTabs";
 import { SplitBar } from "../components/SplitBar";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
@@ -58,6 +59,7 @@ export function ResultScreen({
   const [drawdownThresholdPct, setDrawdownThresholdPct] = useState(
     DEFAULT_ALERT_RULES.drawdownThresholdPct,
   );
+  const [activeTab, setActiveTab] = useState<ResultTab>("paths");
 
   useEffect(() => {
     let alive = true;
@@ -84,150 +86,209 @@ export function ResultScreen({
   const up = snapshot.changePct >= 0;
   const fp = precedent.fingerprint;
 
+  const hasVision = vision != null || (analysis.visionError != null && analysis.visionError.length > 0) || analysis.thumbUri != null;
+
+  const availableTabs = useMemo<ResultTab[]>(() => {
+    const tabs: ResultTab[] = ["paths", "risk", "onchain", "scenario"];
+    if (hasVision) tabs.push("vision");
+    return tabs;
+  }, [hasVision]);
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={20} color={colors.fg} />
-        </Pressable>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.eyebrow}>
-            {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
-            {formatInt(analysis.candleCount)} candles
-            {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
-            {reanalyzing ? " · reanalisando…" : ""}
-          </Text>
-          <Text style={styles.ticker} numberOfLines={1}>
-            {analysis.displayTicker}
-          </Text>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <View style={styles.priceRow}>
-            {livePrice != null ? <View style={styles.liveDot} /> : null}
-            <Text style={styles.price}>{formatPrice(headerPrice)}</Text>
+    <View style={styles.root}>
+      {/* ── Zone A: Hero (fixed, non-scrollable) ── */}
+      <View style={styles.hero}>
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
+            <ArrowLeft size={20} color={colors.fg} />
+          </Pressable>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.eyebrow}>
+              {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
+              {formatInt(analysis.candleCount)} candles
+              {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
+              {reanalyzing ? " · reanalisando…" : ""}
+            </Text>
+            <Text style={styles.ticker} numberOfLines={1}>
+              {analysis.displayTicker}
+            </Text>
           </View>
-          <Text style={[styles.change, { color: up ? colors.up : colors.down }]}>
-            {formatPct(snapshot.changePct)} vela
-          </Text>
-        </View>
-      </View>
-
-      {onToggleWatch ? (
-        <Pressable
-          onPress={onToggleWatch}
-          style={[styles.watchBtn, watched && styles.watchBtnOn]}
-          disabled={reanalyzing}
-        >
-          <Star
-            size={14}
-            color={watched ? colors.accentFg : colors.fg}
-            fill={watched ? colors.accentFg : "transparent"}
-          />
-          <Text style={[styles.watchBtnText, watched && { color: colors.accentFg }]}>
-            {watched ? "Na watch" : "+ Watch"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {onChangeTimeframe ? (
-        <View style={{ gap: 6 }}>
-          <TimeframeSwitch
-            current={analysis.timeframe}
-            disabled={reanalyzing}
-            onChange={onChangeTimeframe}
-          />
-          {reanalyzing ? (
-            <Text style={[styles.muted, { fontSize: 11 }]}>Atualizando OHLC…</Text>
-          ) : null}
-          {reanalyzeError ? (
-            <Text style={{ color: colors.down, fontSize: 13 }}>{reanalyzeError}</Text>
+          <View style={{ alignItems: "flex-end", gap: 4 }}>
+            <View style={styles.priceRow}>
+              {livePrice != null ? <View style={styles.liveDot} /> : null}
+              <Text style={styles.price}>{formatPrice(headerPrice)}</Text>
+            </View>
+            <Text style={[styles.change, { color: up ? colors.up : colors.down }]}>
+              {formatPct(snapshot.changePct)} vela
+            </Text>
+          </View>
+          {onToggleWatch ? (
+            <Pressable
+              onPress={onToggleWatch}
+              style={[styles.watchBtn, watched && styles.watchBtnOn]}
+              disabled={reanalyzing}
+              hitSlop={4}
+            >
+              <Star
+                size={14}
+                color={watched ? colors.accentFg : colors.fg}
+                fill={watched ? colors.accentFg : "transparent"}
+              />
+            </Pressable>
           ) : null}
         </View>
-      ) : null}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-        {precedent.horizons.map((h, i) => (
-          <HorizonChip
-            key={h.bars}
-            horizon={h}
-            active={i === horizonIdx}
-            onPress={() => setHorizonIdx(i)}
-          />
-        ))}
-        <Chip
-          label="Amostra"
-          primary={sampleTitle(precedent.sampleNote)}
-          secondary={`n=${formatInt(precedent.matches)}`}
-          tone={
-            precedent.sampleNote === "ok"
-              ? "up"
-              : precedent.sampleNote === "small"
-                ? "warn"
-                : "down"
-          }
-        />
-        <Chip label="RSI 14" primary={snapshot.rsi14.toFixed(1).replace(".", ",")} />
-        <Chip
-          label="vs SMA20"
-          primary={formatPct(snapshot.distSma20Pct)}
-          tone={snapshot.distSma20Pct >= 0 ? "up" : "down"}
-        />
-        {(snapshot.near20High || snapshot.near20Low) && (
-          <Chip
-            label="Extremo 20"
-            primary={snapshot.near20High ? "high20" : "low20"}
-            tone="warn"
-          />
-        )}
-        {onchain?.fundingRate != null ? (
-          <Chip
-            label="Funding"
-            primary={`${onchain.fundingRate >= 0 ? "+" : ""}${(onchain.fundingRate * 100).toFixed(3).replace(".", ",")}%`}
-            tone={Math.abs(onchain.fundingRate) >= 0.0005 ? "warn" : undefined}
-          />
+        {onChangeTimeframe ? (
+          <View style={{ gap: 4 }}>
+            <TimeframeSwitch
+              current={analysis.timeframe}
+              disabled={reanalyzing}
+              onChange={onChangeTimeframe}
+            />
+            {reanalyzing ? (
+              <Text style={[styles.muted, { fontSize: 11 }]}>Atualizando OHLC…</Text>
+            ) : null}
+            {reanalyzeError ? (
+              <Text style={{ color: colors.down, fontSize: 13 }}>{reanalyzeError}</Text>
+            ) : null}
+          </View>
         ) : null}
-        {onchain?.liquidityUsd != null ? (
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          {precedent.horizons.map((h, i) => (
+            <HorizonChip
+              key={h.bars}
+              horizon={h}
+              active={i === horizonIdx}
+              onPress={() => setHorizonIdx(i)}
+            />
+          ))}
           <Chip
-            label="Liq DEX"
-            primary={
-              onchain.liquidityUsd >= 1e9
-                ? `$${(onchain.liquidityUsd / 1e9).toFixed(1)}B`
-                : onchain.liquidityUsd >= 1e6
-                  ? `$${(onchain.liquidityUsd / 1e6).toFixed(1)}M`
-                  : `$${(onchain.liquidityUsd / 1e3).toFixed(0)}K`
+            label="Amostra"
+            primary={sampleTitle(precedent.sampleNote)}
+            secondary={`n=${formatInt(precedent.matches)}`}
+            tone={
+              precedent.sampleNote === "ok"
+                ? "up"
+                : precedent.sampleNote === "small"
+                  ? "warn"
+                  : "down"
             }
           />
+          <Chip label="RSI 14" primary={snapshot.rsi14.toFixed(1).replace(".", ",")} />
+          <Chip
+            label="vs SMA20"
+            primary={formatPct(snapshot.distSma20Pct)}
+            tone={snapshot.distSma20Pct >= 0 ? "up" : "down"}
+          />
+          {(snapshot.near20High || snapshot.near20Low) && (
+            <Chip
+              label="Extremo 20"
+              primary={snapshot.near20High ? "high20" : "low20"}
+              tone="warn"
+            />
+          )}
+          {onchain?.fundingRate != null ? (
+            <Chip
+              label="Funding"
+              primary={`${onchain.fundingRate >= 0 ? "+" : ""}${(onchain.fundingRate * 100).toFixed(3).replace(".", ",")}%`}
+              tone={Math.abs(onchain.fundingRate) >= 0.0005 ? "warn" : undefined}
+            />
+          ) : null}
+          {onchain?.liquidityUsd != null ? (
+            <Chip
+              label="Liq DEX"
+              primary={
+                onchain.liquidityUsd >= 1e9
+                  ? `$${(onchain.liquidityUsd / 1e9).toFixed(1)}B`
+                  : onchain.liquidityUsd >= 1e6
+                    ? `$${(onchain.liquidityUsd / 1e6).toFixed(1)}M`
+                    : `$${(onchain.liquidityUsd / 1e3).toFixed(0)}K`
+              }
+            />
+          ) : null}
+        </ScrollView>
+
+        {precedent.sampleNote !== "ok" ? (
+          <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} compact />
         ) : null}
-      </ScrollView>
 
-      <Text style={styles.fpLine}>
-        {fingerprintLabel(precedent.fingerprint)}
-        {snapshot.lastExtrema
-          ? ` · Último ${snapshot.lastExtrema.type === "top" ? "topo" : "fundo"} há ${snapshot.lastExtrema.barsAgo} barras.`
-          : ""}
-      </Text>
-
-      <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} />
-
-      <View style={[styles.card, { padding: 16, gap: 12 }]}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
-          <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
+        <View style={[styles.card, { padding: 14, gap: 10 }]}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
+            <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
+          </View>
+          <OhlcChart
+            data={analysis.chart}
+            matches={precedent.chartMatches}
+            displayTicker={analysis.displayTicker}
+            timeframe={analysis.timeframe}
+          />
         </View>
-        <OhlcChart
-          data={analysis.chart}
-          matches={precedent.chartMatches}
-          displayTicker={analysis.displayTicker}
-          timeframe={analysis.timeframe}
-        />
       </View>
 
-      <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
+      {/* ── Zone B: Tab bar ── */}
+      <View style={styles.tabBarWrap}>
+        <ResultTabs active={activeTab} onChange={setActiveTab} tabs={availableTabs} />
+      </View>
 
-      <OnchainCard onchain={onchain ?? null} />
+      {/* ── Zone C: Tab content (scrollable) ── */}
+      <ScrollView
+        key={activeTab}
+        contentContainerStyle={styles.tabContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {activeTab === "paths" && (
+          <PathsTab
+            analysis={analysis}
+            precedent={precedent}
+            snapshot={snapshot}
+            horizon={horizon}
+            horizonIdx={horizonIdx}
+            setHorizonIdx={setHorizonIdx}
+            fp={fp}
+          />
+        )}
+        {activeTab === "risk" && (
+          <RiskCard snapshot={snapshot} precedent={precedent} horizon={horizon} />
+        )}
+        {activeTab === "onchain" && (
+          <OnchainCard onchain={onchain ?? null} />
+        )}
+        {activeTab === "scenario" && (
+          <ScenarioCard analysis={analysis} />
+        )}
+        {activeTab === "vision" && (
+          <VisionTab analysis={analysis} vision={vision} />
+        )}
+        <Text style={styles.disclaimer}>
+          Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
+          <Text style={{ color: colors.fg }}>Ler o cenário</Text>. OHLC: {analysis.source}.
+        </Text>
+      </ScrollView>
+    </View>
+  );
+}
 
-      <ScenarioCard analysis={analysis} />
-
+function PathsTab({
+  analysis,
+  precedent,
+  snapshot,
+  horizon,
+  horizonIdx,
+  setHorizonIdx,
+  fp,
+}: {
+  analysis: StoredAnalysis;
+  precedent: StoredAnalysis["precedent"];
+  snapshot: StoredAnalysis["snapshot"];
+  horizon: HorizonOutcome;
+  horizonIdx: number;
+  setHorizonIdx: (i: number) => void;
+  fp: StoredAnalysis["precedent"]["fingerprint"];
+}) {
+  return (
+    <>
       <View style={[styles.card, { padding: 16, gap: 14 }]}>
         <View style={styles.rowBetween}>
           <View>
@@ -342,40 +403,43 @@ export function ResultScreen({
           })}
         </View>
       ) : null}
+    </>
+  );
+}
 
-      {analysis.thumbUri || vision || analysis.visionError ? (
-        <View style={styles.card}>
-          {analysis.thumbUri ? (
-            <Image source={{ uri: analysis.thumbUri }} style={styles.thumb} resizeMode="cover" />
-          ) : null}
-          <View style={{ padding: 16, gap: 10 }}>
-            <View style={styles.visionHeader}>
-              <Eye size={13} color={colors.muted} />
-              <Text style={styles.eyebrow}>Leitura visual</Text>
-            </View>
-            {vision ? (
-              <>
-                <Text style={styles.body}>{vision.leitura}</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                  <Badge label={`tendência ${vision.tendencia}`} accent />
-                  {vision.padrao ? <Badge label={vision.padrao} /> : null}
-                  <Badge label={`confiança ${vision.confianca}`} />
-                </View>
-              </>
-            ) : analysis.visionError ? (
-              <Text style={styles.muted}>{analysis.visionError}</Text>
-            ) : (
-              <Text style={styles.muted}>Nenhum print nesta análise.</Text>
-            )}
-          </View>
-        </View>
+function VisionTab({
+  analysis,
+  vision,
+}: {
+  analysis: StoredAnalysis;
+  vision: StoredAnalysis["vision"];
+}) {
+  return (
+    <View style={styles.card}>
+      {analysis.thumbUri ? (
+        <Image source={{ uri: analysis.thumbUri }} style={styles.thumb} resizeMode="cover" />
       ) : null}
-
-      <Text style={styles.disclaimer}>
-        Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
-        <Text style={{ color: colors.fg }}>Ler o cenário</Text>. OHLC: {analysis.source}.
-      </Text>
-    </ScrollView>
+      <View style={{ padding: 16, gap: 10 }}>
+        <View style={styles.visionHeader}>
+          <Eye size={13} color={colors.muted} />
+          <Text style={styles.eyebrow}>Leitura visual</Text>
+        </View>
+        {vision ? (
+          <>
+            <Text style={styles.body}>{vision.leitura}</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <Badge label={`tendência ${vision.tendencia}`} accent />
+              {vision.padrao ? <Badge label={vision.padrao} /> : null}
+              <Badge label={`confiança ${vision.confianca}`} />
+            </View>
+          </>
+        ) : analysis.visionError ? (
+          <Text style={styles.muted}>{analysis.visionError}</Text>
+        ) : (
+          <Text style={styles.muted}>Nenhum print nesta análise.</Text>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -456,7 +520,8 @@ function sideLabel(side: "above" | "below" | "near"): string {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 96, gap: 14 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  hero: { padding: 16, paddingBottom: 0, gap: 12 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   backBtn: { marginTop: 2 },
   eyebrow: {
@@ -467,7 +532,7 @@ const styles = StyleSheet.create({
   },
   ticker: {
     fontFamily: fonts.display,
-    fontSize: 24,
+    fontSize: 22,
     color: colors.fg,
     marginTop: 2,
   },
@@ -476,21 +541,19 @@ const styles = StyleSheet.create({
   price: { fontSize: 16, color: colors.fg, fontVariant: ["tabular-nums"] },
   change: { fontSize: 11, fontVariant: ["tabular-nums"], marginTop: 2 },
   watchBtn: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    width: 36,
+    height: 36,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 0,
   },
   watchBtnOn: {
     backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
-  watchBtnText: { fontSize: 12, fontWeight: "500", color: colors.fg },
   chipRow: { gap: 8, paddingVertical: 2 },
   chip: {
     minWidth: 72,
@@ -511,7 +574,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.fg,
   },
-  fpLine: { fontSize: 12, lineHeight: 17, color: colors.muted },
+  tabBarWrap: { paddingHorizontal: 16, paddingVertical: 10 },
+  tabContent: { padding: 16, paddingTop: 0, paddingBottom: 96, gap: 14 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
