@@ -297,3 +297,25 @@ export type MoversSnapshot = {
   losers: MoverRow[];
   disclaimer: string;
 };
+
+// --- New Listings: moedas recém-listadas (detectadas por diff de snapshot) ----
+
+export type NewListingRow = {
+  symbol: string;
+  base: string;
+  lastPrice: number;
+  changePct: number;
+  quoteVolume: number;
+  high: number;
+  low: number;
+  firstSeenAt: number;
+  ageHours: number;
+};
+
+export type NewListingsSnapshot = {
+  fetchedAt: number;
+  source: string;
+  listings: NewListingRow[];
+  totalTracked: number;
+  disclaimer: string;
+};

@@ -17,6 +17,7 @@ import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiDexRouteImport } from './routes/api/dex'
 import { Route as ApiMoversRouteImport } from './routes/api/movers'
+import { Route as ApiNewListingsRouteImport } from './routes/api/new-listings'
 import { Route as ApiPriceRouteImport } from './routes/api/price'
 import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
@@ -81,6 +82,11 @@ const ApiDexRoute = ApiDexRouteImport.update({
 const ApiMoversRoute = ApiMoversRouteImport.update({
   id: '/api/movers',
   path: '/api/movers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNewListingsRoute = ApiNewListingsRouteImport.update({
+  id: '/api/new-listings',
+  path: '/api/new-listings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPriceRoute = ApiPriceRouteImport.update({
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
   '/api/movers': typeof ApiMoversRoute
+  '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
   '/api/movers': typeof ApiMoversRoute
+  '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
   '/api/movers': typeof ApiMoversRoute
+  '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/dex'
     | '/api/movers'
+    | '/api/new-listings'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/dex'
     | '/api/movers'
+    | '/api/new-listings'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/dex'
     | '/api/movers'
+    | '/api/new-listings'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiDexRoute: typeof ApiDexRoute
   ApiMoversRoute: typeof ApiMoversRoute
+  ApiNewListingsRoute: typeof ApiNewListingsRoute
   ApiPriceRoute: typeof ApiPriceRoute
   ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
@@ -517,6 +530,13 @@ declare module '@tanstack/react-router' {
       path: '/api/movers'
       fullPath: '/api/movers'
       preLoaderRoute: typeof ApiMoversRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/new-listings': {
+      id: '/api/new-listings'
+      path: '/api/new-listings'
+      fullPath: '/api/new-listings'
+      preLoaderRoute: typeof ApiNewListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/price': {
@@ -706,6 +726,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiDexRoute: ApiDexRoute,
   ApiMoversRoute: ApiMoversRoute,
+  ApiNewListingsRoute: ApiNewListingsRoute,
   ApiPriceRoute: ApiPriceRoute,
   ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,
