@@ -22,7 +22,6 @@ import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import {
   barsToHuman,
-  fingerprintLabel,
   formatInt,
   formatPct,
   formatPrice,
@@ -158,7 +157,7 @@ export function ResultScreen({
           </View>
         ) : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <View style={styles.chipGrid}>
           {precedent.horizons.map((h, i) => (
             <HorizonChip
               key={h.bars}
@@ -185,13 +184,13 @@ export function ResultScreen({
             primary={formatPct(snapshot.distSma20Pct)}
             tone={snapshot.distSma20Pct >= 0 ? "up" : "down"}
           />
-          {(snapshot.near20High || snapshot.near20Low) && (
+          {(snapshot.near20High || snapshot.near20Low) ? (
             <Chip
               label="Extremo 20"
               primary={snapshot.near20High ? "high20" : "low20"}
               tone="warn"
             />
-          )}
+          ) : null}
           {onchain?.fundingRate != null ? (
             <Chip
               label="Funding"
@@ -211,7 +210,7 @@ export function ResultScreen({
               }
             />
           ) : null}
-        </ScrollView>
+        </View>
 
         {precedent.sampleNote !== "ok" ? (
           <SampleBanner sampleNote={precedent.sampleNote} matches={precedent.matches} compact />
@@ -565,13 +564,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
-  chipRow: { gap: 8, paddingVertical: 2 },
+  chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: {
-    minWidth: 72,
+    minWidth: 0,
+    flexBasis: "30%",
+    flexGrow: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   chipOn: { borderWidth: 1, borderColor: colors.border },
   chipLabel: {
