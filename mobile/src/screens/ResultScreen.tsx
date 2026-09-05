@@ -99,24 +99,28 @@ export function ResultScreen({
 
   return (
     <View style={styles.root}>
-      {/* ── Zone A: Hero (fixed, non-scrollable) ── */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+      >
+      {/* ── Header ── */}
       <View style={styles.hero}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
             <ArrowLeft size={20} color={colors.fg} />
           </Pressable>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.eyebrow}>
+          <View style={{ flex: 1, minWidth: 0, flexShrink: 1 }}>
+            <Text style={styles.eyebrow} numberOfLines={1}>
               {analysis.source} · {timeframeLabel(analysis.timeframe)} ·{" "}
               {formatInt(analysis.candleCount)} candles
-              {onchain?.sources?.length ? ` · ${onchain.sources.join(" + ")}` : ""}
               {reanalyzing ? " · reanalisando…" : ""}
             </Text>
             <Text style={styles.ticker} numberOfLines={1}>
               {analysis.displayTicker}
             </Text>
           </View>
-          <View style={{ alignItems: "flex-end", gap: 4 }}>
+          <View style={{ alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
             <View style={styles.priceRow}>
               {livePrice != null ? <View style={styles.liveDot} /> : null}
               <Text style={styles.price}>{formatPrice(headerPrice)}</Text>
@@ -237,17 +241,13 @@ export function ResultScreen({
         </View>
       </View>
 
-      {/* ── Zone B: Tab bar ── */}
+      {/* ── Tab bar ── */}
       <View style={styles.tabBarWrap}>
         <ResultTabs active={activeTab} onChange={setActiveTab} tabs={availableTabs} />
       </View>
 
-      {/* ── Zone C: Tab content (scrollable) ── */}
-      <ScrollView
-        key={activeTab}
-        contentContainerStyle={styles.tabContent}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* ── Tab content ── */}
+      <View style={styles.tabContent}>
         {activeTab === "paths" && (
           <PathsTab
             analysis={analysis}
@@ -275,6 +275,7 @@ export function ResultScreen({
           Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
           <Text style={{ color: colors.fg }}>Ler o cenário</Text>. OHLC: {analysis.source}.
         </Text>
+      </View>
       </ScrollView>
     </View>
   );
@@ -531,6 +532,7 @@ function sideLabel(side: "above" | "below" | "near"): string {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  scrollContent: { paddingBottom: 96 },
   hero: { padding: 16, paddingBottom: 0, gap: 12 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   backBtn: { marginTop: 2 },
@@ -587,7 +589,7 @@ const styles = StyleSheet.create({
     color: colors.fg,
   },
   tabBarWrap: { paddingHorizontal: 16, paddingVertical: 10 },
-  tabContent: { padding: 16, paddingTop: 0, paddingBottom: 96, gap: 14 },
+  tabContent: { padding: 16, paddingTop: 0, gap: 14 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import Svg, { G, Line, Path, Rect } from "react-native-svg";
 import { X } from "lucide-react-native";
@@ -107,6 +107,7 @@ export function OhlcChartModal({
 
   const pinch = Gesture.Pinch()
     .onStart((e: any) => {
+      "worklet";
       pinchBaseCount.value = countShared.value;
       pinchBaseStart.value = startShared.value;
       const frac = Math.max(0, Math.min(1, e.focalX / chartW));
@@ -254,7 +255,7 @@ export function OhlcChartModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <GestureHandlerRootView style={styles.sheet}>
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>{displayTicker}</Text>
@@ -337,7 +338,7 @@ export function OhlcChartModal({
             </Text>
           )}
         </View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
