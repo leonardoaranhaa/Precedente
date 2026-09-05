@@ -37,8 +37,8 @@ function linePath(
 export function OhlcChart({
   data,
   matches,
-  displayTicker,
-  timeframe,
+  displayTicker: _displayTicker,
+  timeframe: _timeframe,
   chartType = "candle",
   showSma20 = true,
   showSma50 = true,
@@ -82,6 +82,11 @@ export function OhlcChart({
   }, [totalBars]);
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+
+  const crosshairLineStyle = useAnimatedStyle(() => ({
+    opacity: crosshairActive.value ? 1 : 0,
+    transform: [{ translateX: crosshairX.value }],
+  }));
 
   if (data.length === 0) {
     return (
@@ -189,11 +194,6 @@ export function OhlcChart({
 
   const crosshairComposite = Gesture.Simultaneous(crosshairLongPress, crosshairPan);
   const rootGesture = Gesture.Race(pinch, Gesture.Exclusive(crosshairComposite, panScroll));
-
-  const crosshairLineStyle = useAnimatedStyle(() => ({
-    opacity: crosshairActive.value ? 1 : 0,
-    transform: [{ translateX: crosshairX.value }],
-  }));
 
   const matchByTime = new Map<number, number>();
   for (const m of matches ?? []) matchByTime.set(m.t, m.score);
