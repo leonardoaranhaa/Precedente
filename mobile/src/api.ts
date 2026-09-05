@@ -1,5 +1,5 @@
 import { ANALYZE_ENDPOINT, API_BASE_URL } from "./config";
-import type { AnalysisPayload, ApiErrorBody, DexReading, MoversSnapshot, Timeframe, TradedPair } from "./types";
+import type { AnalysisPayload, ApiErrorBody, DexReading, MoversSnapshot, NewListingsSnapshot, Timeframe, TradedPair } from "./types";
 
 export type AnalyzeRequest = {
   ticker: string;
@@ -55,6 +55,17 @@ export async function fetchMovers(top = 20): Promise<MoversSnapshot> {
     throw new Error(`Não foi possível ler os movers (status ${response.status}).`);
   }
   return (await response.json()) as MoversSnapshot;
+}
+
+/**
+ * Novas listagens detectadas por diff de snapshot (últimas 72h).
+ */
+export async function fetchNewListings(): Promise<NewListingsSnapshot> {
+  const response = await fetch(`${API_BASE_URL}/api/new-listings`);
+  if (!response.ok) {
+    throw new Error(`Não foi possível ler novas listagens (status ${response.status}).`);
+  }
+  return (await response.json()) as NewListingsSnapshot;
 }
 
 /**

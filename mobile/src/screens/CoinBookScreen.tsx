@@ -8,15 +8,16 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { ArrowDownRight, ArrowUpRight, Minus, RefreshCw, Search, X } from "lucide-react-native";
-import { fetchMovers, fetchTopTraded } from "../api";
+import { ArrowDownRight, ArrowUpRight, Minus, RefreshCw, Search, Sparkles, X } from "lucide-react-native";
+import { fetchMovers, fetchNewListings, fetchTopTraded } from "../api";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
-import type { MoverRow, MoversSnapshot, TradedPair } from "../types";
+import type { MoverRow, MoversSnapshot, NewListingRow, NewListingsSnapshot, TradedPair } from "../types";
 
-type Tab = "volume" | "gainers" | "losers" | "volatile";
+type Tab = "volume" | "gainers" | "losers" | "volatile" | "new";
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: "new", label: "Novas" },
   { key: "volume", label: "Volume" },
   { key: "gainers", label: "Alta" },
   { key: "losers", label: "Baixa" },
@@ -42,31 +43,53 @@ function fmtVolume(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
+function fmtAge(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)}min`;
+  if (hours < 24) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
 type CoinRow = {
   symbol: string;
   base: string;
   lastPrice: number;
   changePct: number;
   quoteVolume: number;
+  isNew?: boolean;
+  ageHours?: number;
 };
 
-function tradedPairToRow(p: TradedPair): CoinRow {
+function tradedPairToRow(p: TradedPair, newSymbols: Set<string>): CoinRow {
   return {
     symbol: p.symbol,
     base: p.base,
     lastPrice: p.lastPrice,
     changePct: p.changePct,
     quoteVolume: p.quoteVolume,
+    isNew: newSymbols.has(p.symbol),
   };
 }
 
-function moverToRow(m: MoverRow): CoinRow {
+function moverToRow(m: MoverRow, newSymbols: Set<string>): CoinRow {
   return {
     symbol: m.symbol,
     base: m.base,
     lastPrice: m.lastPrice,
     changePct: m.changePct,
     quoteVolume: m.quoteVolume,
+    isNew: newSymbols.has(m.symbol),
+  };
+}
+
+function newListingToRow(n: NewListingRow): CoinRow {
+  return {
+    symbol: n.symbol,
+    base: n.base,
+    lastPrice: n.lastPrice,
+    changePct: n.changePct,
+    quoteVolume: n.quoteVolume,
+    isNew: true,
+    ageHours: n.ageHours,
   };
 }
 
@@ -83,6 +106,8 @@ export function CoinBookScreen({
 
   const [volumeList, setVolumeList] = useState<CoinRow[]>([]);
   const [movers, setMovers] = useState<MoversSnapshot | null>(null);
+  const [newListings, setNewListings] = useState<NewListingsSnapshot | null>(null);
+  const [newSymbolSet, setNewSymbolSet] = useState<Set<string>>(new Set());
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -90,12 +115,18 @@ export function CoinBookScreen({
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const [pairs, snap] = await Promise.all([
+      const [pairs, snap, listings] = await Promise.all([
         fetchTopTraded(200),
         fetchMovers(50),
+        fetchNewListings().catch(() => null),
       ]);
-      setVolumeList(pairs.map(tradedPairToRow));
+      const newSet = new Set(
+        (listings?.listings ?? []).map((l) => l.symbol),
+      );
+      setNewSymbolSet(newSet);
+      setVolumeList(pairs.map((p) => tradedPairToRow(p, newSet)));
       setMovers(snap);
+      setNewListings(listings);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao carregar mercado.");
     } finally {
@@ -117,20 +148,25 @@ export function CoinBookScreen({
     void loadData(true);
   }
 
+  const newCount = newListings?.listings.length ?? 0;
+
   const rows = useMemo(() => {
     let list: CoinRow[];
     switch (tab) {
+      case "new":
+        list = (newListings?.listings ?? []).map(newListingToRow);
+        break;
       case "volume":
         list = volumeList;
         break;
       case "gainers":
-        list = (movers?.gainers ?? []).map(moverToRow);
+        list = (movers?.gainers ?? []).map((m) => moverToRow(m, newSymbolSet));
         break;
       case "losers":
-        list = (movers?.losers ?? []).map(moverToRow);
+        list = (movers?.losers ?? []).map((m) => moverToRow(m, newSymbolSet));
         break;
       case "volatile":
-        list = (movers?.byAbsChange ?? []).map(moverToRow);
+        list = (movers?.byAbsChange ?? []).map((m) => moverToRow(m, newSymbolSet));
         break;
     }
 
@@ -140,13 +176,14 @@ export function CoinBookScreen({
     }
 
     return list;
-  }, [tab, volumeList, movers, search]);
+  }, [tab, volumeList, movers, newListings, newSymbolSet, search]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: CoinRow; index: number }) => (
       <CoinRowItem
         item={item}
         rank={tab === "volume" ? index + 1 : undefined}
+        showAge={tab === "new"}
         onPress={() => onSelectTicker(item.base)}
       />
     ),
@@ -183,9 +220,19 @@ export function CoinBookScreen({
             onPress={() => setTab(t.key)}
             style={[styles.tab, tab === t.key && styles.tabActive]}
           >
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>
-              {t.label}
-            </Text>
+            <View style={styles.tabInner}>
+              {t.key === "new" ? (
+                <Sparkles size={10} color={tab === "new" ? colors.accentFg : colors.warn} style={{ marginRight: 3 }} />
+              ) : null}
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>
+                {t.label}
+              </Text>
+              {t.key === "new" && newCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{newCount}</Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
         ))}
         <Pressable onPress={handleRefresh} hitSlop={8} style={styles.refreshBtn}>
@@ -221,14 +268,23 @@ export function CoinBookScreen({
               <Text style={[styles.colName, { flex: 1 }]}>Moeda</Text>
               <Text style={styles.colPrice}>Preço</Text>
               <Text style={styles.colChange}>24h</Text>
-              <Text style={styles.colVol}>Volume</Text>
+              <Text style={styles.colVol}>{tab === "new" ? "Idade" : "Volume"}</Text>
             </View>
           }
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>
-                {search ? `Nenhum resultado para "${search}"` : "Sem dados"}
+                {search
+                  ? `Nenhum resultado para "${search}"`
+                  : tab === "new"
+                    ? "Nenhuma listagem nova detectada"
+                    : "Sem dados"}
               </Text>
+              {tab === "new" && !search ? (
+                <Text style={styles.emptySubtext}>
+                  Novas moedas aparecem aqui nas primeiras 72h após serem detectadas.
+                </Text>
+              ) : null}
             </View>
           }
           stickyHeaderIndices={[0]}
@@ -241,10 +297,12 @@ export function CoinBookScreen({
 function CoinRowItem({
   item,
   rank,
+  showAge,
   onPress,
 }: {
   item: CoinRow;
   rank?: number;
+  showAge?: boolean;
   onPress: () => void;
 }) {
   const up = item.changePct >= 0;
@@ -254,7 +312,14 @@ function CoinRowItem({
     <Pressable style={styles.row} onPress={onPress}>
       <Text style={styles.colRank}>{rank ?? "-"}</Text>
       <View style={styles.nameCol}>
-        <Text style={styles.baseTicker}>{item.base}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.baseTicker}>{item.base}</Text>
+          {item.isNew ? (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NOVO</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.quoteTicker}>USDT</Text>
       </View>
       <Text style={[styles.colPrice, styles.priceText]}>${fmtPrice(item.lastPrice)}</Text>
@@ -270,7 +335,11 @@ function CoinRowItem({
           {fmtPct(item.changePct)}
         </Text>
       </View>
-      <Text style={styles.volText}>{fmtVolume(item.quoteVolume)}</Text>
+      {showAge && item.ageHours != null ? (
+        <Text style={styles.ageText}>{fmtAge(item.ageHours)}</Text>
+      ) : (
+        <Text style={styles.volText}>{fmtVolume(item.quoteVolume)}</Text>
+      )}
     </Pressable>
   );
 }
@@ -308,14 +377,26 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tab: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
   },
   tabActive: { backgroundColor: colors.accent },
-  tabText: { fontSize: 12, fontWeight: "600", color: colors.muted },
+  tabInner: { flexDirection: "row", alignItems: "center" },
+  tabText: { fontSize: 11, fontWeight: "600", color: colors.muted },
   tabTextActive: { color: colors.accentFg },
+  badge: {
+    backgroundColor: colors.warn,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    marginLeft: 4,
+  },
+  badgeText: { fontSize: 9, fontWeight: "700", color: colors.bg },
   refreshBtn: { marginLeft: "auto", padding: 8 },
   center: {
     flex: 1,
@@ -334,6 +415,7 @@ const styles = StyleSheet.create({
   },
   retryText: { fontSize: 13, color: colors.accent, fontWeight: "600" },
   emptyText: { fontSize: 13, color: colors.muted },
+  emptySubtext: { fontSize: 11, color: colors.subtle, textAlign: "center", paddingHorizontal: 32 },
   listContent: { paddingBottom: 80 },
   listHeader: {
     flexDirection: "row",
@@ -369,11 +451,24 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   nameCol: { flex: 1, marginLeft: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   baseTicker: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.fg,
     fontFamily: fonts.sansSemiBold,
+  },
+  newBadge: {
+    backgroundColor: "rgba(196,165,116,0.2)",
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  newBadgeText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: colors.warn,
+    letterSpacing: 0.5,
   },
   quoteTicker: { fontSize: 10, color: colors.subtle, marginTop: 1 },
   priceText: {
@@ -402,6 +497,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.muted,
     textAlign: "right",
+    fontVariant: ["tabular-nums"],
+  },
+  ageText: {
+    width: 56,
+    fontSize: 11,
+    color: colors.warn,
+    textAlign: "right",
+    fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
 });
