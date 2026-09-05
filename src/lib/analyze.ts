@@ -184,7 +184,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
     const session = await getSessionUser();
     if (!session?.id) {
       earlyVisionError =
-        "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.";
+        "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota.";
       data.imageDataUrl = null;
     } else if (billingGatesEnabled()) {
       const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
