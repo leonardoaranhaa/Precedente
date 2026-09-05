@@ -30,10 +30,9 @@ import {
   requestPushScan,
   syncPushSubscription,
 } from "./src/notifications";
-import { AccountScreen } from "./src/screens/AccountScreen";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
-import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
+import { MenuScreen } from "./src/screens/MenuScreen";
 import { NewsScreen } from "./src/screens/NewsScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
@@ -62,8 +61,10 @@ import {
 } from "./src/watchlist";
 import { ZoneModal } from "./src/components/ZoneModal";
 import { NewsPreferencesModal } from "./src/components/NewsPreferencesModal";
+import { Bell, Menu, Newspaper, Search, Star } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 
-type Screen = "home" | "history" | "result" | "watch" | "alerts" | "news" | "account";
+type Screen = "home" | "result" | "watch" | "alerts" | "news" | "menu";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -581,17 +582,9 @@ function AppInner() {
             setError(null);
           }}
         >
-          <Mark size={22} />
+          <Mark size={20} />
           <Text style={styles.brandText}>Precedente</Text>
         </Pressable>
-        <View style={styles.tabs}>
-          <Tab active={view === "home"} onPress={() => setView("home")} label="Analisar" />
-          <Tab active={view === "watch"} onPress={() => setView("watch")} label="Watch" />
-          <Tab active={view === "alerts"} onPress={() => setView("alerts")} label="Alertas" />
-          <Tab active={view === "news"} onPress={() => setView("news")} label="Notíc." />
-          <Tab active={view === "history"} onPress={() => setView("history")} label="Hist." />
-          <Tab active={view === "account"} onPress={() => setView("account")} label="Conta" />
-        </View>
       </View>
 
       <View style={styles.body}>
@@ -646,26 +639,22 @@ function AppInner() {
             refreshKey={newsRefreshKey}
             onOpenPreferences={() => setNewsPrefsOpen(true)}
           />
-        ) : view === "history" ? (
-          <HistoryScreen
-            items={history}
-            signedIn={Boolean(user)}
-            onOpen={(item) => {
-              setResult(item);
-              setView("result");
-            }}
-          />
-        ) : view === "account" ? (
-          <AccountScreen
+        ) : view === "menu" ? (
+          <MenuScreen
             user={user}
             busy={authBusy}
             error={authError}
+            history={history}
             onSignIn={(email, password) => void handleSignIn(email, password)}
             onSignUp={(name, email, password) => void handleSignUp(name, email, password)}
             onSignOut={() => void handleSignOut()}
             onCheckout={startPremiumCheckout}
             onManage={openBillingPortal}
             onUpdateName={handleUpdateName}
+            onOpenHistory={(item) => {
+              setResult(item);
+              setView("result");
+            }}
           />
         ) : (
           <HomeScreen
@@ -687,6 +676,23 @@ function AppInner() {
         )}
 
         {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
+      </View>
+
+      <View style={styles.bottomBar}>
+        <BottomTab
+          icon={Search}
+          label="Analisar"
+          active={view === "home" || view === "result"}
+          onPress={() => {
+            if (view === "result") return;
+            setView("home");
+            setError(null);
+          }}
+        />
+        <BottomTab icon={Star} label="Watch" active={view === "watch"} onPress={() => setView("watch")} />
+        <BottomTab icon={Bell} label="Alertas" active={view === "alerts"} onPress={() => setView("alerts")} />
+        <BottomTab icon={Newspaper} label="Notícias" active={view === "news"} onPress={() => setView("news")} />
+        <BottomTab icon={Menu} label="Menu" active={view === "menu"} onPress={() => setView("menu")} />
       </View>
 
       <ZoneModal
@@ -722,21 +728,21 @@ function AppInner() {
   );
 }
 
-function Tab({
+function BottomTab({
+  icon: Icon,
+  label,
   active,
   onPress,
-  label,
 }: {
+  icon: LucideIcon;
+  label: string;
   active: boolean;
   onPress: () => void;
-  label: string;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.tab, active && { backgroundColor: colors.bgElevated }]}
-    >
-      <Text style={[styles.tabText, active && { color: colors.fg }]}>{label}</Text>
+    <Pressable style={styles.bottomTab} onPress={onPress}>
+      <Icon size={20} color={active ? colors.accent : colors.subtle} strokeWidth={active ? 2.2 : 1.6} />
+      <Text style={[styles.bottomTabLabel, active && { color: colors.accent }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -746,27 +752,29 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 6,
   },
-  brand: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
+  brand: { flexDirection: "row", alignItems: "center", gap: 6 },
   brandText: { fontFamily: fonts.display, fontSize: 16, color: colors.fg },
-  tabs: {
+  body: { flex: 1 },
+  bottomBar: {
     flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 2,
-    flexShrink: 1,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
+    paddingBottom: 2,
   },
-  tab: {
-    height: 28,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+  bottomTab: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 8,
+    gap: 3,
   },
-  tabText: { fontSize: 10, fontWeight: "500", color: colors.muted },
-  body: { flex: 1 },
+  bottomTabLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: colors.subtle,
+  },
 });

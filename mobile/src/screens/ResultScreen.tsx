@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
+import { ChartToolbar, type ChartType } from "../components/ChartToolbar";
 import { OhlcChart } from "../components/OhlcChart";
 import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
@@ -60,6 +61,9 @@ export function ResultScreen({
     DEFAULT_ALERT_RULES.drawdownThresholdPct,
   );
   const [activeTab, setActiveTab] = useState<ResultTab>("paths");
+  const [chartType, setChartType] = useState<ChartType>("candle");
+  const [showSma20, setShowSma20] = useState(true);
+  const [showSma50, setShowSma50] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -214,15 +218,22 @@ export function ResultScreen({
         ) : null}
 
         <View style={[styles.card, { padding: 14, gap: 10 }]}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.eyebrow}>Série recente · OHLC + SMAs</Text>
-            <Text style={[styles.muted, { fontSize: 11 }]}>sem setas de entrada</Text>
-          </View>
+          <ChartToolbar
+            chartType={chartType}
+            onChartType={setChartType}
+            showSma20={showSma20}
+            showSma50={showSma50}
+            onToggleSma20={() => setShowSma20((v) => !v)}
+            onToggleSma50={() => setShowSma50((v) => !v)}
+          />
           <OhlcChart
             data={analysis.chart}
             matches={precedent.chartMatches}
             displayTicker={analysis.displayTicker}
             timeframe={analysis.timeframe}
+            chartType={chartType}
+            showSma20={showSma20}
+            showSma50={showSma50}
           />
         </View>
       </View>
