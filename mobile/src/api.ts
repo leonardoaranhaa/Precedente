@@ -1,5 +1,5 @@
 import { ANALYZE_ENDPOINT, API_BASE_URL } from "./config";
-import type { AnalysisPayload, ApiErrorBody, DexReading, Timeframe, TradedPair } from "./types";
+import type { AnalysisPayload, ApiErrorBody, DexReading, MoversSnapshot, Timeframe, TradedPair } from "./types";
 
 export type AnalyzeRequest = {
   ticker: string;
@@ -44,6 +44,17 @@ export async function fetchTopTraded(limit = 12): Promise<TradedPair[]> {
   }
   const body = (await response.json()) as { pairs?: TradedPair[] };
   return body.pairs ?? [];
+}
+
+/**
+ * Movers 24h — gainers, losers, mais voláteis e top volume.
+ */
+export async function fetchMovers(top = 20): Promise<MoversSnapshot> {
+  const response = await fetch(`${API_BASE_URL}/api/movers?top=${top}`);
+  if (!response.ok) {
+    throw new Error(`Não foi possível ler os movers (status ${response.status}).`);
+  }
+  return (await response.json()) as MoversSnapshot;
 }
 
 /**

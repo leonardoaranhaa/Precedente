@@ -114,6 +114,7 @@ export function OhlcChart({
 
   const pinch = Gesture.Pinch()
     .onStart((e: any) => {
+      "worklet";
       pinchBaseCount.value = countShared.value;
       pinchBaseStart.value = startShared.value;
       const frac = Math.max(0, Math.min(1, e.focalX / chartW));

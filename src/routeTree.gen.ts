@@ -16,6 +16,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiDexRouteImport } from './routes/api/dex'
+import { Route as ApiMoversRouteImport } from './routes/api/movers'
 import { Route as ApiPriceRouteImport } from './routes/api/price'
 import { Route as ApiSparklineRouteImport } from './routes/api/sparkline'
 import { Route as ApiSyncRouteImport } from './routes/api/sync'
@@ -75,6 +76,11 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
 const ApiDexRoute = ApiDexRouteImport.update({
   id: '/api/dex',
   path: '/api/dex',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMoversRoute = ApiMoversRouteImport.update({
+  id: '/api/movers',
+  path: '/api/movers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPriceRoute = ApiPriceRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/movers': typeof ApiMoversRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/movers': typeof ApiMoversRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/movers': typeof ApiMoversRoute
   '/api/price': typeof ApiPriceRoute
   '/api/sparkline': typeof ApiSparklineRoute
   '/api/sync': typeof ApiSyncRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/movers'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/movers'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/movers'
     | '/api/price'
     | '/api/sparkline'
     | '/api/sync'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiDexRoute: typeof ApiDexRoute
+  ApiMoversRoute: typeof ApiMoversRoute
   ApiPriceRoute: typeof ApiPriceRoute
   ApiSparklineRoute: typeof ApiSparklineRoute
   ApiSyncRoute: typeof ApiSyncRoute
@@ -497,6 +510,13 @@ declare module '@tanstack/react-router' {
       path: '/api/dex'
       fullPath: '/api/dex'
       preLoaderRoute: typeof ApiDexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/movers': {
+      id: '/api/movers'
+      path: '/api/movers'
+      fullPath: '/api/movers'
+      preLoaderRoute: typeof ApiMoversRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/price': {
@@ -685,6 +705,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiDexRoute: ApiDexRoute,
+  ApiMoversRoute: ApiMoversRoute,
   ApiPriceRoute: ApiPriceRoute,
   ApiSparklineRoute: ApiSparklineRoute,
   ApiSyncRoute: ApiSyncRoute,
@@ -714,12 +735,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

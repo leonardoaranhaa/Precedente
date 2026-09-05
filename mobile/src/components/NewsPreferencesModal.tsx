@@ -81,8 +81,8 @@ export function NewsPreferencesModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
             <Text style={styles.title}>Preferências de notícias</Text>
             <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Fechar">
@@ -143,8 +143,8 @@ export function NewsPreferencesModal({
               </Pressable>
             </ScrollView>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

@@ -58,8 +58,8 @@ export function ZoneModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Zona de alerta</Text>
@@ -162,8 +162,8 @@ export function ZoneModal({
           <Pressable style={styles.saveBtn} onPress={save}>
             <Text style={styles.saveBtnText}>Salvar zona</Text>
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

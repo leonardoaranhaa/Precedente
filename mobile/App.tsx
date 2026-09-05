@@ -31,6 +31,7 @@ import {
   syncPushSubscription,
 } from "./src/notifications";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
+import { CoinBookScreen } from "./src/screens/CoinBookScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { MenuScreen } from "./src/screens/MenuScreen";
 import { NewsScreen } from "./src/screens/NewsScreen";
@@ -61,10 +62,10 @@ import {
 } from "./src/watchlist";
 import { ZoneModal } from "./src/components/ZoneModal";
 import { NewsPreferencesModal } from "./src/components/NewsPreferencesModal";
-import { Bell, Menu, Newspaper, Search, Star } from "lucide-react-native";
+import { Bell, BarChart3, Menu, Search, Star } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 
-type Screen = "home" | "result" | "watch" | "alerts" | "news" | "menu";
+type Screen = "home" | "result" | "watch" | "alerts" | "news" | "menu" | "market";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -633,6 +634,13 @@ function AppInner() {
             onRequestPermission={() => void handleRequestPermission()}
             onScanNow={() => void handleScanNow()}
           />
+        ) : view === "market" ? (
+          <CoinBookScreen
+            onSelectTicker={(base) => {
+              setTicker(base);
+              setView("home");
+            }}
+          />
         ) : view === "news" ? (
           <NewsScreen
             signedIn={Boolean(user)}
@@ -689,10 +697,10 @@ function AppInner() {
             setError(null);
           }}
         />
+        <BottomTab icon={BarChart3} label="Mercado" active={view === "market"} onPress={() => setView("market")} />
         <BottomTab icon={Star} label="Watch" active={view === "watch"} onPress={() => setView("watch")} />
         <BottomTab icon={Bell} label="Alertas" active={view === "alerts"} onPress={() => setView("alerts")} />
-        <BottomTab icon={Newspaper} label="Notícias" active={view === "news"} onPress={() => setView("news")} />
-        <BottomTab icon={Menu} label="Menu" active={view === "menu"} onPress={() => setView("menu")} />
+        <BottomTab icon={Menu} label="Menu" active={view === "menu" || view === "news"} onPress={() => setView("menu")} />
       </View>
 
       <ZoneModal
