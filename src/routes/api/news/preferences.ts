@@ -12,11 +12,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authCorsHeaders } from "@/lib/cors";
+
+const CORS_HEADERS = authCorsHeaders("GET, POST, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

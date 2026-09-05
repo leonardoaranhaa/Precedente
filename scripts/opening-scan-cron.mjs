@@ -16,7 +16,7 @@ async function main() {
   console.log(`[opening-scan-cron] POST ${url}`);
   const headers = { "Content-Type": "application/json" };
   if (secret) headers["X-Cron-Secret"] = secret;
-  const res = await fetch(url, { method: "POST", headers, body: "{}" });
+  const res = await fetch(url, { method: "POST", headers, body: "{}", signal: AbortSignal.timeout(30_000) });
   const text = await res.text();
   let body;
   try { body = JSON.parse(text); } catch { body = { raw: text }; }

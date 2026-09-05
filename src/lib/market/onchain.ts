@@ -80,6 +80,7 @@ async function fetchDerivativesUnguarded(symbol: string): Promise<DerivResult> {
     }
 
     const fundingRate = Number(premium.lastFundingRate);
+    if (!Number.isFinite(fundingRate)) continue;
     const markPrice = premium.markPrice != null ? Number(premium.markPrice) : null;
     const nextFundingTime =
       typeof premium.nextFundingTime === "number" ? premium.nextFundingTime : null;
@@ -89,7 +90,10 @@ async function fetchDerivativesUnguarded(symbol: string): Promise<DerivResult> {
         `${base}/fapi/v1/openInterest?symbol=${encodeURIComponent(symbol)}`,
         DERIV_TIMEOUT_MS,
       );
-      if (oi?.openInterest != null) openInterest = Number(oi.openInterest);
+      if (oi?.openInterest != null) {
+        const parsed = Number(oi.openInterest);
+        if (Number.isFinite(parsed)) openInterest = parsed;
+      }
     } catch {
       // OI é secundário — funding sozinho já é um dado útil.
     }

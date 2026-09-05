@@ -8,7 +8,7 @@ import { analyzeSeries } from "./market/precedent";
 import type { AnalysisPayload, Timeframe, VisionReading } from "./market/types";
 import { TIMEFRAMES } from "./market/types";
 import { opus5CostUsd } from "./anthropic-cost";
-import { billingGatesEnabled, PremiumRequiredError } from "./billing/plan-limits";
+import { billingGatesEnabled } from "./billing/plan-limits";
 import { sanePatternRegion } from "./pattern-region";
 
 type AnalyzeInput = {
@@ -178,22 +178,21 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   // ESTÁTICO de propósito: módulo puro, já importado estaticamente em rotas e
   // componentes, então tem que continuar estático em todo lugar.
   let visionQuota: AnalysisPayload["visionQuota"] = null;
+  let earlyVisionError: string | null = null;
   if (data.imageDataUrl) {
-    if (billingGatesEnabled()) {
-      const { getSessionUser } = await import("./auth/verify.server");
+    const { getSessionUser } = await import("./auth/verify.server");
+    const session = await getSessionUser();
+    if (!session?.id) {
+      earlyVisionError =
+        "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota.";
+      data.imageDataUrl = null;
+    } else if (billingGatesEnabled()) {
       const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
       const {
         getVisionCountToday,
         incrementVisionCount,
         getVisionQuotaSnapshot,
       } = await import("./billing/vision-quota");
-      const session = await getSessionUser();
-      if (!session?.id) {
-        throw new PremiumRequiredError(
-          "vision",
-          "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
-        );
-      }
       const { isPremium } = await assertPremiumFeatureForUser(session.id, "vision", {
         visionCountToday: getVisionCountToday(session.id),
       });
@@ -257,7 +256,7 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
               : "Não foi possível ler o print.",
           visionCostUsd: 0,
         }))
-    : Promise.resolve({ vision: null, visionError: null, visionCostUsd: 0 });
+    : Promise.resolve({ vision: null, visionError: earlyVisionError, visionCostUsd: 0 });
 
   const [visionPart, onchain, newsContext] = await Promise.all([
     visionPromise,

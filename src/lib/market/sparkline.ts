@@ -39,7 +39,7 @@ async function fetchFromBase(base: string, symbol: string, interval: Timeframe):
   if (!Array.isArray(raw)) {
     throw new Error("Resposta inesperada da Binance.");
   }
-  return raw.map((row) => Number(row[4]));
+  return raw.map((row) => Number(row[4])).filter(Number.isFinite);
 }
 
 async function fetchSparklineUnguarded(symbol: string, interval: Timeframe): Promise<number[]> {
