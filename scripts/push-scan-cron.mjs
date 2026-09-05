@@ -52,7 +52,7 @@ async function callEndpoint(label, path) {
 
   let res;
   try {
-    res = await fetch(url, { method: "POST", headers, body: "{}" });
+    res = await fetch(url, { method: "POST", headers, body: "{}", signal: AbortSignal.timeout(30_000) });
   } catch (err) {
     console.error(`[${label}] rede:`, err?.message ?? err);
     return false;

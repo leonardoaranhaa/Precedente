@@ -14,11 +14,9 @@ import { reportServerError } from "@/lib/sentry.server";
  * login + assinatura premium ativa desde já — é a rota mais cara do app
  * (Sonnet + até 4 buscas web reais por chamada).
  */
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authCorsHeaders } from "@/lib/cors";
+
+const CORS_HEADERS = authCorsHeaders("POST, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

@@ -2,12 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { openBillingPortalFor } from "@/lib/billing/checkout";
 import { requireUserId, UnauthorizedError } from "@/lib/auth/verify.server";
 import { reportServerError } from "@/lib/sentry.server";
+import { authCorsHeaders } from "@/lib/cors";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const CORS_HEADERS = authCorsHeaders("POST, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

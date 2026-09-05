@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DEFAULT_ALERT_RULES, MAX_DEX_WATCHES, type AlertRules, type WatchTarget } from "@/lib/push/types";
 import { sanitizeDexTicker } from "@/lib/push/sanitize";
-import { removeSubscription, subscriptionCount, upsertSubscription } from "@/lib/push/store";
+import { getSubscription, removeSubscription, subscriptionCount, upsertSubscription } from "@/lib/push/store";
 import { TIMEFRAMES, type Timeframe } from "@/lib/market/types";
 import { normalizeTicker } from "@/lib/market/labels";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
@@ -18,11 +18,9 @@ const RATE_WINDOW_MS = 5 * 60 * 1000;
 
 const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authCorsHeaders } from "@/lib/cors";
+
+const CORS_HEADERS = authCorsHeaders("POST, DELETE, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -174,6 +172,15 @@ export const Route = createFileRoute("/api/push/register")({
           typeof (body as { token?: string }).token === "string"
             ? (body as { token: string }).token
             : "";
+
+        const existing = await getSubscription(token);
+        if (existing?.userId) {
+          const session = await getSessionUser();
+          if (!session || session.id !== existing.userId) {
+            return json({ error: "Não autorizado a remover esta subscription." }, 403);
+          }
+        }
+
         await removeSubscription(token);
         return json({ ok: true, subscribers: await subscriptionCount() });
       },

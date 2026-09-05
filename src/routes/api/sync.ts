@@ -11,11 +11,9 @@ import { PremiumQuotaError, PremiumRequiredError } from "@/lib/billing/plan-limi
  * o mesmo token que a Better Auth já devolve no login/cadastro (plugin
  * `bearer()`, já registrado em src/lib/auth/server.ts).
  */
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authCorsHeaders } from "@/lib/cors";
+
+const CORS_HEADERS = authCorsHeaders("GET, POST, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

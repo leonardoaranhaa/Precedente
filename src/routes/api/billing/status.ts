@@ -1,12 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getEntitlement, isEntitlementActive } from "@/lib/billing/entitlements";
 import { requireUserId, UnauthorizedError } from "@/lib/auth/verify.server";
+import { authCorsHeaders } from "@/lib/cors";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const CORS_HEADERS = authCorsHeaders("GET, OPTIONS");
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

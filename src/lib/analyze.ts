@@ -179,21 +179,21 @@ export async function runAnalysis(data: AnalyzeInput): Promise<AnalysisPayload> 
   // componentes, então tem que continuar estático em todo lugar.
   let visionQuota: AnalysisPayload["visionQuota"] = null;
   if (data.imageDataUrl) {
+    const { getSessionUser } = await import("./auth/verify.server");
+    const session = await getSessionUser();
+    if (!session?.id) {
+      throw new PremiumRequiredError(
+        "vision",
+        "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
+      );
+    }
     if (billingGatesEnabled()) {
-      const { getSessionUser } = await import("./auth/verify.server");
       const { assertPremiumFeatureForUser } = await import("./billing/assert-premium.server");
       const {
         getVisionCountToday,
         incrementVisionCount,
         getVisionQuotaSnapshot,
       } = await import("./billing/vision-quota");
-      const session = await getSessionUser();
-      if (!session?.id) {
-        throw new PremiumRequiredError(
-          "vision",
-          "Entre na sua conta para usar a leitura de print. No plano gratuito há cota diária limitada; Premium amplia essa cota. Não é recomendação de compra ou venda.",
-        );
-      }
       const { isPremium } = await assertPremiumFeatureForUser(session.id, "vision", {
         visionCountToday: getVisionCountToday(session.id),
       });

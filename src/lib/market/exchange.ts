@@ -31,14 +31,15 @@ type Kline = [
 ];
 
 function parseKline(row: Kline): Candle {
-  return {
-    t: row[0],
-    o: Number(row[1]),
-    h: Number(row[2]),
-    l: Number(row[3]),
-    c: Number(row[4]),
-    v: Number(row[5]),
-  };
+  const o = Number(row[1]);
+  const h = Number(row[2]);
+  const l = Number(row[3]);
+  const c = Number(row[4]);
+  const v = Number(row[5]);
+  if (!Number.isFinite(o) || !Number.isFinite(h) || !Number.isFinite(l) || !Number.isFinite(c)) {
+    throw new Error(`Kline corrompida da Binance (NaN em OHLC): t=${row[0]}`);
+  }
+  return { t: row[0], o, h, l, c, v: Number.isFinite(v) ? v : 0 };
 }
 
 async function fetchPage(

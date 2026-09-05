@@ -11,6 +11,7 @@ export type WeeklyRiskCounts = {
   rsi_zone: number;
   funding_extreme: number;
   volume_anomaly: number;
+  dex_drain: number;
 };
 
 export const EMPTY_WEEKLY: WeeklyRiskCounts = {
@@ -22,6 +23,7 @@ export const EMPTY_WEEKLY: WeeklyRiskCounts = {
   rsi_zone: 0,
   funding_extreme: 0,
   volume_anomaly: 0,
+  dex_drain: 0,
 };
 
 const LABELS: Record<keyof WeeklyRiskCounts, string> = {
@@ -33,6 +35,7 @@ const LABELS: Record<keyof WeeklyRiskCounts, string> = {
   rsi_zone: "zona de RSI",
   funding_extreme: "funding elevado",
   volume_anomaly: "volume anômalo",
+  dex_drain: "drenagem DEX",
 };
 
 export function countRiskFromLastSent(

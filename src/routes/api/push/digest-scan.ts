@@ -3,11 +3,9 @@ import { scanWatchDigests } from "@/lib/push/digest-scan";
 import { dbSource } from "@/lib/db";
 import { reportServerError } from "@/lib/sentry.server";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Cron-Secret",
-};
+import { cronCorsHeaders } from "@/lib/cors";
+
+const CORS_HEADERS = cronCorsHeaders();
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

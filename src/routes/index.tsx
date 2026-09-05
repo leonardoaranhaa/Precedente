@@ -82,6 +82,7 @@ function Home() {
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
 
+  const runIdRef = useRef(0);
   const watchRef = useRef(watch);
   const refreshingAllRef = useRef(refreshingAll);
   const refreshAllFnRef = useRef<() => void>(() => {});
@@ -171,6 +172,7 @@ function Home() {
   }, []);
 
   async function run() {
+    const thisRunId = ++runIdRef.current;
     setError(null);
     setDexReading(null);
     setBusy(true);
@@ -185,6 +187,7 @@ function Home() {
           imageDataUrl: image,
         },
       });
+      if (runIdRef.current !== thisRunId) return;
       const thumb = image ? await makeThumb(image) : null;
       const stored: StoredAnalysis = {
         ...payload,
@@ -200,13 +203,14 @@ function Home() {
       setStep("done");
       setView("result");
     } catch (err) {
+      if (runIdRef.current !== thisRunId) return;
       const message = err instanceof Error ? err.message : "Não foi possível concluir a análise.";
       setError(cleanError(message));
       if (isNotListed(message)) void loadDexReading(ticker);
     } finally {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
-      setBusy(false);
+      if (runIdRef.current === thisRunId) setBusy(false);
     }
   }
 
@@ -234,6 +238,7 @@ function Home() {
     if (view !== "result" || !result) return;
     if (tf === result.timeframe) return;
 
+    const thisRunId = ++runIdRef.current;
     const target = result.ticker;
     setError(null);
     setBusy(true);
@@ -243,6 +248,7 @@ function Home() {
       const payload = await analyzeSetup({
         data: { ticker: target, timeframe: tf, imageDataUrl: null },
       });
+      if (runIdRef.current !== thisRunId) return;
       const stored: StoredAnalysis = {
         ...payload,
         id: crypto.randomUUID(),
@@ -256,11 +262,12 @@ function Home() {
       touchFocus(`${stored.ticker}:${stored.timeframe}`);
       setStep("done");
     } catch (err) {
+      if (runIdRef.current !== thisRunId) return;
       const message = err instanceof Error ? err.message : "Não foi possível concluir a análise.";
       setError(cleanError(message));
     } finally {
       window.clearTimeout(t1);
-      setBusy(false);
+      if (runIdRef.current === thisRunId) setBusy(false);
     }
   }
 
