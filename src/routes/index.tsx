@@ -10,6 +10,7 @@ import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { NewsPanel } from "@/components/news-panel";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { ResultSkeleton } from "@/components/result-skeleton";
 import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -37,6 +38,7 @@ import {
   upsertWatch,
   type WatchItem,
 } from "@/lib/watchlist";
+import { loadRecentSearches, pushRecentSearch } from "@/lib/recent-searches";
 import { cn } from "@/lib/utils";
 import { getSyncData, setSyncData } from "@/lib/sync";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -81,6 +83,8 @@ function Home() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [autoRefreshMin, setAutoRefreshMin] = useState<WatchRefreshMinutes>(0);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showRecent, setShowRecent] = useState(false);
 
   const runIdRef = useRef(0);
   const watchRef = useRef(watch);
@@ -93,6 +97,7 @@ function Home() {
     setHistory(loadHistory());
     setWatch(loadWatchlist());
     setAutoRefreshMin(loadWatchRefreshMinutes());
+    setRecentSearches(loadRecentSearches());
   }, []);
 
   // Sincronização opcional: só entra em ação com login. Sem conta, tudo
@@ -197,6 +202,7 @@ function Home() {
         thumb,
       };
       setResult(stored);
+      setRecentSearches(pushRecentSearch(stored.displayTicker.split("/")[0] ?? stored.ticker));
       setHistory((h) => pushHistory(h, stored));
       setWatch((w) => (isWatched(w, stored) ? upsertWatch(w, stored) : w));
       touchFocus(`${stored.ticker}:${stored.timeframe}`);
@@ -425,24 +431,48 @@ function Home() {
             <span className="font-display text-xl tracking-tight">Precedente</span>
           </button>
           <div className="flex flex-wrap items-center gap-2">
-            <form
-              className="hidden items-center gap-1.5 rounded-md bg-surface px-2.5 shadow-[var(--shadow-border)] sm:flex"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (busy || !ticker.trim()) return;
-                setView("home");
-                void run();
-              }}
-            >
-              <Search className="size-3.5 shrink-0 text-subtle" />
-              <input
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
-                placeholder="BTC, ETHUSDT…"
-                disabled={busy}
-                className="h-9 w-32 bg-transparent font-mono text-xs uppercase text-fg placeholder:text-subtle placeholder:normal-case focus:outline-none disabled:opacity-50"
-              />
-            </form>
+            <div className="relative hidden sm:block">
+              <form
+                className="flex items-center gap-1.5 rounded-md bg-surface px-2.5 shadow-[var(--shadow-border)]"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (busy || !ticker.trim()) return;
+                  setShowRecent(false);
+                  setView("home");
+                  void run();
+                }}
+              >
+                <Search className="size-3.5 shrink-0 text-subtle" />
+                <input
+                  value={ticker}
+                  onChange={(e) => setTicker(e.target.value)}
+                  onFocus={() => recentSearches.length > 0 && setShowRecent(true)}
+                  onBlur={() => setTimeout(() => setShowRecent(false), 150)}
+                  placeholder="BTC, ETHUSDT…"
+                  disabled={busy}
+                  className="h-9 w-32 bg-transparent font-mono text-xs uppercase text-fg placeholder:text-subtle placeholder:normal-case focus:outline-none disabled:opacity-50"
+                />
+              </form>
+              {showRecent && recentSearches.length > 0 ? (
+                <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-border bg-surface py-1 shadow-lg">
+                  <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted">Recentes</p>
+                  {recentSearches.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="flex w-full items-center px-3 py-1.5 text-left font-mono text-xs text-fg hover:bg-bg-elevated"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setTicker(t);
+                        setShowRecent(false);
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             <div
               className="hidden items-center gap-0.5 rounded-md bg-surface p-1 shadow-[var(--shadow-border)] font-mono sm:flex"
@@ -637,7 +667,10 @@ function Home() {
                   <RiskLogPanel />
 
                   {busy ? (
-                    <Pipeline step={step} hasImage={Boolean(image)} />
+                    <div className="space-y-4">
+                      <Pipeline step={step} hasImage={Boolean(image)} />
+                      <ResultSkeleton />
+                    </div>
                   ) : (
                     <AnalyzeForm
                       ticker={ticker}

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
+  Check,
+  Copy,
   Eye,
   Loader2,
   Maximize2,
+  Share2,
   Star,
   TrendingDown,
   TrendingUp,
@@ -38,6 +41,7 @@ import {
 } from "@/lib/market/types";
 import { DEFAULT_ALERT_RULES } from "@/lib/push/types";
 import { recordRiskEvents } from "@/lib/risk-log";
+import { copyAnalysis, shareAnalysis } from "@/lib/export-analysis";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -65,6 +69,7 @@ export function AnalysisResult({
     Math.min(1, Math.max(0, precedent.horizons.length - 1)),
   );
   const [printOpen, setPrintOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const h10 = precedent.horizons.find((h) => h.bars === 10) ?? precedent.horizons[1];
@@ -143,6 +148,36 @@ export function AnalysisResult({
               >
                 <Star className={cn("size-3.5", watched && "fill-current")} />
                 {watched ? "Na watch" : "+ Watch"}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={reanalyzing}
+              className="gap-1.5"
+              onClick={async () => {
+                const ok = await copyAnalysis(analysis);
+                if (ok) {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }
+              }}
+            >
+              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copied ? "Copiado" : "Copiar"}
+            </Button>
+            {typeof navigator !== "undefined" && typeof navigator.share === "function" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={reanalyzing}
+                className="gap-1.5"
+                onClick={() => void shareAnalysis(analysis)}
+              >
+                <Share2 className="size-3.5" />
+                Enviar
               </Button>
             ) : null}
           </div>
