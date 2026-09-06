@@ -32,6 +32,7 @@ import {
 } from "./src/notifications";
 import { AlertsScreen } from "./src/screens/AlertsScreen";
 import { CoinBookScreen } from "./src/screens/CoinBookScreen";
+import { DailySummaryScreen } from "./src/screens/DailySummaryScreen";
 import { HomeScreen, type PickedImage } from "./src/screens/HomeScreen";
 import { MenuScreen } from "./src/screens/MenuScreen";
 import { NewsScreen } from "./src/screens/NewsScreen";
@@ -65,7 +66,7 @@ import { NewsPreferencesModal } from "./src/components/NewsPreferencesModal";
 import { Bell, BarChart3, Menu, Search, Star } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 
-type Screen = "home" | "result" | "watch" | "alerts" | "news" | "menu" | "market";
+type Screen = "home" | "result" | "watch" | "alerts" | "news" | "menu" | "market" | "summary";
 
 // Espera de inatividade antes de sincronizar watch/history com o servidor —
 // absorve rajadas de mudanças (ex.: "Reavaliar todos") numa única escrita.
@@ -647,6 +648,14 @@ function AppInner() {
             refreshKey={newsRefreshKey}
             onOpenPreferences={() => setNewsPrefsOpen(true)}
           />
+        ) : view === "summary" ? (
+          <DailySummaryScreen
+            watchItems={watch}
+            onBack={() => setView("home")}
+            onOpenWatch={(item) => {
+              openFromWatch(item);
+            }}
+          />
         ) : view === "menu" ? (
           <MenuScreen
             user={user}
@@ -663,6 +672,7 @@ function AppInner() {
               setResult(item);
               setView("result");
             }}
+            onOpenSummary={() => setView("summary")}
           />
         ) : (
           <HomeScreen
