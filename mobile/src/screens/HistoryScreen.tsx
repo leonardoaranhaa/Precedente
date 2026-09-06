@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -17,6 +18,7 @@ import {
   Clock,
   Minus,
   Search,
+  Trash2,
   X,
 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
@@ -45,10 +47,14 @@ export function HistoryScreen({
   items,
   signedIn,
   onOpen,
+  onDelete,
+  onClearAll,
 }: {
   items: StoredAnalysis[];
   signedIn: boolean;
   onOpen: (item: StoredAnalysis) => void;
+  onDelete?: (id: string) => void;
+  onClearAll?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [tfFilter, setTfFilter] = useState<TfFilter>(TF_ALL);
@@ -115,12 +121,34 @@ export function HistoryScreen({
   return (
     <View style={s.wrapper}>
       <View style={s.headerArea}>
-        <Text style={s.title}>Histórico</Text>
-        <Text style={s.countHint}>
-          {hasFilters
-            ? `${filtered.length} de ${items.length}`
-            : `${items.length} análises`}
-        </Text>
+        <View style={s.titleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.title}>Histórico</Text>
+            <Text style={s.countHint}>
+              {hasFilters
+                ? `${filtered.length} de ${items.length}`
+                : `${items.length} análises`}
+            </Text>
+          </View>
+          {onClearAll && items.length > 0 ? (
+            <Pressable
+              style={s.clearAllBtn}
+              onPress={() =>
+                Alert.alert(
+                  "Limpar histórico",
+                  `Apagar ${items.length} análise${items.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`,
+                  [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Apagar tudo", style: "destructive", onPress: onClearAll },
+                  ],
+                )
+              }
+            >
+              <Trash2 size={13} color={colors.down} />
+              <Text style={s.clearAllText}>Limpar tudo</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         {/* Search bar */}
         <View style={s.searchRow}>
@@ -216,42 +244,54 @@ export function HistoryScreen({
             const dirColor =
               sig.dir === "up" ? colors.up : sig.dir === "down" ? colors.down : colors.subtle;
             return (
-              <Pressable style={s.row} onPress={() => onOpen(item)}>
-                {item.thumbUri ? (
-                  <Image source={{ uri: item.thumbUri }} style={s.thumb} />
-                ) : (
-                  <View style={s.thumbFallback}>
-                    <Text style={s.thumbFallbackText}>
-                      {item.displayTicker.split("/")[0]}
-                    </Text>
-                  </View>
-                )}
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={s.titleRow}>
-                    <Text style={s.rowTitle} numberOfLines={1}>
-                      {item.displayTicker}
-                      <Text style={s.mutedText}>
-                        {" "}
-                        · {timeframeLabel(item.timeframe)}
+              <View style={s.row}>
+                <Pressable style={s.rowMain} onPress={() => onOpen(item)}>
+                  {item.thumbUri ? (
+                    <Image source={{ uri: item.thumbUri }} style={s.thumb} />
+                  ) : (
+                    <View style={s.thumbFallback}>
+                      <Text style={s.thumbFallbackText}>
+                        {item.displayTicker.split("/")[0]}
                       </Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={s.rowTitleInner}>
+                      <Text style={s.rowTitle} numberOfLines={1}>
+                        {item.displayTicker}
+                        <Text style={s.mutedText}>
+                          {" "}
+                          · {timeframeLabel(item.timeframe)}
+                        </Text>
+                      </Text>
+                      <Badge
+                        label={item.precedent.sampleNote.toUpperCase()}
+                        accent={item.precedent.sampleNote === "ok"}
+                        warn={item.precedent.sampleNote !== "ok"}
+                      />
+                    </View>
+                    <Text style={s.subtitle}>
+                      {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
                     </Text>
-                    <Badge
-                      label={item.precedent.sampleNote.toUpperCase()}
-                      accent={item.precedent.sampleNote === "ok"}
-                      warn={item.precedent.sampleNote !== "ok"}
-                    />
                   </View>
-                  <Text style={s.subtitle}>
-                    {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
-                  </Text>
-                </View>
-                <View style={s.signal}>
-                  <DirIcon size={14} color={dirColor} />
-                  <Text style={[s.signalPct, { color: dirColor }]}>
-                    {formatPct(sig.pct, 1)}
-                  </Text>
-                </View>
-              </Pressable>
+                  <View style={s.signal}>
+                    <DirIcon size={14} color={dirColor} />
+                    <Text style={[s.signalPct, { color: dirColor }]}>
+                      {formatPct(sig.pct, 1)}
+                    </Text>
+                  </View>
+                </Pressable>
+                {onDelete ? (
+                  <Pressable
+                    style={s.deleteBtn}
+                    onPress={() => onDelete(item.id)}
+                    hitSlop={8}
+                    accessibilityLabel={`Remover ${item.displayTicker}`}
+                  >
+                    <Trash2 size={14} color={colors.subtle} />
+                  </Pressable>
+                ) : null}
+              </View>
             );
           }}
         />
@@ -397,14 +437,38 @@ const s = StyleSheet.create({
     color: colors.accent,
     textDecorationLine: "underline",
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  clearAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: "rgba(193,123,106,0.12)",
+    marginTop: 4,
+  },
+  clearAllText: { fontSize: 11, fontWeight: "500", color: colors.down },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: 12,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 4,
   },
+  rowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  deleteBtn: { padding: 8 },
   thumb: { width: 52, height: 52, borderRadius: radius.sm },
   thumbFallback: {
     width: 52,
@@ -415,7 +479,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   thumbFallbackText: { fontSize: 11, color: colors.muted },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  rowTitleInner: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowTitle: { fontSize: 14, fontWeight: "500", color: colors.fg, flex: 1 },
   mutedText: { color: colors.muted, fontWeight: "400" },
   subtitle: { fontSize: 12, color: colors.muted },

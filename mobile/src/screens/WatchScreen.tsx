@@ -134,6 +134,8 @@ export function WatchScreen({
       data={viewMode === "heatmap" ? [] : visible}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
+      refreshing={refreshingAll}
+      onRefresh={onRefreshAll}
       ListHeaderComponent={
         <View>
           {onOpenDex && onUnpinDex ? (
