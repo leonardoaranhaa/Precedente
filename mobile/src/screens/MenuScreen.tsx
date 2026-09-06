@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import {
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -38,6 +39,7 @@ export function MenuScreen({
   onManage,
   onUpdateName,
   onOpenHistory,
+  onOpenSummary,
 }: {
   user: AuthUser | null;
   busy: boolean;
@@ -50,10 +52,22 @@ export function MenuScreen({
   onManage: () => Promise<{ url: string } | { error: string }>;
   onUpdateName: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   onOpenHistory: (item: StoredAnalysis) => void;
+  onOpenSummary: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.screenTitle}>Menu</Text>
+
+      <Pressable style={styles.card} onPress={onOpenSummary}>
+        <View style={styles.menuRow}>
+          <CalendarDays size={18} color={colors.warn} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuRowLabel}>Resumo diário</Text>
+            <Text style={styles.menuRowHint}>Watch + notícias + movers num só lugar</Text>
+          </View>
+          <ChevronRight size={16} color={colors.subtle} />
+        </View>
+      </Pressable>
 
       <SectionLabel label="CONTA" />
       <AccountSection
