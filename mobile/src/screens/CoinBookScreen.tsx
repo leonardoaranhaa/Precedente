@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { ArrowDownRight, ArrowUpRight, Minus, RefreshCw, Search, Sparkles, X } from "lucide-react-native";
 import { fetchMovers, fetchNewListings, fetchTopTraded } from "../api";
+import { SkeletonRow } from "../components/Skeleton";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import type { MoverRow, MoversSnapshot, NewListingRow, NewListingsSnapshot, TradedPair } from "../types";
@@ -244,9 +245,10 @@ export function CoinBookScreen({
       </View>
 
       {loading && rows.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loadingText}>Carregando mercado...</Text>
+        <View style={styles.skeletonWrap}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
         </View>
       ) : error && rows.length === 0 ? (
         <View style={styles.center}>
@@ -405,6 +407,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     gap: 12,
   },
+  skeletonWrap: { paddingHorizontal: 14, paddingVertical: 12, gap: 4 },
   loadingText: { fontSize: 13, color: colors.muted, marginTop: 8 },
   errorText: { fontSize: 13, color: colors.down, textAlign: "center", paddingHorizontal: 24 },
   retryBtn: {
