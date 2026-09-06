@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { analyze, fetchDexReading, fetchTopTraded } from "./src/api";
@@ -584,6 +584,7 @@ function AppInner() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.header}>
         <Pressable
           style={styles.brand}
@@ -798,6 +799,7 @@ function AppInner() {
         pinned={dexPinned}
         onTogglePin={() => void toggleDexPin()}
       />
+      </Pressable>
     </SafeAreaView>
   );
 }
