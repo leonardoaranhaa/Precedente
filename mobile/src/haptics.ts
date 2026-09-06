@@ -33,6 +33,11 @@ export function hapticCrosshairTick(): void {
   void safe(() => Haptics.selectionAsync());
 }
 
+/** Troca de aba no bottom bar — selection feedback, quase imperceptível. */
+export function hapticTabSwitch(): void {
+  void safe(() => Haptics.selectionAsync());
+}
+
 const ZONE_KINDS = new Set(["price_zone", "rsi_zone"]);
 
 /** Escolhe o haptic certo a partir do `kind` que vem no payload do push (ver src/lib/push/expo-send.ts). */

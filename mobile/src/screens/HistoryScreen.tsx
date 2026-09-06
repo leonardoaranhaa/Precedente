@@ -22,13 +22,13 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronUp,
-  Clock,
   Minus,
   Search,
   Trash2,
   X,
 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
+import { EmptyState } from "../components/EmptyState";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import { formatPct, formatWhen, timeframeLabel } from "../format";
@@ -104,15 +104,15 @@ export function HistoryScreen({
 
   if (items.length === 0) {
     return (
-      <View style={s.empty}>
-        <Clock size={22} color={colors.subtle} />
-        <Text style={s.emptyTitle}>Nenhuma análise ainda.</Text>
-        <Text style={s.emptyHint}>
-          {signedIn
+      <EmptyState
+        variant="history"
+        title="Nenhuma análise ainda."
+        hint={
+          signedIn
             ? "Suas análises sincronizam com sua conta entre aparelhos."
-            : "As análises ficam neste aparelho. Entre na sua conta pra sincronizar."}
-        </Text>
-      </View>
+            : "As análises ficam neste aparelho. Entre na sua conta pra sincronizar."
+        }
+      />
     );
   }
 
@@ -458,13 +458,6 @@ const s = StyleSheet.create({
   },
   sortLabel: { fontSize: 11, fontWeight: "600", color: colors.subtle },
   list: { padding: 16, paddingTop: 8, gap: 6, paddingBottom: 40 },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 80,
-  },
   emptyFilter: {
     alignItems: "center",
     justifyContent: "center",
@@ -472,12 +465,6 @@ const s = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyTitle: { fontSize: 14, color: colors.muted },
-  emptyHint: {
-    fontSize: 12,
-    color: colors.subtle,
-    textAlign: "center",
-    maxWidth: 260,
-  },
   clearLink: {
     fontSize: 13,
     color: colors.accent,
