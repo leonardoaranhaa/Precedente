@@ -710,6 +710,19 @@ function AppInner() {
             step={step}
             error={error}
             topTraded={topTraded}
+            recentPairs={(() => {
+              const seen = new Set<string>();
+              const pairs: { base: string; timeframe: Timeframe }[] = [];
+              for (const h of history) {
+                const key = `${h.ticker}:${h.timeframe}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  pairs.push({ base: h.displayTicker.split("/")[0], timeframe: h.timeframe });
+                  if (pairs.length >= 6) break;
+                }
+              }
+              return pairs;
+            })()}
             onTicker={setTicker}
             onTimeframe={setTimeframe}
             onImage={setImage}
