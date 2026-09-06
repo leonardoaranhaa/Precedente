@@ -8,9 +8,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
+import { Grid3x3, List, RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { DexWatchlistSection } from "../components/DexWatchlistSection";
+import { WatchHeatmap } from "../components/WatchHeatmap";
+import { WatchComparator } from "../components/WatchComparator";
 import { colors, radius } from "../theme";
 import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from "../format";
 import {
@@ -73,6 +75,7 @@ export function WatchScreen({
   const [tab, setTab] = useState<WatchTab>("mine");
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
   const [tfFilter, setTfFilter] = useState<WatchTfFilter>(WATCH_TF_FILTER_ALL);
+  const [viewMode, setViewMode] = useState<"list" | "heatmap">("list");
 
   const visible = useMemo(() => {
     let out = filterByTab(items, tab, focusIds);
@@ -102,7 +105,7 @@ export function WatchScreen({
 
   return (
     <FlatList
-      data={visible}
+      data={viewMode === "heatmap" ? [] : visible}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       ListHeaderComponent={
@@ -225,15 +228,39 @@ export function WatchScreen({
             ))}
           </ScrollView>
 
-          <View style={styles.colHeader}>
-            <Text style={[styles.col, { flex: 1, textAlign: "left" }]}>
-              Par · {visible.length}
-              {visible.length !== items.length ? `/${items.length}` : ""}
-            </Text>
-            <Text style={styles.col}>Δ</Text>
-            <Text style={styles.col}>Amostra</Text>
-            <Text style={styles.col}>DD10</Text>
+          <View style={styles.viewToggle}>
+            <Pressable
+              onPress={() => setViewMode("list")}
+              style={[styles.viewBtn, viewMode === "list" && { backgroundColor: colors.surface }]}
+            >
+              <List size={14} color={viewMode === "list" ? colors.fg : colors.subtle} />
+            </Pressable>
+            <Pressable
+              onPress={() => setViewMode("heatmap")}
+              style={[styles.viewBtn, viewMode === "heatmap" && { backgroundColor: colors.surface }]}
+            >
+              <Grid3x3 size={14} color={viewMode === "heatmap" ? colors.fg : colors.subtle} />
+            </Pressable>
           </View>
+
+          {viewMode === "heatmap" ? (
+            <WatchHeatmap items={visible} onSelect={onOpen} />
+          ) : null}
+
+          {viewMode === "list" ? (
+            <>
+              <WatchComparator items={visible} onSelect={onOpen} />
+              <View style={styles.colHeader}>
+                <Text style={[styles.col, { flex: 1, textAlign: "left" }]}>
+                  Par · {visible.length}
+                  {visible.length !== items.length ? `/${items.length}` : ""}
+                </Text>
+                <Text style={styles.col}>Δ</Text>
+                <Text style={styles.col}>Amostra</Text>
+                <Text style={styles.col}>DD10</Text>
+              </View>
+            </>
+          ) : null}
           </View>
         </View>
       }
@@ -456,4 +483,19 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   iconBtn: { padding: 8 },
+  viewToggle: {
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    padding: 3,
+    alignSelf: "flex-end",
+  },
+  viewBtn: {
+    width: 32,
+    height: 28,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

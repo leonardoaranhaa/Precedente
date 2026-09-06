@@ -15,6 +15,7 @@ import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
 import { SampleBanner } from "../components/SampleBanner";
 import { IntelCard } from "../components/IntelCard";
+import { NewsCard } from "../components/NewsCard";
 import { ScenarioCard } from "../components/ScenarioCard";
 import { TimeframeSwitch } from "../components/TimeframeSwitch";
 import { ResultTabs, type ResultTab } from "../components/ResultTabs";
@@ -96,8 +97,9 @@ export function ResultScreen({
     const tabs: ResultTab[] = ["paths", "risk", "onchain", "scenario"];
     if (hasVision) tabs.push("vision");
     tabs.push("intel");
+    if (analysis.newsContext?.items?.length) tabs.push("news");
     return tabs;
-  }, [hasVision]);
+  }, [hasVision, analysis.newsContext]);
 
   return (
     <View style={styles.root}>
@@ -275,6 +277,9 @@ export function ResultScreen({
         )}
         {activeTab === "intel" && (
           <IntelCard ticker={analysis.ticker} />
+        )}
+        {activeTab === "news" && (
+          <NewsCard newsContext={analysis.newsContext} />
         )}
         <Text style={styles.disclaimer}>
           Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
