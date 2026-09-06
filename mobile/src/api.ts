@@ -90,6 +90,17 @@ export async function fetchExternalIntel(ticker: string): Promise<ExternalIntelR
  * Leitura de fragilidade de um token que vive no DEX. Devolve null quando o
  * token não tem par nenhum — é resposta esperada, não erro.
  */
+export async function fetchSparkline(symbol: string, interval: string): Promise<number[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/sparkline?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`,
+  );
+  if (!response.ok) {
+    throw new Error(`Sparkline indisponível (status ${response.status}).`);
+  }
+  const body = (await response.json()) as { closes: number[] };
+  return body.closes ?? [];
+}
+
 export async function fetchDexReading(ticker: string): Promise<DexReading | null> {
   const response = await fetch(
     `${API_BASE_URL}/api/dex?ticker=${encodeURIComponent(ticker)}`,

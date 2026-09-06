@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,8 +11,10 @@ import {
 import { Grid3x3, List, RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { DexWatchlistSection } from "../components/DexWatchlistSection";
+import { Sparkline } from "../components/Sparkline";
 import { WatchHeatmap } from "../components/WatchHeatmap";
 import { WatchComparator } from "../components/WatchComparator";
+import { fetchSparkline } from "../api";
 import { colors, radius } from "../theme";
 import { formatAgo, formatPct, formatPrice, formatWhen, timeframeLabel } from "../format";
 import {
@@ -76,6 +78,30 @@ export function WatchScreen({
   const [quickFilter, setQuickFilter] = useState<WatchQuickFilter>("all");
   const [tfFilter, setTfFilter] = useState<WatchTfFilter>(WATCH_TF_FILTER_ALL);
   const [viewMode, setViewMode] = useState<"list" | "heatmap">("list");
+  const [sparklines, setSparklines] = useState<Record<string, number[]>>({});
+  const sparklineQueue = useRef<Set<string>>(new Set());
+
+  const loadSparkline = useCallback(async (item: WatchItem) => {
+    const key = item.id;
+    if (sparklineQueue.current.has(key)) return;
+    sparklineQueue.current.add(key);
+    try {
+      const closes = await fetchSparkline(item.ticker, item.timeframe);
+      if (closes.length >= 2) {
+        setSparklines((prev) => ({ ...prev, [key]: closes }));
+      }
+    } catch {
+      // silent — sparkline is decorative
+    }
+  }, []);
+
+  useEffect(() => {
+    sparklineQueue.current.clear();
+    setSparklines({});
+    for (const item of items.slice(0, 12)) {
+      void loadSparkline(item);
+    }
+  }, [items.length, loadSparkline]);
 
   const visible = useMemo(() => {
     let out = filterByTab(items, tab, focusIds);
@@ -272,6 +298,7 @@ export function WatchScreen({
         const extreme = item.near20High || item.near20Low;
         const rowBusy = refreshingId === item.id;
         const zoneActive = Boolean(item.priceZone?.enabled || item.rsiZone?.enabled);
+        const closes = sparklines[item.id];
         return (
           <View style={[styles.row, rowBusy && styles.rowBusy]}>
             <Pressable
@@ -299,6 +326,7 @@ export function WatchScreen({
                   {formatPrice(item.price)} · {formatWhen(item.updatedAt)}
                 </Text>
               </View>
+              {closes ? <Sparkline closes={closes} /> : null}
               <Text style={[styles.delta, { color: up ? colors.up : colors.down }]}>
                 {formatPct(item.changePct, 1)}
               </Text>
