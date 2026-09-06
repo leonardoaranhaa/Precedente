@@ -43,7 +43,7 @@ import { NewsScreen } from "./src/screens/NewsScreen";
 import { ResultScreen } from "./src/screens/ResultScreen";
 import { WatchScreen } from "./src/screens/WatchScreen";
 import { initSentry } from "./src/sentry";
-import { hapticRefreshDone } from "./src/haptics";
+import { hapticRefreshDone, hapticTabSwitch } from "./src/haptics";
 import { getSyncData, setSyncData } from "./src/sync";
 
 initSentry();
@@ -754,7 +754,7 @@ function AppInner() {
           }}
         />
         <BottomTab icon={BarChart3} label="Mercado" active={view === "market"} onPress={() => setView("market")} />
-        <BottomTab icon={Star} label="Watch" active={view === "watch"} onPress={() => setView("watch")} />
+        <BottomTab icon={Star} label="Watch" active={view === "watch"} badge={watch.length} onPress={() => setView("watch")} />
         <BottomTab icon={Bell} label="Alertas" active={view === "alerts"} onPress={() => setView("alerts")} />
         <BottomTab icon={Menu} label="Menu" active={view === "menu" || view === "news" || view === "history"} onPress={() => setView("menu")} />
       </View>
@@ -796,16 +796,25 @@ function BottomTab({
   icon: Icon,
   label,
   active,
+  badge,
   onPress,
 }: {
   icon: LucideIcon;
   label: string;
   active: boolean;
+  badge?: number;
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.bottomTab} onPress={onPress}>
-      <Icon size={20} color={active ? colors.accent : colors.subtle} strokeWidth={active ? 2.2 : 1.6} />
+    <Pressable style={styles.bottomTab} onPress={() => { hapticTabSwitch(); onPress(); }}>
+      <View>
+        <Icon size={20} color={active ? colors.accent : colors.subtle} strokeWidth={active ? 2.2 : 1.6} />
+        {badge != null && badge > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+          </View>
+        ) : null}
+      </View>
       <Text style={[styles.bottomTabLabel, active && { color: colors.accent }]}>{label}</Text>
     </Pressable>
   );
@@ -840,5 +849,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "500",
     color: colors.subtle,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: colors.bg,
+    fontVariant: ["tabular-nums"],
   },
 });
