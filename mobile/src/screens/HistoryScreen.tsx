@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -10,6 +10,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Animated, {
+  SharedValue,
+  useAnimatedStyle,
+  interpolate,
+} from "react-native-reanimated";
+import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import {
   ArrowDown,
   ArrowUp,
@@ -237,66 +244,105 @@ export function HistoryScreen({
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.list}
-          renderItem={({ item }) => {
-            const sig = signalDirection(item);
-            const DirIcon =
-              sig.dir === "up" ? ArrowUp : sig.dir === "down" ? ArrowDown : Minus;
-            const dirColor =
-              sig.dir === "up" ? colors.up : sig.dir === "down" ? colors.down : colors.subtle;
-            return (
-              <View style={s.row}>
-                <Pressable style={s.rowMain} onPress={() => onOpen(item)}>
-                  {item.thumbUri ? (
-                    <Image source={{ uri: item.thumbUri }} style={s.thumb} />
-                  ) : (
-                    <View style={s.thumbFallback}>
-                      <Text style={s.thumbFallbackText}>
-                        {item.displayTicker.split("/")[0]}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <View style={s.rowTitleInner}>
-                      <Text style={s.rowTitle} numberOfLines={1}>
-                        {item.displayTicker}
-                        <Text style={s.mutedText}>
-                          {" "}
-                          · {timeframeLabel(item.timeframe)}
-                        </Text>
-                      </Text>
-                      <Badge
-                        label={item.precedent.sampleNote.toUpperCase()}
-                        accent={item.precedent.sampleNote === "ok"}
-                        warn={item.precedent.sampleNote !== "ok"}
-                      />
-                    </View>
-                    <Text style={s.subtitle}>
-                      {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
-                    </Text>
-                  </View>
-                  <View style={s.signal}>
-                    <DirIcon size={14} color={dirColor} />
-                    <Text style={[s.signalPct, { color: dirColor }]}>
-                      {formatPct(sig.pct, 1)}
-                    </Text>
-                  </View>
-                </Pressable>
-                {onDelete ? (
-                  <Pressable
-                    style={s.deleteBtn}
-                    onPress={() => onDelete(item.id)}
-                    hitSlop={8}
-                    accessibilityLabel={`Remover ${item.displayTicker}`}
-                  >
-                    <Trash2 size={14} color={colors.subtle} />
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          }}
+          renderItem={({ item }) => (
+            <SwipeableRow
+              item={item}
+              onOpen={onOpen}
+              onDelete={onDelete}
+            />
+          )}
         />
       )}
     </View>
+  );
+}
+
+function DeleteAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(Math.abs(drag.value), [0, 60], [0, 1]),
+  }));
+  return (
+    <Animated.View style={[s.deleteAction, animStyle]}>
+      <Trash2 size={18} color="#fff" />
+      <Text style={s.deleteActionText}>Apagar</Text>
+    </Animated.View>
+  );
+}
+
+function SwipeableRow({
+  item,
+  onOpen,
+  onDelete,
+}: {
+  item: StoredAnalysis;
+  onOpen: (item: StoredAnalysis) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const swipeRef = useRef<SwipeableMethods>(null);
+  const sig = signalDirection(item);
+  const DirIcon =
+    sig.dir === "up" ? ArrowUp : sig.dir === "down" ? ArrowDown : Minus;
+  const dirColor =
+    sig.dir === "up" ? colors.up : sig.dir === "down" ? colors.down : colors.subtle;
+
+  const handleSwipeOpen = useCallback(() => {
+    if (onDelete) {
+      onDelete(item.id);
+      swipeRef.current?.close();
+    }
+  }, [item.id, onDelete]);
+
+  const row = (
+    <Pressable style={[s.row, { paddingRight: 12 }]} onPress={() => onOpen(item)}>
+      {item.thumbUri ? (
+        <Image source={{ uri: item.thumbUri }} style={s.thumb} />
+      ) : (
+        <View style={s.thumbFallback}>
+          <Text style={s.thumbFallbackText}>
+            {item.displayTicker.split("/")[0]}
+          </Text>
+        </View>
+      )}
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={s.rowTitleInner}>
+          <Text style={s.rowTitle} numberOfLines={1}>
+            {item.displayTicker}
+            <Text style={s.mutedText}>
+              {" "}· {timeframeLabel(item.timeframe)}
+            </Text>
+          </Text>
+          <Badge
+            label={item.precedent.sampleNote.toUpperCase()}
+            accent={item.precedent.sampleNote === "ok"}
+            warn={item.precedent.sampleNote !== "ok"}
+          />
+        </View>
+        <Text style={s.subtitle}>
+          {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
+        </Text>
+      </View>
+      <View style={s.signal}>
+        <DirIcon size={14} color={dirColor} />
+        <Text style={[s.signalPct, { color: dirColor }]}>
+          {formatPct(sig.pct, 1)}
+        </Text>
+      </View>
+    </Pressable>
+  );
+
+  if (!onDelete) return row;
+
+  return (
+    <ReanimatedSwipeable
+      ref={swipeRef}
+      friction={2}
+      rightThreshold={80}
+      renderRightActions={DeleteAction}
+      onSwipeableWillOpen={handleSwipeOpen}
+      overshootRight={false}
+    >
+      {row}
+    </ReanimatedSwipeable>
   );
 }
 
@@ -456,19 +502,26 @@ const s = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     paddingVertical: 12,
-    paddingLeft: 12,
-    paddingRight: 4,
+    paddingHorizontal: 12,
   },
-  rowMain: {
-    flex: 1,
-    flexDirection: "row",
+  deleteAction: {
+    backgroundColor: colors.down,
+    borderRadius: radius.lg,
     alignItems: "center",
-    gap: 12,
+    justifyContent: "center",
+    width: 80,
+    marginLeft: 6,
   },
-  deleteBtn: { padding: 8 },
+  deleteActionText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+  },
   thumb: { width: 52, height: 52, borderRadius: radius.sm },
   thumbFallback: {
     width: 52,
