@@ -319,3 +319,20 @@ export type NewListingsSnapshot = {
   totalTracked: number;
   disclaimer: string;
 };
+
+// --- External Intel: agente de contexto crypto via busca web ----------------
+
+export type ExternalIntelSource = {
+  url: string;
+  title: string;
+};
+
+export type ExternalIntelResult = {
+  ticker: string;
+  displayTicker: string;
+  summary: string;
+  sources: ExternalIntelSource[];
+  searchCount: number;
+  costUsd: number;
+  fetchedAt: number;
+};

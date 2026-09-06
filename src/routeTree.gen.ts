@@ -16,6 +16,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiDexRouteImport } from './routes/api/dex'
+import { Route as ApiIntelRouteImport } from './routes/api/intel'
 import { Route as ApiMoversRouteImport } from './routes/api/movers'
 import { Route as ApiNewListingsRouteImport } from './routes/api/new-listings'
 import { Route as ApiPriceRouteImport } from './routes/api/price'
@@ -77,6 +78,11 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
 const ApiDexRoute = ApiDexRouteImport.update({
   id: '/api/dex',
   path: '/api/dex',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiIntelRoute = ApiIntelRouteImport.update({
+  id: '/api/intel',
+  path: '/api/intel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMoversRoute = ApiMoversRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/intel': typeof ApiIntelRoute
   '/api/movers': typeof ApiMoversRoute
   '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/intel': typeof ApiIntelRoute
   '/api/movers': typeof ApiMoversRoute
   '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/dex': typeof ApiDexRoute
+  '/api/intel': typeof ApiIntelRoute
   '/api/movers': typeof ApiMoversRoute
   '/api/new-listings': typeof ApiNewListingsRoute
   '/api/price': typeof ApiPriceRoute
@@ -336,6 +345,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/intel'
     | '/api/movers'
     | '/api/new-listings'
     | '/api/price'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/intel'
     | '/api/movers'
     | '/api/new-listings'
     | '/api/price'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/api/analyze'
     | '/api/dex'
+    | '/api/intel'
     | '/api/movers'
     | '/api/new-listings'
     | '/api/price'
@@ -445,6 +457,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiDexRoute: typeof ApiDexRoute
+  ApiIntelRoute: typeof ApiIntelRoute
   ApiMoversRoute: typeof ApiMoversRoute
   ApiNewListingsRoute: typeof ApiNewListingsRoute
   ApiPriceRoute: typeof ApiPriceRoute
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       path: '/api/dex'
       fullPath: '/api/dex'
       preLoaderRoute: typeof ApiDexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/intel': {
+      id: '/api/intel'
+      path: '/api/intel'
+      fullPath: '/api/intel'
+      preLoaderRoute: typeof ApiIntelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/movers': {
@@ -725,6 +745,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiDexRoute: ApiDexRoute,
+  ApiIntelRoute: ApiIntelRoute,
   ApiMoversRoute: ApiMoversRoute,
   ApiNewListingsRoute: ApiNewListingsRoute,
   ApiPriceRoute: ApiPriceRoute,
@@ -756,3 +777,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

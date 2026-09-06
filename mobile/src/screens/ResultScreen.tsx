@@ -14,6 +14,7 @@ import { OnchainCard } from "../components/OnchainCard";
 import { PathChart } from "../components/PathChart";
 import { RiskCard } from "../components/RiskCard";
 import { SampleBanner } from "../components/SampleBanner";
+import { IntelCard } from "../components/IntelCard";
 import { ScenarioCard } from "../components/ScenarioCard";
 import { TimeframeSwitch } from "../components/TimeframeSwitch";
 import { ResultTabs, type ResultTab } from "../components/ResultTabs";
@@ -94,6 +95,7 @@ export function ResultScreen({
   const availableTabs = useMemo<ResultTab[]>(() => {
     const tabs: ResultTab[] = ["paths", "risk", "onchain", "scenario"];
     if (hasVision) tabs.push("vision");
+    tabs.push("intel");
     return tabs;
   }, [hasVision]);
 
@@ -270,6 +272,9 @@ export function ResultScreen({
         )}
         {activeTab === "vision" && (
           <VisionTab analysis={analysis} vision={vision} />
+        )}
+        {activeTab === "intel" && (
+          <IntelCard ticker={analysis.ticker} />
         )}
         <Text style={styles.disclaimer}>
           Frequência, caminho e encenação são contexto — nunca ordem. A decisão é só sua. Use{" "}
