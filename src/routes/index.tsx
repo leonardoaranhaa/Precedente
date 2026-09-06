@@ -367,6 +367,39 @@ function Home() {
     void refreshWatchItem(item, { openResult: true });
   }
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      if (e.key === "/" && !inInput) {
+        e.preventDefault();
+        const el = document.querySelector<HTMLInputElement>("header input");
+        el?.focus();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (inInput) (e.target as HTMLElement).blur();
+        return;
+      }
+
+      if (inInput) return;
+
+      if (e.key === "1") { setView("home"); setError(null); }
+      else if (e.key === "2") setView("watch");
+      else if (e.key === "3") setView("news");
+      else if (e.key === "4") setView("history");
+      else if (e.key === "w" && result && view === "result") {
+        setWatch((cur) =>
+          isWatched(cur, result) ? removeWatch(cur, `${result.ticker}:${result.timeframe}`) : upsertWatch(cur, result),
+        );
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [result, view]);
+
   const wide = view === "result" || view === "home";
   const resultWatched = result ? isWatched(watch, result) : false;
 
@@ -657,6 +690,20 @@ function Home() {
       </div>
 
       <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-[11px] text-subtle xl:max-w-[1680px]">
+        <p className="mb-2 hidden select-none gap-3 justify-center font-mono sm:flex">
+          <kbd className="rounded border border-border bg-surface px-1.5 py-0.5">/</kbd>
+          <span className="text-muted">buscar</span>
+          <kbd className="rounded border border-border bg-surface px-1.5 py-0.5">1-4</kbd>
+          <span className="text-muted">abas</span>
+          {view === "result" && result ? (
+            <>
+              <kbd className="rounded border border-border bg-surface px-1.5 py-0.5">w</kbd>
+              <span className="text-muted">{resultWatched ? "remover watch" : "add watch"}</span>
+            </>
+          ) : null}
+          <kbd className="rounded border border-border bg-surface px-1.5 py-0.5">esc</kbd>
+          <span className="text-muted">sair do campo</span>
+        </p>
         <Link to="/termos" className="underline-offset-4 hover:text-fg hover:underline">
           Termos
         </Link>
