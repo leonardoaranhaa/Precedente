@@ -40,6 +40,7 @@ export function MenuScreen({
   onManage,
   onUpdateName,
   onOpenHistory,
+  onOpenFullHistory,
   onOpenSummary,
   onOpenPerformance,
 }: {
@@ -54,6 +55,7 @@ export function MenuScreen({
   onManage: () => Promise<{ url: string } | { error: string }>;
   onUpdateName: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   onOpenHistory: (item: StoredAnalysis) => void;
+  onOpenFullHistory: () => void;
   onOpenSummary: () => void;
   onOpenPerformance: () => void;
 }) {
@@ -97,7 +99,7 @@ export function MenuScreen({
       />
 
       <SectionLabel label="HISTÓRICO" />
-      <HistorySection items={history} onOpen={onOpenHistory} />
+      <HistorySection items={history} onOpen={onOpenHistory} onOpenAll={onOpenFullHistory} />
     </ScrollView>
   );
 }
@@ -272,9 +274,11 @@ function AccountSection({
 function HistorySection({
   items,
   onOpen,
+  onOpenAll,
 }: {
   items: StoredAnalysis[];
   onOpen: (item: StoredAnalysis) => void;
+  onOpenAll: () => void;
 }) {
   if (items.length === 0) {
     return (
@@ -287,7 +291,7 @@ function HistorySection({
     );
   }
 
-  const recent = items.slice(0, 10);
+  const recent = items.slice(0, 6);
 
   return (
     <View style={{ gap: 6 }}>
@@ -314,9 +318,12 @@ function HistorySection({
           <ChevronRight size={16} color={colors.subtle} />
         </Pressable>
       ))}
-      {items.length > 10 ? (
-        <Text style={styles.moreHint}>{items.length - 10} análises anteriores</Text>
-      ) : null}
+      <Pressable style={styles.viewAllBtn} onPress={onOpenAll}>
+        <Text style={styles.viewAllText}>
+          Ver tudo ({items.length})
+        </Text>
+        <ChevronRight size={14} color={colors.accent} />
+      </Pressable>
     </View>
   );
 }
@@ -530,10 +537,16 @@ const styles = StyleSheet.create({
   thumbFallbackText: { fontSize: 10, color: colors.muted },
   historyTitle: { fontSize: 13, fontWeight: "500", color: colors.fg },
   historySubtitle: { fontSize: 11, color: colors.muted, marginTop: 2 },
-  moreHint: {
-    fontSize: 11,
-    color: colors.subtle,
-    textAlign: "center",
-    paddingVertical: 8,
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 10,
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.accent,
   },
 });
