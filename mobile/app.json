@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0c0c0a",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0c0a"
+    },
     "scheme": "precedente",
     "ios": {
       "supportsTablet": true,
@@ -61,7 +66,8 @@
         }
       ],
       "expo-secure-store",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {
