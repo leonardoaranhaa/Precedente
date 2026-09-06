@@ -1,5 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
+import { InstallPrompt } from "@/components/install-prompt";
+import { OfflineBanner } from "@/components/offline-banner";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { initSentryClient, reportClientError, SentryErrorBoundary } from "@/lib/sentry-client";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -44,6 +46,8 @@ export const Route = createRootRoute({
       </head>
       <body>
         <PreviewHostBridge />
+        <OfflineBanner />
+        <InstallPrompt />
         <AuthProvider>
           <SentryErrorBoundary
             fallback={() => (
