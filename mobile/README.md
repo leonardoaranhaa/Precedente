@@ -76,7 +76,7 @@ npm run build:apk   # gera .apk direto, sem passar pela Play Store
 
 ## Próximos ajustes naturais
 
-- Ícone e splash screen personalizados (hoje está no padrão Expo).
+- ~~Ícone e splash screen personalizados (hoje está no padrão Expo).~~ Feito — splash com `expo-splash-screen`, ícone customizado.
 - Gráfico OHLC da série recente (o web tem `OhlcChart`; o mobile hoje só traz
   o `PathChart` do horizonte selecionado).
 - Persistir a preferência de `EXPO_PUBLIC_API_BASE_URL` numa tela de

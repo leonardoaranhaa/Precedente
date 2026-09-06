@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import * as SplashScreen from "expo-splash-screen";
 import { analyze, fetchDexReading, fetchTopTraded } from "./src/api";
 import {
   DEFAULT_ALERT_RULES,
@@ -18,6 +20,7 @@ import {
   type DexWatchItem,
 } from "./src/dex-watchlist";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { Mark } from "./src/components/Mark";
 import { OfflineBanner } from "./src/components/OfflineBanner";
 import type { PipelineStep } from "./src/components/Pipeline";
@@ -47,6 +50,7 @@ import { hapticRefreshDone, hapticTabSwitch } from "./src/haptics";
 import { getSyncData, setSyncData } from "./src/sync";
 
 initSentry();
+SplashScreen.preventAutoHideAsync();
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
 import type { DexReading, StoredAnalysis, Timeframe, TradedPair, WatchRefreshMinutes } from "./src/types";
@@ -78,11 +82,13 @@ const SYNC_DEBOUNCE_MS = 1500;
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppInner />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AppInner />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 
@@ -240,6 +246,10 @@ function AppInner() {
     }, ms);
     return () => clearInterval(id);
   }, [autoRefreshMin]);
+
+  useEffect(() => {
+    if (fontsLoaded) void SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
 
@@ -817,6 +827,19 @@ function BottomTab({
   badge?: number;
   onPress: () => void;
 }) {
+  const scale = useSharedValue(active ? 1 : 0);
+  const dotWidth = useSharedValue(active ? 14 : 0);
+
+  useEffect(() => {
+    scale.value = withSpring(active ? 1 : 0.85, { damping: 15, stiffness: 200 });
+    dotWidth.value = withSpring(active ? 14 : 0, { damping: 15, stiffness: 200 });
+  }, [active, scale, dotWidth]);
+
+  const dotStyle = useAnimatedStyle(() => ({
+    width: dotWidth.value,
+    opacity: dotWidth.value > 0.5 ? 1 : 0,
+  }));
+
   return (
     <Pressable style={styles.bottomTab} onPress={() => { hapticTabSwitch(); onPress(); }}>
       <View>
@@ -828,6 +851,7 @@ function BottomTab({
         ) : null}
       </View>
       <Text style={[styles.bottomTabLabel, active && { color: colors.accent }]}>{label}</Text>
+      <Animated.View style={[styles.tabDot, dotStyle]} />
     </Pressable>
   );
 }
@@ -879,5 +903,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.bg,
     fontVariant: ["tabular-nums"],
+  },
+  tabDot: {
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.accent,
+    marginTop: 1,
   },
 });
