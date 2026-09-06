@@ -7,6 +7,8 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "Precedente";
 
+const SW_REGISTER_SCRIPT = `if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))`;
+
 initSentryClient();
 
 export const Route = createRootRoute({
@@ -25,7 +27,7 @@ export const Route = createRootRoute({
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/__grok/manifest.webmanifest" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
       {
         rel: "stylesheet",
@@ -60,6 +62,7 @@ export const Route = createRootRoute({
           </SentryErrorBoundary>
         </AuthProvider>
         <Scripts />
+        <script dangerouslySetInnerHTML={{ __html: SW_REGISTER_SCRIPT }} />
       </body>
     </html>
   ),
