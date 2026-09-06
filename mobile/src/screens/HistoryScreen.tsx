@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -130,7 +131,19 @@ export function HistoryScreen({
             </Text>
           </View>
           {onClearAll && items.length > 0 ? (
-            <Pressable style={s.clearAllBtn} onPress={onClearAll}>
+            <Pressable
+              style={s.clearAllBtn}
+              onPress={() =>
+                Alert.alert(
+                  "Limpar histórico",
+                  `Apagar ${items.length} análise${items.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`,
+                  [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Apagar tudo", style: "destructive", onPress: onClearAll },
+                  ],
+                )
+              }
+            >
               <Trash2 size={13} color={colors.down} />
               <Text style={s.clearAllText}>Limpar tudo</Text>
             </Pressable>
