@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Linking,
   Pressable,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Newspaper, Settings2 } from "lucide-react-native";
+import { EmptyState } from "../components/EmptyState";
 import { SkeletonCard } from "../components/Skeleton";
 import { colors, radius } from "../theme";
 import { formatAgo } from "../format";
@@ -96,11 +96,15 @@ export function NewsScreen({
           ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {!loading && !error && items.length === 0 ? (
-            <Text style={styles.empty}>
-              {hasFilter
-                ? "Nenhuma notícia recente bate com suas preferências."
-                : "Nenhuma notícia disponível agora. Puxe pra atualizar."}
-            </Text>
+            <EmptyState
+              variant="search"
+              title={hasFilter ? "Nenhuma notícia encontrada." : "Sem notícias agora."}
+              hint={
+                hasFilter
+                  ? "Nenhuma notícia recente bate com suas preferências."
+                  : "Nenhuma notícia disponível agora. Puxe pra atualizar."
+              }
+            />
           ) : null}
         </View>
       }
@@ -151,7 +155,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   error: { marginTop: 16, fontSize: 13, color: colors.down },
-  empty: { marginTop: 24, fontSize: 13, color: colors.muted, textAlign: "center" },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,

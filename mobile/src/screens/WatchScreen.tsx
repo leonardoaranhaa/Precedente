@@ -8,9 +8,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { Grid3x3, List, RefreshCw, Star, Target, Trash2 } from "lucide-react-native";
+import { Grid3x3, List, RefreshCw, Target, Trash2 } from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { DexWatchlistSection } from "../components/DexWatchlistSection";
+import { EmptyState } from "../components/EmptyState";
 import { Sparkline } from "../components/Sparkline";
 import { WatchHeatmap } from "../components/WatchHeatmap";
 import { WatchComparator } from "../components/WatchComparator";
@@ -116,13 +117,11 @@ export function WatchScreen({
         {onOpenDex && onUnpinDex ? (
           <DexWatchlistSection items={dexItems} onOpen={onOpenDex} onUnpin={onUnpinDex} />
         ) : null}
-        <View style={styles.empty}>
-          <Star size={22} color={colors.subtle} />
-          <Text style={styles.emptyTitle}>Nenhum par na watch.</Text>
-          <Text style={styles.emptyHint}>
-            Depois de analisar um par, toque em + Watch para acompanhar amostra e drawdown aqui.
-          </Text>
-        </View>
+        <EmptyState
+          variant="watch"
+          title="Nenhum par na watch."
+          hint="Depois de analisar um par, toque em + Watch para acompanhar amostra e drawdown aqui."
+        />
       </ScrollView>
     );
   }
@@ -466,16 +465,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: 32,
   },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 80,
-    paddingHorizontal: 32,
-  },
-  emptyTitle: { fontSize: 14, color: colors.muted },
-  emptyHint: { fontSize: 12, color: colors.subtle, textAlign: "center", maxWidth: 280 },
   row: {
     flexDirection: "row",
     alignItems: "center",
