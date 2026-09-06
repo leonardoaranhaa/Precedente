@@ -1,5 +1,5 @@
 import { ANALYZE_ENDPOINT, API_BASE_URL } from "./config";
-import type { AnalysisPayload, ApiErrorBody, DexReading, MoversSnapshot, NewListingsSnapshot, Timeframe, TradedPair } from "./types";
+import type { AnalysisPayload, ApiErrorBody, DexReading, ExternalIntelResult, MoversSnapshot, NewListingsSnapshot, Timeframe, TradedPair } from "./types";
 
 export type AnalyzeRequest = {
   ticker: string;
@@ -66,6 +66,24 @@ export async function fetchNewListings(): Promise<NewListingsSnapshot> {
     throw new Error(`Não foi possível ler novas listagens (status ${response.status}).`);
   }
   return (await response.json()) as NewListingsSnapshot;
+}
+
+/**
+ * Inteligência externa — agente AI que busca notícias e contexto de mercado
+ * em tempo real para um ativo crypto. Disparo sob demanda (custa ~$0.01/busca).
+ */
+export async function fetchExternalIntel(ticker: string): Promise<ExternalIntelResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/intel?ticker=${encodeURIComponent(ticker)}`,
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const message = body && typeof body === "object" && "error" in body
+      ? (body as { error: string }).error
+      : `Não foi possível buscar contexto externo (status ${response.status}).`;
+    throw new Error(message);
+  }
+  return (await response.json()) as ExternalIntelResult;
 }
 
 /**

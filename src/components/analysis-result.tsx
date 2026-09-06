@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OhlcChart } from "@/components/ohlc-chart";
 import { OnchainPanel } from "@/components/onchain-panel";
+import { IntelPanel } from "@/components/intel-panel";
 import { NewsContextPanel } from "@/components/news-context-panel";
 import { PathChart } from "@/components/path-chart";
 import { PrintReadingModal } from "@/components/print-reading-modal";
@@ -290,6 +291,7 @@ export function AnalysisResult({
 
           <OnchainPanel onchain={onchain} />
           <NewsContextPanel newsContext={newsContext} />
+          <IntelPanel ticker={analysis.ticker} />
 
           <ScenarioPanel analysis={analysis} />
 
