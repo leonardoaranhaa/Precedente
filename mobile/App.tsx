@@ -24,7 +24,7 @@ import { DexFragilityModal } from "./src/components/DexFragilityModal";
 import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
 import { toAnalysisDataUrl, toThumbDataUrl } from "./src/image";
-import { loadHistory, pushHistory, saveHistory } from "./src/history";
+import { clearHistory, loadHistory, pushHistory, removeHistory, saveHistory } from "./src/history";
 import {
   registerForPushAsync,
   requestPushScan,
@@ -667,6 +667,18 @@ function AppInner() {
             onOpen={(item) => {
               setResult(item);
               setView("result");
+            }}
+            onDelete={(id) => {
+              void removeHistory(historyRef.current, id).then((next) => {
+                setHistory(next);
+                historyRef.current = next;
+              });
+            }}
+            onClearAll={() => {
+              void clearHistory().then(() => {
+                setHistory([]);
+                historyRef.current = [];
+              });
             }}
           />
         ) : view === "menu" ? (

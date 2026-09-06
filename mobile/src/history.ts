@@ -36,3 +36,16 @@ export async function pushHistory(
   await saveHistory(items);
   return items;
 }
+
+export async function removeHistory(
+  current: StoredAnalysis[],
+  id: string,
+): Promise<StoredAnalysis[]> {
+  const items = current.filter((a) => a.id !== id);
+  await saveHistory(items);
+  return items;
+}
+
+export async function clearHistory(): Promise<void> {
+  await AsyncStorage.removeItem(KEY);
+}
