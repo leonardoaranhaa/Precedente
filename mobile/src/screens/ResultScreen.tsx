@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import {
   ArrowLeft,
   Eye,
+  Share2,
   Star,
   TrendingDown,
   TrendingUp,
@@ -93,6 +94,23 @@ export function ResultScreen({
 
   const hasVision = vision != null || (analysis.visionError != null && analysis.visionError.length > 0) || analysis.thumbUri != null;
 
+  function handleShare() {
+    const h = precedent.horizons;
+    const lines = h.map((hz) => {
+      const dir = hz.medianPct > 0.15 ? "↑" : hz.medianPct < -0.15 ? "↓" : "→";
+      return `  ${barsToHuman(hz.bars, analysis.timeframe)}: ${dir} ${formatPct(hz.medianPct, 1)} (DD ${formatPct(hz.medianDrawdownPct, 1)})`;
+    });
+    const text = [
+      `${analysis.displayTicker} · ${timeframeLabel(analysis.timeframe)}`,
+      `${precedent.matches} precedentes · amostra ${precedent.sampleNote}`,
+      "",
+      ...lines,
+      "",
+      "— Precedente",
+    ].join("\n");
+    void Share.share({ message: text });
+  }
+
   const availableTabs = useMemo<ResultTab[]>(() => {
     const tabs: ResultTab[] = ["paths", "risk", "onchain", "scenario"];
     if (hasVision) tabs.push("vision");
@@ -133,6 +151,14 @@ export function ResultScreen({
               {formatPct(snapshot.changePct)} vela
             </Text>
           </View>
+          <Pressable
+            onPress={handleShare}
+            style={styles.watchBtn}
+            hitSlop={4}
+            accessibilityLabel="Compartilhar análise"
+          >
+            <Share2 size={14} color={colors.fg} />
+          </Pressable>
           {onToggleWatch ? (
             <Pressable
               onPress={onToggleWatch}
