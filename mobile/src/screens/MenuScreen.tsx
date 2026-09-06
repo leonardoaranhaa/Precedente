@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import {
+  BarChart3,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -40,6 +41,7 @@ export function MenuScreen({
   onUpdateName,
   onOpenHistory,
   onOpenSummary,
+  onOpenPerformance,
 }: {
   user: AuthUser | null;
   busy: boolean;
@@ -53,6 +55,7 @@ export function MenuScreen({
   onUpdateName: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   onOpenHistory: (item: StoredAnalysis) => void;
   onOpenSummary: () => void;
+  onOpenPerformance: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -64,6 +67,17 @@ export function MenuScreen({
           <View style={{ flex: 1 }}>
             <Text style={styles.menuRowLabel}>Resumo diário</Text>
             <Text style={styles.menuRowHint}>Watch + notícias + movers num só lugar</Text>
+          </View>
+          <ChevronRight size={16} color={colors.subtle} />
+        </View>
+      </Pressable>
+
+      <Pressable style={styles.card} onPress={onOpenPerformance}>
+        <View style={styles.menuRow}>
+          <BarChart3 size={18} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuRowLabel}>Desempenho</Text>
+            <Text style={styles.menuRowHint}>Estatísticas das suas análises</Text>
           </View>
           <ChevronRight size={16} color={colors.subtle} />
         </View>
