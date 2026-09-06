@@ -98,7 +98,7 @@ export function ResultScreen({
     const h = precedent.horizons;
     const lines = h.map((hz) => {
       const dir = hz.medianPct > 0.15 ? "↑" : hz.medianPct < -0.15 ? "↓" : "→";
-      return `  ${barsToHuman(hz.bars, analysis.timeframe)}: ${dir} ${formatPct(hz.medianPct, 1)} (DD ${formatPct(hz.medianDrawdownPct, 1)})`;
+      return `  ${barsToHuman(analysis.timeframe, hz.bars)}: ${dir} ${formatPct(hz.medianPct, 1)} (DD ${formatPct(hz.medianDrawdownPct, 1)})`;
     });
     const text = [
       `${analysis.displayTicker} · ${timeframeLabel(analysis.timeframe)}`,

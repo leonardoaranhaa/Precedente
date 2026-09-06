@@ -19,7 +19,9 @@ import {
 } from "./src/dex-watchlist";
 import { openBillingPortal, startPremiumCheckout } from "./src/billing";
 import { Mark } from "./src/components/Mark";
+import { OfflineBanner } from "./src/components/OfflineBanner";
 import type { PipelineStep } from "./src/components/Pipeline";
+import { ScreenTransition } from "./src/components/ScreenTransition";
 import { DexFragilityModal } from "./src/components/DexFragilityModal";
 import { ScenarioAssistant } from "./src/components/ScenarioAssistant";
 import { fonts, useAppFonts } from "./src/fonts";
@@ -591,7 +593,10 @@ function AppInner() {
         </Pressable>
       </View>
 
+      <OfflineBanner />
+
       <View style={styles.body}>
+        <ScreenTransition screenKey={view}>
         {view === "result" && result ? (
           <ResultScreen
             analysis={result}
@@ -734,6 +739,7 @@ function AppInner() {
         )}
 
         {view === "result" && result ? <ScenarioAssistant analysis={result} /> : null}
+        </ScreenTransition>
       </View>
 
       <View style={styles.bottomBar}>

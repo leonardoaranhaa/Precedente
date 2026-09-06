@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Linking,
   Pressable,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
   Newspaper,
   TrendingUp,
 } from "lucide-react-native";
+import { SkeletonCard } from "../components/Skeleton";
 import { colors, radius } from "../theme";
 import { formatAgo, formatPct, formatPrice, timeframeLabel } from "../format";
 import { sampleTitle } from "../sample-copy";
@@ -276,7 +276,11 @@ export function DailySummaryScreen({
       </View>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.muted} />
+        <View style={{ gap: 12, marginTop: 12 }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
       ) : error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : (

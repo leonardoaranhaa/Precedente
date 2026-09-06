@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Newspaper, Settings2 } from "lucide-react-native";
+import { SkeletonCard } from "../components/Skeleton";
 import { colors, radius } from "../theme";
 import { formatAgo } from "../format";
 import { fetchNewsFeed, NEWS_CATEGORIES, type NewsItem } from "../news";
@@ -86,7 +87,13 @@ export function NewsScreen({
               <Settings2 size={18} color={colors.fg} />
             </Pressable>
           </View>
-          {loading ? <ActivityIndicator style={{ marginTop: 24 }} color={colors.muted} /> : null}
+          {loading ? (
+            <View style={{ gap: 10, marginTop: 12 }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </View>
+          ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {!loading && !error && items.length === 0 ? (
             <Text style={styles.empty}>
