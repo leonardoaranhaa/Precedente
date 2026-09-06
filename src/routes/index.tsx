@@ -10,6 +10,7 @@ import { HowItWorks } from "@/components/how-it-works";
 import { Mark } from "@/components/mark";
 import { NewsPanel } from "@/components/news-panel";
 import { Pipeline, type PipelineStep } from "@/components/pipeline";
+import { ResultSkeleton } from "@/components/result-skeleton";
 import { RiskLogPanel } from "@/components/risk-log-panel";
 import { ScenarioAssistant } from "@/components/scenario-assistant";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -666,7 +667,10 @@ function Home() {
                   <RiskLogPanel />
 
                   {busy ? (
-                    <Pipeline step={step} hasImage={Boolean(image)} />
+                    <div className="space-y-4">
+                      <Pipeline step={step} hasImage={Boolean(image)} />
+                      <ResultSkeleton />
+                    </div>
                   ) : (
                     <AnalyzeForm
                       ticker={ticker}
