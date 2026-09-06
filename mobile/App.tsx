@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { analyze, fetchDexReading, fetchTopTraded } from "./src/api";
@@ -49,7 +49,7 @@ import { getSyncData, setSyncData } from "./src/sync";
 initSentry();
 import { colors } from "./src/theme";
 import { normalizeTicker } from "./src/format";
-import type { DexReading, StoredAnalysis, Timeframe, WatchRefreshMinutes } from "./src/types";
+import type { DexReading, StoredAnalysis, Timeframe, TradedPair, WatchRefreshMinutes } from "./src/types";
 import {
   loadWatchRefreshMinutes,
   saveWatchRefreshMinutes,
@@ -107,6 +107,7 @@ function AppInner() {
   const [watch, setWatch] = useState<WatchItem[]>([]);
   const [focusIds, setFocusIds] = useState<string[]>([]);
   const [topTraded, setTopTraded] = useState<string[]>([]);
+  const [allPairs, setAllPairs] = useState<TradedPair[]>([]);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
@@ -176,8 +177,11 @@ function AppInner() {
   }, [syncPush]);
 
   useEffect(() => {
-    fetchTopTraded(12)
-      .then((pairs) => setTopTraded(pairs.map((p) => p.base)))
+    fetchTopTraded(100)
+      .then((pairs) => {
+        setTopTraded(pairs.slice(0, 12).map((p) => p.base));
+        setAllPairs(pairs);
+      })
       .catch(() => {});
   }, []);
 
@@ -580,6 +584,7 @@ function AppInner() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.header}>
         <Pressable
           style={styles.brand}
@@ -715,6 +720,7 @@ function AppInner() {
             step={step}
             error={error}
             topTraded={topTraded}
+            allPairs={allPairs}
             recentPairs={(() => {
               const seen = new Set<string>();
               const pairs: { base: string; timeframe: Timeframe }[] = [];
@@ -735,6 +741,11 @@ function AppInner() {
             dexReading={dexReading}
             dexBusy={dexBusy}
             onOpenDexModal={() => setDexModalOpen(true)}
+            onRefreshPairs={async () => {
+              const pairs = await fetchTopTraded(100);
+              setTopTraded(pairs.slice(0, 12).map((p) => p.base));
+              setAllPairs(pairs);
+            }}
           />
         )}
 
@@ -788,6 +799,7 @@ function AppInner() {
         pinned={dexPinned}
         onTogglePin={() => void toggleDexPin()}
       />
+      </Pressable>
     </SafeAreaView>
   );
 }

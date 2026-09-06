@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +17,7 @@ import { RiskLogPanel } from "../components/RiskLogPanel";
 import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import { DexFragilitySummary } from "../components/DexFragilitySummary";
-import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type DexReading, type Timeframe } from "../types";
+import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type DexReading, type Timeframe, type TradedPair } from "../types";
 import { normalizeTicker, timeframeLabel } from "../format";
 
 export type PickedImage = { uri: string; width: number; height: number };
@@ -35,11 +36,13 @@ type Props = {
   dexBusy: boolean;
   onOpenDexModal?: () => void;
   topTraded: string[];
+  allPairs?: TradedPair[];
   recentPairs?: RecentPair[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
   onImage: (v: PickedImage | null) => void;
   onSubmit: () => void;
+  onRefreshPairs?: () => Promise<void>;
 };
 
 export function HomeScreen({
@@ -53,16 +56,38 @@ export function HomeScreen({
   dexBusy,
   onOpenDexModal,
   topTraded,
+  allPairs = [],
   recentPairs = [],
   onTicker,
   onTimeframe,
   onImage,
   onSubmit,
+  onRefreshPairs,
 }: Props) {
   const [pickError, setPickError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const current = normalizeTicker(ticker);
   // Ranking ao vivo por volume 24h; a lista fixa cobre a falha da rede.
   const chips = topTraded.length > 0 ? topTraded.slice(0, 6) : [...POPULAR_TICKERS.slice(0, 6)];
+
+  const suggestions = (() => {
+    if (!showSuggestions || ticker.length < 1 || allPairs.length === 0) return [];
+    const q = ticker.toUpperCase();
+    return allPairs
+      .filter((p) => p.base.includes(q) || p.display.toUpperCase().includes(q))
+      .slice(0, 8);
+  })();
+
+  function handleTickerChange(v: string) {
+    onTicker(v);
+    setShowSuggestions(v.length >= 1);
+  }
+
+  function selectSuggestion(pair: TradedPair) {
+    onTicker(pair.base);
+    setShowSuggestions(false);
+  }
 
   async function pickImage() {
     setPickError(null);
@@ -82,7 +107,21 @@ export function HomeScreen({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefreshPairs ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              onRefreshPairs().finally(() => setRefreshing(false));
+            }}
+          />
+        ) : undefined
+      }
+    >
       <Text style={styles.eyebrow}>Print + ticker · nunca compre/venda</Text>
       <Text style={styles.title}>Quantas vezes isso já aconteceu?</Text>
       <Text style={styles.subtitle}>
@@ -122,13 +161,37 @@ export function HomeScreen({
             <Text style={styles.label}>Par</Text>
             <TextInput
               value={ticker}
-              onChangeText={onTicker}
+              onChangeText={handleTickerChange}
+              onFocus={() => ticker.length >= 1 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               placeholder="BTC, ETHUSDT, SOL…"
               placeholderTextColor={colors.subtle}
               autoCapitalize="characters"
               autoCorrect={false}
               style={styles.input}
             />
+            {suggestions.length > 0 ? (
+              <View style={styles.suggestBox}>
+                {suggestions.map((p) => {
+                  const pctColor = p.changePct >= 0 ? colors.up : colors.down;
+                  return (
+                    <Pressable
+                      key={p.symbol}
+                      style={styles.suggestRow}
+                      onPress={() => selectSuggestion(p)}
+                    >
+                      <Text style={styles.suggestBase}>{p.base}</Text>
+                      <Text style={styles.suggestDisplay}>{p.display}</Text>
+                      <View style={{ flex: 1 }} />
+                      <Text style={[styles.suggestPct, { color: pctColor }]}>
+                        {p.changePct >= 0 ? "+" : ""}
+                        {p.changePct.toFixed(1)}%
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
             {recentPairs.length > 0 ? (
               <View style={{ gap: 4 }}>
                 <View style={styles.recentLabel}>
@@ -338,4 +401,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   footnote: { fontSize: 11, color: colors.subtle, textAlign: "center" },
+  suggestBox: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  suggestRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  suggestBase: { fontSize: 14, fontWeight: "600", color: colors.fg, minWidth: 48 },
+  suggestDisplay: { fontSize: 12, color: colors.muted },
+  suggestPct: { fontSize: 12, fontWeight: "500" },
 });
