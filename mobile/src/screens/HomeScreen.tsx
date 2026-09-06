@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { X, ImagePlus } from "lucide-react-native";
+import { Clock, X, ImagePlus } from "lucide-react-native";
 import { Button } from "../components/Button";
 import { Pipeline, type PipelineStep } from "../components/Pipeline";
 import { RiskLogPanel } from "../components/RiskLogPanel";
@@ -17,9 +17,11 @@ import { colors, radius } from "../theme";
 import { fonts } from "../fonts";
 import { DexFragilitySummary } from "../components/DexFragilitySummary";
 import { POPULAR_TICKERS, TIMEFRAME_GROUPS, type DexReading, type Timeframe } from "../types";
-import { normalizeTicker } from "../format";
+import { normalizeTicker, timeframeLabel } from "../format";
 
 export type PickedImage = { uri: string; width: number; height: number };
+
+type RecentPair = { base: string; timeframe: Timeframe };
 
 type Props = {
   ticker: string;
@@ -33,6 +35,7 @@ type Props = {
   dexBusy: boolean;
   onOpenDexModal?: () => void;
   topTraded: string[];
+  recentPairs?: RecentPair[];
   onTicker: (v: string) => void;
   onTimeframe: (v: Timeframe) => void;
   onImage: (v: PickedImage | null) => void;
@@ -50,6 +53,7 @@ export function HomeScreen({
   dexBusy,
   onOpenDexModal,
   topTraded,
+  recentPairs = [],
   onTicker,
   onTimeframe,
   onImage,
@@ -125,6 +129,37 @@ export function HomeScreen({
               autoCorrect={false}
               style={styles.input}
             />
+            {recentPairs.length > 0 ? (
+              <View style={{ gap: 4 }}>
+                <View style={styles.recentLabel}>
+                  <Clock size={11} color={colors.subtle} />
+                  <Text style={styles.recentLabelText}>Recentes</Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {recentPairs.map((r) => {
+                    const active = current === normalizeTicker(r.base) && timeframe === r.timeframe;
+                    return (
+                      <Pressable
+                        key={`${r.base}:${r.timeframe}`}
+                        onPress={() => {
+                          onTicker(r.base);
+                          onTimeframe(r.timeframe);
+                        }}
+                        style={[styles.chip, active && { backgroundColor: colors.accent }]}
+                      >
+                        <Text style={[styles.chipText, active && { color: colors.accentFg }]}>
+                          {r.base} · {timeframeLabel(r.timeframe)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : null}
             <View style={styles.chipRow}>
               {chips.map((t) => {
                 const active = current === `${t}USDT` || current === t;
@@ -216,6 +251,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
+  recentLabel: { flexDirection: "row", alignItems: "center", gap: 4 },
+  recentLabelText: { fontSize: 10, letterSpacing: 0.4, color: colors.subtle, textTransform: "uppercase" },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
   chip: {
     height: 34,
