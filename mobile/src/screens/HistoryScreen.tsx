@@ -1,9 +1,36 @@
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { ArrowDown, ArrowUp, Clock, Minus } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import {
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Minus,
+  Search,
+  X,
+} from "lucide-react-native";
 import { Badge } from "../components/Badge";
 import { colors, radius } from "../theme";
+import { fonts } from "../fonts";
 import { formatPct, formatWhen, timeframeLabel } from "../format";
-import type { StoredAnalysis } from "../types";
+import { TIMEFRAMES, type StoredAnalysis, type Timeframe } from "../types";
+
+type SortKey = "date" | "signal";
+type SortDir = "desc" | "asc";
+type DirFilter = "all" | "up" | "down" | "flat";
+
+const TF_ALL = "all" as const;
+type TfFilter = Timeframe | typeof TF_ALL;
 
 function signalDirection(a: StoredAnalysis): { dir: "up" | "down" | "flat"; pct: number } {
   const h = a.precedent.horizons;
@@ -23,72 +50,353 @@ export function HistoryScreen({
   signedIn: boolean;
   onOpen: (item: StoredAnalysis) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [tfFilter, setTfFilter] = useState<TfFilter>(TF_ALL);
+  const [dirFilter, setDirFilter] = useState<DirFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const filtered = useMemo(() => {
+    let list = items;
+
+    if (query.trim()) {
+      const q = query.trim().toUpperCase();
+      list = list.filter(
+        (a) =>
+          a.displayTicker.toUpperCase().includes(q) ||
+          a.ticker.toUpperCase().includes(q),
+      );
+    }
+
+    if (tfFilter !== TF_ALL) {
+      list = list.filter((a) => a.timeframe === tfFilter);
+    }
+
+    if (dirFilter !== "all") {
+      list = list.filter((a) => signalDirection(a).dir === dirFilter);
+    }
+
+    const sign = sortDir === "asc" ? 1 : -1;
+    list = [...list].sort((a, b) => {
+      if (sortKey === "signal") {
+        return (signalDirection(a).pct - signalDirection(b).pct) * sign;
+      }
+      return (a.createdAt - b.createdAt) * sign;
+    });
+
+    return list;
+  }, [items, query, tfFilter, dirFilter, sortKey, sortDir]);
+
+  const hasFilters = query.trim() !== "" || tfFilter !== TF_ALL || dirFilter !== "all";
+
   if (items.length === 0) {
     return (
-      <View style={styles.empty}>
+      <View style={s.empty}>
         <Clock size={22} color={colors.subtle} />
-        <Text style={styles.emptyTitle}>Nenhuma análise ainda.</Text>
-        <Text style={styles.emptyHint}>
+        <Text style={s.emptyTitle}>Nenhuma análise ainda.</Text>
+        <Text style={s.emptyHint}>
           {signedIn
             ? "Suas análises sincronizam com sua conta entre aparelhos."
-            : "As análises ficam neste aparelho. Entre na sua conta pra sincronizar entre aparelhos."}
+            : "As análises ficam neste aparelho. Entre na sua conta pra sincronizar."}
         </Text>
       </View>
     );
   }
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
   return (
-    <FlatList
-      data={items}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.list}
-      renderItem={({ item }) => {
-        const sig = signalDirection(item);
-        const DirIcon = sig.dir === "up" ? ArrowUp : sig.dir === "down" ? ArrowDown : Minus;
-        const dirColor = sig.dir === "up" ? colors.up : sig.dir === "down" ? colors.down : colors.subtle;
-        return (
-          <Pressable style={styles.row} onPress={() => onOpen(item)}>
-            {item.thumbUri ? (
-              <Image source={{ uri: item.thumbUri }} style={styles.thumb} />
-            ) : (
-              <View style={styles.thumbFallback}>
-                <Text style={styles.thumbFallbackText}>{item.displayTicker.split("/")[0]}</Text>
-              </View>
-            )}
-            <View style={{ flex: 1, gap: 2 }}>
-              <View style={styles.titleRow}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {item.displayTicker}
-                  <Text style={styles.mutedText}> · {timeframeLabel(item.timeframe)}</Text>
-                </Text>
-                <Badge
-                  label={item.precedent.sampleNote.toUpperCase()}
-                  accent={item.precedent.sampleNote === "ok"}
-                  warn={item.precedent.sampleNote !== "ok"}
-                />
-              </View>
-              <Text style={styles.subtitle}>
-                {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
-              </Text>
-            </View>
-            <View style={styles.signal}>
-              <DirIcon size={14} color={dirColor} />
-              <Text style={[styles.signalPct, { color: dirColor }]}>
-                {formatPct(sig.pct, 1)}
-              </Text>
-            </View>
+    <View style={s.wrapper}>
+      <View style={s.headerArea}>
+        <Text style={s.title}>Histórico</Text>
+        <Text style={s.countHint}>
+          {hasFilters
+            ? `${filtered.length} de ${items.length}`
+            : `${items.length} análises`}
+        </Text>
+
+        {/* Search bar */}
+        <View style={s.searchRow}>
+          <Search size={14} color={colors.subtle} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar par…"
+            placeholderTextColor={colors.subtle}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            style={s.searchInput}
+          />
+          {query.length > 0 ? (
+            <Pressable onPress={() => setQuery("")} hitSlop={8}>
+              <X size={14} color={colors.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Timeframe chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.chipRow}
+        >
+          <Chip
+            label="Todos"
+            active={tfFilter === TF_ALL}
+            onPress={() => setTfFilter(TF_ALL)}
+          />
+          {TIMEFRAMES.map((tf) => (
+            <Chip
+              key={tf}
+              label={timeframeLabel(tf)}
+              active={tfFilter === tf}
+              onPress={() => setTfFilter(tf === tfFilter ? TF_ALL : tf)}
+            />
+          ))}
+        </ScrollView>
+
+        {/* Direction chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.chipRow}
+        >
+          <Chip label="Todos" active={dirFilter === "all"} onPress={() => setDirFilter("all")} />
+          <DirChip dir="up" active={dirFilter === "up"} onPress={() => setDirFilter(dirFilter === "up" ? "all" : "up")} />
+          <DirChip dir="flat" active={dirFilter === "flat"} onPress={() => setDirFilter(dirFilter === "flat" ? "all" : "flat")} />
+          <DirChip dir="down" active={dirFilter === "down"} onPress={() => setDirFilter(dirFilter === "down" ? "all" : "down")} />
+        </ScrollView>
+
+        {/* Sort toggles */}
+        <View style={s.sortRow}>
+          <SortButton
+            label="Data"
+            active={sortKey === "date"}
+            dir={sortKey === "date" ? sortDir : undefined}
+            onPress={() => toggleSort("date")}
+          />
+          <SortButton
+            label="Sinal"
+            active={sortKey === "signal"}
+            dir={sortKey === "signal" ? sortDir : undefined}
+            onPress={() => toggleSort("signal")}
+          />
+        </View>
+      </View>
+
+      {filtered.length === 0 ? (
+        <View style={s.emptyFilter}>
+          <Text style={s.emptyTitle}>Nenhum resultado.</Text>
+          <Pressable
+            onPress={() => {
+              setQuery("");
+              setTfFilter(TF_ALL);
+              setDirFilter("all");
+            }}
+          >
+            <Text style={s.clearLink}>Limpar filtros</Text>
           </Pressable>
-        );
-      }}
-    />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={s.list}
+          renderItem={({ item }) => {
+            const sig = signalDirection(item);
+            const DirIcon =
+              sig.dir === "up" ? ArrowUp : sig.dir === "down" ? ArrowDown : Minus;
+            const dirColor =
+              sig.dir === "up" ? colors.up : sig.dir === "down" ? colors.down : colors.subtle;
+            return (
+              <Pressable style={s.row} onPress={() => onOpen(item)}>
+                {item.thumbUri ? (
+                  <Image source={{ uri: item.thumbUri }} style={s.thumb} />
+                ) : (
+                  <View style={s.thumbFallback}>
+                    <Text style={s.thumbFallbackText}>
+                      {item.displayTicker.split("/")[0]}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={s.titleRow}>
+                    <Text style={s.rowTitle} numberOfLines={1}>
+                      {item.displayTicker}
+                      <Text style={s.mutedText}>
+                        {" "}
+                        · {timeframeLabel(item.timeframe)}
+                      </Text>
+                    </Text>
+                    <Badge
+                      label={item.precedent.sampleNote.toUpperCase()}
+                      accent={item.precedent.sampleNote === "ok"}
+                      warn={item.precedent.sampleNote !== "ok"}
+                    />
+                  </View>
+                  <Text style={s.subtitle}>
+                    {item.precedent.matches} precedentes · {formatWhen(item.createdAt)}
+                  </Text>
+                </View>
+                <View style={s.signal}>
+                  <DirIcon size={14} color={dirColor} />
+                  <Text style={[s.signalPct, { color: dirColor }]}>
+                    {formatPct(sig.pct, 1)}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          }}
+        />
+      )}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  list: { padding: 20, gap: 8 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 80 },
+function Chip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[s.chip, active && s.chipActive]}
+      onPress={onPress}
+    >
+      <Text style={[s.chipText, active && s.chipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function DirChip({
+  dir,
+  active,
+  onPress,
+}: {
+  dir: "up" | "down" | "flat";
+  active: boolean;
+  onPress: () => void;
+}) {
+  const Icon = dir === "up" ? ArrowUp : dir === "down" ? ArrowDown : Minus;
+  const label = dir === "up" ? "Alta" : dir === "down" ? "Baixa" : "Neutro";
+  const tint = dir === "up" ? colors.up : dir === "down" ? colors.down : colors.muted;
+  return (
+    <Pressable style={[s.chip, active && s.chipActive]} onPress={onPress}>
+      <Icon size={12} color={active ? colors.accentFg : tint} />
+      <Text style={[s.chipText, active && s.chipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function SortButton({
+  label,
+  active,
+  dir,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  dir?: SortDir;
+  onPress: () => void;
+}) {
+  const SortIcon = dir === "asc" ? ChevronUp : ChevronDown;
+  return (
+    <Pressable style={s.sortBtn} onPress={onPress}>
+      <Text style={[s.sortLabel, active && { color: colors.fg }]}>{label}</Text>
+      {active ? <SortIcon size={12} color={colors.fg} /> : null}
+    </Pressable>
+  );
+}
+
+const s = StyleSheet.create({
+  wrapper: { flex: 1 },
+  headerArea: { padding: 16, paddingBottom: 0, gap: 8 },
+  title: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    fontWeight: "700",
+    color: colors.fg,
+  },
+  countHint: { fontSize: 11, color: colors.subtle },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.fg,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  chipRow: { gap: 6, paddingVertical: 2 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  chipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  chipText: { fontSize: 12, color: colors.muted, fontWeight: "500" },
+  chipTextActive: { color: colors.accentFg },
+  sortRow: { flexDirection: "row", gap: 12, paddingVertical: 4 },
+  sortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  sortLabel: { fontSize: 11, fontWeight: "600", color: colors.subtle },
+  list: { padding: 16, paddingTop: 8, gap: 6, paddingBottom: 40 },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 80,
+  },
+  emptyFilter: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 60,
+  },
   emptyTitle: { fontSize: 14, color: colors.muted },
-  emptyHint: { fontSize: 12, color: colors.subtle, textAlign: "center", maxWidth: 260 },
+  emptyHint: {
+    fontSize: 12,
+    color: colors.subtle,
+    textAlign: "center",
+    maxWidth: 260,
+  },
+  clearLink: {
+    fontSize: 13,
+    color: colors.accent,
+    textDecorationLine: "underline",
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -108,9 +416,13 @@ const styles = StyleSheet.create({
   },
   thumbFallbackText: { fontSize: 11, color: colors.muted },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  title: { fontSize: 14, fontWeight: "500", color: colors.fg, flex: 1 },
+  rowTitle: { fontSize: 14, fontWeight: "500", color: colors.fg, flex: 1 },
   mutedText: { color: colors.muted, fontWeight: "400" },
   subtitle: { fontSize: 12, color: colors.muted },
   signal: { alignItems: "center", gap: 2, width: 42 },
-  signalPct: { fontSize: 10, fontVariant: ["tabular-nums"], fontWeight: "600" },
+  signalPct: {
+    fontSize: 10,
+    fontVariant: ["tabular-nums"],
+    fontWeight: "600",
+  },
 });
