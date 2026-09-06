@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius } from "../theme";
 
-export type ResultTab = "paths" | "risk" | "onchain" | "scenario" | "vision" | "intel";
+export type ResultTab = "paths" | "risk" | "onchain" | "scenario" | "vision" | "intel" | "news";
 
 const TAB_LABELS: Record<ResultTab, string> = {
   paths: "Caminhos",
@@ -10,6 +10,7 @@ const TAB_LABELS: Record<ResultTab, string> = {
   scenario: "Cenário",
   vision: "Visão",
   intel: "Intel",
+  news: "News",
 };
 
 export function ResultTabs({

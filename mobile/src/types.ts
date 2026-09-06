@@ -182,6 +182,7 @@ export type AnalysisPayload = {
   } | null;
   source: string;
   onchain?: OnchainContext | null;
+  newsContext?: NewsContextPayload | null;
 };
 
 export type StoredAnalysis = AnalysisPayload & {
@@ -317,6 +318,27 @@ export type NewListingsSnapshot = {
   source: string;
   listings: NewListingRow[];
   totalTracked: number;
+  disclaimer: string;
+};
+
+// --- News Context: manchetes recentes anexadas à análise --------------------
+
+export type NewsCategory = "regulatory" | "market" | "security" | "institutional" | "technology";
+
+export type NewsContextItem = {
+  title: string;
+  source: string;
+  link: string;
+  publishedAt: number | null;
+  coins: string[];
+  categories: NewsCategory[];
+};
+
+export type NewsContextPayload = {
+  ticker: string;
+  coin: string;
+  items: NewsContextItem[];
+  fetchedAt: number;
   disclaimer: string;
 };
 
