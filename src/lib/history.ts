@@ -38,3 +38,12 @@ export function pushHistory(
   saveHistory(items);
   return items;
 }
+
+export function removeHistoryItem(
+  current: StoredAnalysis[],
+  id: string,
+): StoredAnalysis[] {
+  const items = current.filter((a) => a.id !== id);
+  saveHistory(items);
+  return items;
+}

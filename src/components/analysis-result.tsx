@@ -96,6 +96,7 @@ export function AnalysisResult({
         "mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24",
         reanalyzing && "pointer-events-none opacity-70",
       )}
+      aria-busy={reanalyzing}
       data-testid="analysis-result"
     >
       <header className="space-y-4 rounded-xl bg-surface p-4 shadow-[var(--shadow-border)] sm:p-5">
@@ -144,6 +145,7 @@ export function AnalysisResult({
                 size="sm"
                 onClick={onToggleWatch}
                 disabled={reanalyzing}
+                aria-pressed={watched}
                 className="gap-1.5"
               >
                 <Star className={cn("size-3.5", watched && "fill-current")} />
@@ -240,7 +242,7 @@ export function AnalysisResult({
               Horizontes 5/10/20 barras passam a valer neste momento.
             </p>
             {reanalyzeError ? (
-              <p className="rounded-md bg-down/10 px-3 py-2 text-sm text-down">{reanalyzeError}</p>
+              <p role="alert" className="rounded-md bg-down/10 px-3 py-2 text-sm text-down">{reanalyzeError}</p>
             ) : null}
           </div>
         ) : null}

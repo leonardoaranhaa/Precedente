@@ -61,7 +61,7 @@ export function AnalyzeForm({
           disabled={busy}
           className="font-mono uppercase"
         />
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Pares populares">
           {chips.map((t) => {
             const active = current === t;
             return (
@@ -69,6 +69,7 @@ export function AnalyzeForm({
                 key={t}
                 type="button"
                 disabled={busy}
+                aria-pressed={active}
                 onClick={() => onTicker(shortTicker(t))}
                 className={cn(
                   "h-9 rounded-full px-3 text-xs font-medium shadow-[var(--shadow-border)]",
@@ -96,6 +97,7 @@ export function AnalyzeForm({
                     key={tf}
                     type="button"
                     disabled={busy}
+                    aria-pressed={timeframe === tf}
                     onClick={() => onTimeframe(tf)}
                     className={cn(
                       "h-10 flex-1 rounded-md text-sm font-medium transition-colors duration-150",
@@ -114,7 +116,7 @@ export function AnalyzeForm({
       </div>
 
       {error ? (
-        <p className="rounded-md bg-down/10 px-3 py-2 text-sm text-down">{error}</p>
+        <p role="alert" className="rounded-md bg-down/10 px-3 py-2 text-sm text-down">{error}</p>
       ) : null}
 
       <Button type="submit" size="lg" className="w-full" disabled={busy || !ticker.trim()}>

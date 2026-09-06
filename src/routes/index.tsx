@@ -20,7 +20,7 @@ import { analyzeSetup } from "@/lib/analyze";
 import { productBoundary } from "@/lib/market/sample-copy";
 import { DexFragilityPanel } from "@/components/dex-fragility-panel";
 import { makeThumb } from "@/lib/compress";
-import { loadHistory, pushHistory, saveHistory } from "@/lib/history";
+import { loadHistory, pushHistory, removeHistoryItem, saveHistory } from "@/lib/history";
 // Só type — apagado na compilação, não vira import estático da fachada.
 import type { DexFragilityReport, DexPairSnapshot } from "@/lib/market/dex";
 import {
@@ -645,6 +645,7 @@ function Home() {
                     setTimeframe(item.timeframe);
                     setView("result");
                   }}
+                  onDelete={(id) => setHistory(removeHistoryItem(history, id))}
                 />
               </div>
             ) : (

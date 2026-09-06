@@ -148,6 +148,8 @@ export function WatchPanel({
               <button
                 type="button"
                 onClick={() => setLayout("list")}
+                aria-label="Ver em lista"
+                aria-pressed={layout === "list"}
                 title="Ver em lista"
                 className={cn(
                   "flex items-center rounded-sm p-0.5",
@@ -159,6 +161,8 @@ export function WatchPanel({
               <button
                 type="button"
                 onClick={() => setLayout("map")}
+                aria-label="Ver como mapa de calor"
+                aria-pressed={layout === "map"}
                 title="Ver como mapa de calor"
                 className={cn(
                   "flex items-center rounded-sm p-0.5",
@@ -195,6 +199,7 @@ export function WatchPanel({
             <button
               key={m}
               type="button"
+              aria-pressed={autoRefreshMin === m}
               onClick={() => onAutoRefreshMin(m)}
               className={cn(
                 "h-5 rounded-sm px-1.5 text-[10px] font-medium",
@@ -221,6 +226,7 @@ export function WatchPanel({
               <button
                 key={t}
                 type="button"
+                aria-pressed={tab === t}
                 onClick={() => setTab(t)}
                 className={cn(
                   "h-6 flex-1 rounded-sm text-[10px] font-medium uppercase tracking-wide",
@@ -236,6 +242,7 @@ export function WatchPanel({
               <button
                 key={f}
                 type="button"
+                aria-pressed={quickFilter === f}
                 onClick={() => setQuickFilter(f)}
                 className={cn(
                   "h-5 rounded-sm px-1.5 text-[10px] font-medium",
@@ -250,6 +257,7 @@ export function WatchPanel({
             <span className="mr-1 text-[9px] tracking-wide text-subtle uppercase">tf</span>
             <button
               type="button"
+              aria-pressed={tfFilter === WATCH_TF_FILTER_ALL}
               onClick={() => setTfFilter(WATCH_TF_FILTER_ALL)}
               className={cn(
                 "h-5 rounded-sm px-1.5 text-[10px] font-medium",
@@ -264,6 +272,7 @@ export function WatchPanel({
               <button
                 key={tf}
                 type="button"
+                aria-pressed={tfFilter === tf}
                 onClick={() => setTfFilter(tf)}
                 className={cn(
                   "h-5 rounded-sm px-1.5 text-[10px] font-medium",
@@ -278,7 +287,7 @@ export function WatchPanel({
       ) : null}
 
       {error ? (
-        <p className="border-b border-border bg-down/10 px-2 py-1.5 text-[11px] text-down">{error}</p>
+        <p role="alert" className="border-b border-border bg-down/10 px-2 py-1.5 text-[11px] text-down">{error}</p>
       ) : null}
 
       {layout === "map" ? (
@@ -303,6 +312,7 @@ export function WatchPanel({
           <button
             type="button"
             onClick={() => toggleSort("sample")}
+            aria-label="Ordenar por amostra"
             title="Ordenar por amostra"
             className={cn(
               "flex items-center justify-center hover:text-fg",
